@@ -1,0 +1,36 @@
+@startuml
+
+node "Device Microservice" as usrSrvc {
+}
+
+node "Server Microservice" as serverSvc {
+}
+
+node "Broker" as node {
+}
+
+node "Registry" as reg {
+}
+
+node "Identity Management" as idp {
+
+}
+
+node "Data Analytics" as analytics {
+
+}
+
+usrSrvc <-down-> node : streams
+serverSvc <-up-> node : streams
+
+usrSrvc -up-> reg : register \nservice instances
+usrSrvc -up-> idp : create account \nlogin
+
+serverSvc -up-> reg : register \nservice instances
+serverSvc -up-> idp : create account \nlogin
+
+node <-down-> analytics : streams
+
+node -up-> idp : validate token
+
+@enduml

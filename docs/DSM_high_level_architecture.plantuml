@@ -1,0 +1,54 @@
+@startuml
+
+node "Smart Citizen" as userApp1 {
+}
+
+node "School App Server" as schoolServer {
+}
+
+node "Communication Server" as commServer {
+
+}
+
+node "Citizen Mobility \nApp Server" as citzServer {
+}
+
+node "Message Broker" as node {
+}
+
+node "Registry" as reg {
+}
+
+node "Identity Management" as idp {
+
+}
+
+node "Urban Sharing Platform" as usp {
+
+}
+
+node "Data Analytics" as analytics {
+
+}
+
+node "Citizen eLearning\n App Server" as content {
+
+}
+
+userApp1 <-down-> node : streams
+schoolServer <--> node : streams
+commServer <--> node : streams
+citzServer <--> node : streams
+
+userApp1 -up-> reg : register \nservice instances
+userApp1 -up-> idp : create account \n login
+
+node <-down-> usp : streams
+
+node <-down-> analytics : streams
+
+userApp1 -down-> content : post / get content
+
+node --> content : streams
+
+@enduml

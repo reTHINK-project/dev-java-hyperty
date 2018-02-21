@@ -1,0 +1,30 @@
+@startuml
+
+node "Local Shop App Server" as dsmServer {
+
+node "Citizen Wallet" as wallet
+
+node "Local Shop Rating" as citzRate
+
+}
+
+
+node "Smart Citizen" as citz {
+interface "Citizen Wallet" as citzWallet
+
+node "check-in" as checkin
+
+interface "Location" as location
+}
+
+checkin -> location : 1: report
+
+citzRate --> location : 5:observe
+
+citzRate -> citzRate : 6:calculate rating
+
+citzRate --> wallet : 7:transfer(citzUrl, tokens)
+
+wallet --> citzWallet : 8:tokens transaction
+
+@enduml

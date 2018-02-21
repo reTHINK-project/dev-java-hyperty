@@ -1,0 +1,24 @@
+@startuml
+
+
+node "Tokens Rating" as rating
+
+interface "Data Stream" as stream
+
+node "Wallet" as wallet
+
+node "Network" as net
+
+rating -down-> stream : 1: observe
+
+rating -> rating : 2: rating calculation
+
+rating -down-> net : 3: request\n transaction
+
+rating ..> net : 4: transaction\n confirmed
+
+rating -up-> wallet : 5: lodge tokens
+
+
+
+@enduml
