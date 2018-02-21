@@ -16,32 +16,27 @@
 
 package rest.post;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.ServerWebSocket;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JksOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.ext.web.handler.sockjs.BridgeEventType;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import util.Runner;
-
-import java.io.File;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * @author <a href="http://tfox.org">Tim Fox</a>
@@ -72,25 +67,29 @@ public class App extends AbstractVerticle {
     allowedMethods.add(HttpMethod.GET);
     allowedMethods.add(HttpMethod.POST);
     
+    // Create Router object
     Router router = Router.router(vertx);
-    /*router.route().handler(BodyHandler.create());
-    router.route().handler(CorsHandler.create("*").allowedHeaders(allowedHeaders).allowedMethods(allowedMethods));
     
+    /*router.route().handler(CorsHandler.create("*").allowedHeaders(allowedHeaders).allowedMethods(allowedMethods));
+    */
+    
+    // handle post
+    router.route("/requestpub*").handler(BodyHandler.create());
     router.post("/requestpub").handler(this::handleRequestPub);
-	router.get("/").handler(this::handleGetRoot);*/
-	
-	/*BridgeOptions optionsBridge = new BridgeOptions();
-	optionsBridge.addOutboundPermitted(new PermittedOptions().setAddress("school://vertx-app/stream"))
-				 .addInboundPermitted(new PermittedOptions().setAddress("school://vertx-app/stream"));
-    router.route("/eventbus/*").handler(SockJSHandler.create(vertx).bridge(optionsBridge));
-	*/
+    // handle get
+	router.get("/").handler(this::handleGetRoot);
+    
+	// web sockets
 	router.route("/eventbus/*").handler(eventBusHandler());
     
-	
-	vertx.setPeriodic(10000, _id -> {
+	// create a periodic event
+	/*
+	vertx.setPeriodic(3000, _id -> {
 			int toSend = lastValue+=10;
+			// publish value on event bus
 			vertx.eventBus().publish("school://vertx-app/stream", toSend);
-	});									
+	});		
+	*/							
 	
 	int BUFF_SIZE = 32 * 1024;
 	final JksOptions jksOptions = new JksOptions()
@@ -166,10 +165,15 @@ public class App extends AbstractVerticle {
 	    });
 	}
 
-/*
+
 	private void handleRequestPub(RoutingContext routingContext) {
 		
-		System.out.println("ENDPOINT POST RECEIVED DATA -> "+ routingContext.getBodyAsString().toString()); 
+		System.out.println("POST");
+		System.out.println(routingContext.getBodyAsString());
+	
+
+		//System.out.println("ENDPOINT POST RECEIVED DATA -> "+ routingContext.getBodyAsString().toString()); 
+		
 		
     	System.out.println("ON (SERVER) | PUBLISH: ADDRESS(school://vertx-app/stream) | VALUE:" + lastValue );    	
 		vertx.eventBus().publish("school://vertx-app/stream", routingContext.getBodyAsString().toString());
@@ -183,8 +187,11 @@ public class App extends AbstractVerticle {
 			httpServerResponse.write(headers.get(key));
 			httpServerResponse.write("<br>");
 		}
-		httpServerResponse.putHeader("Content-Type", "application/text").end("Success");   
+		httpServerResponse.putHeader("Content-Type", "application/text").end();   
+		
 	 }
+	
+	
 	private void handleGetRoot(RoutingContext routingContext) {
 		HttpServerResponse httpServerResponse = routingContext.response();
 		httpServerResponse.setChunked(true);
@@ -195,5 +202,6 @@ public class App extends AbstractVerticle {
 			httpServerResponse.write("<br>");
 		}
 		httpServerResponse.putHeader("Content-Type", "text/html").end();
-	}*/
+		System.out.println("HANDLING GET");
+	}
 }
