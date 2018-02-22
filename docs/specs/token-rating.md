@@ -2,7 +2,7 @@
 
 Abstract class to be extended, that implements the following generic token rating arch pattern:
 
-![token rating arch](token_mining.png)
+![token rating arch](../token_mining.png)
 
 Config file with:
 
