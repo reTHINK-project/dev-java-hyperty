@@ -146,6 +146,11 @@ public class App extends AbstractVerticle {
     vertx.eventBus().consumer("school://vertx-app/stream", message -> { 
     	System.out.println("ON (SERVER) | CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
     	});
+    vertx.eventBus().consumer("school://vertx-app/announcements", message -> {
+    	System.out.println("ON (SERVER) | CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
+    	vertx.eventBus().publish("school://vertx-app/subscription", message.body());
+
+    	});
     
     System.out.println("Ready");
   }
