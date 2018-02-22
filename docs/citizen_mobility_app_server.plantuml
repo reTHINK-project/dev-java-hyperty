@@ -1,0 +1,39 @@
+@startuml
+
+node "Citizen Mobility App Server" as dsmServer {
+
+node "Citizen Wallet" as wallet
+
+node "Citizen \nMobility Rating" as citzRate
+
+node "Citizen Mobility Stub" as citzStub
+
+interface mobility
+
+}
+
+
+node "Smart Citizen" as citz {
+interface "Citizen Wallet" as citzWallet
+}
+
+
+node "Urban Sharing Platform" as usp {
+}
+
+
+citzStub -down-> usp : 1: get data \n on new data
+
+citzRate ->  citzRate : 4:calculate rating
+
+citzRate -left-> wallet : 5:transfer(citzUrl, tokens)
+
+wallet -up-> citzWallet : 6:tokens transaction
+
+citzStub -up-> mobility : 2: report
+
+citzRate -down-> mobility : 3: observe
+
+
+
+@enduml

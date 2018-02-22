@@ -1,0 +1,41 @@
+@startuml
+
+node "School Cause Server" as dsmServer {
+
+node "School Rating" as agent
+
+node "School Stub" as schoolStub
+
+interface school
+node "Wallet" as wallet
+
+
+}
+
+
+node "Urban Sharing Platform" as usp {
+}
+
+node "Citizen Wallet Server" as citz {
+interface "Citizen Wallet" as citzWallet
+}
+
+
+schoolStub -down-> usp : 1: get data / on new data
+
+schoolStub -up-> school : 2: report
+
+agent -down-> school : 3a: observe
+
+agent --> citzWallet : 3b:observe
+
+agent -> agent : 4: tokens rating
+
+agent -up-> wallet : 5: lodge tokens
+
+citz -> school : observe
+
+wallet -> agent : onTokensAdded
+
+
+@enduml

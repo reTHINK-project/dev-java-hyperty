@@ -1,0 +1,21 @@
+@startuml
+
+node "Communication Server" as dsmServer {
+
+
+node "Group Chat Backup" as schoolCommBckup
+
+
+}
+
+interface "School\nCommunication" as schoolComm
+
+node "Smart Citizen" as citz {
+}
+
+schoolCommBckup -up-> schoolComm: observe
+
+citz -> schoolCommBckup : read
+
+
+@enduml
