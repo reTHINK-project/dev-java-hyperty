@@ -20,7 +20,7 @@ An empty rating engine function (separate class?) when the data evaluation in to
 
 ### private mine(int numTokens, data)
 
-A Token miner function that generates numTokens as uint type as well as associated transaction that is stored in a DB (future in a blockchain?):
+A Token miner function that generates numTokens as uint type as well as associated transaction that is stored in a DB (or the transaction is only stored in the recipient wallet ?) (future in a blockchain?):
 
 ```
 {
