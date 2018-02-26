@@ -27,6 +27,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.ServerWebSocket;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JksOptions;
 import io.vertx.ext.web.Router;
@@ -43,6 +44,7 @@ import util.Runner;
  */
 public class App extends AbstractVerticle {
   public int lastValue = 0;
+  private boolean alreadyRegister = false;
   public static void main(String[] args) {
     Runner.runExample(App.class);
   }
@@ -50,6 +52,7 @@ public class App extends AbstractVerticle {
 
   @Override
   public void start() {
+	
 	  
 	Set<String> allowedHeaders = new HashSet<>();
     allowedHeaders.add("x-requested-with");
@@ -139,20 +142,38 @@ public class App extends AbstractVerticle {
 	
     server.listen(9091);
     vertx.eventBus().consumer("school://vertx-app", message -> {
-    	System.out.println("ON (SERVER) | CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
-    	System.out.println("ON (SERVER) | PUBLISH: ADDRESS(school://vertx-app/stream) | VALUE:" + lastValue );    	
+    	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
+    	System.out.println("PUBLISH: ADDRESS(school://vertx-app/stream) | VALUE:" + lastValue );    	
     	vertx.eventBus().publish("school://vertx-app/stream", lastValue);
     	});
     vertx.eventBus().consumer("school://vertx-app/stream", message -> { 
-    	System.out.println("ON (SERVER) | CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
+    	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
     	});
+    
+    
+    boolean alreadyRegister = false;
     vertx.eventBus().consumer("school://vertx-app/announcements", message -> {
-    	System.out.println("ON (SERVER) | CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
+    	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
+    	
     	vertx.eventBus().publish("school://vertx-app/subscription", message.body());
+    	//vertx.eventBus().consumer()
+    	JsonObject receivedObj = new JsonObject(message.body().toString());
+    	JsonArray arrayEvents = receivedObj.getJsonArray("events");
+    	JsonObject event = arrayEvents.getJsonObject(0);
+    	
+
+    	if (!this.alreadyRegister) {
+    		this.alreadyRegister  = true;
+    		System.out.println("CHANGES-CONSUMER" + event.getString("url"));
+            vertx.eventBus().consumer("" + event.getString("url"), message2 -> {
+            	System.out.println("CHANGES-OBJ - " + message2.address() + ") | message:" + message2.body());
+            	});
+    	}
+
 
     	});
     vertx.eventBus().consumer("school://vertx-app/location-changes", message -> {
-    	System.out.println("ON (SERVER) | CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
+    	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
 
     	});
     
@@ -161,11 +182,11 @@ public class App extends AbstractVerticle {
 
 	private Handler<RoutingContext> eventBusHandler() {
 		BridgeOptions options = new BridgeOptions()
-	            .addOutboundPermitted(new PermittedOptions().setAddressRegex("(school:\\/\\/vertx-app).*"))
-	            .addInboundPermitted(new PermittedOptions().setAddressRegex("(school:\\/\\/vertx-app).*"));
+	            .addOutboundPermitted(new PermittedOptions().setAddressRegex(".*"))
+	            .addInboundPermitted(new PermittedOptions().setAddressRegex(".*"));
 	    return SockJSHandler.create(vertx).bridge(options, event -> {
 	    	if (BridgeEventType.PUBLISH == event.type()) {
-	    		System.out.println("BUS HANDLER:(" + event.type() + ") MESSAGE:" + event.getRawMessage().getString("body"));
+	    		System.out.println("BUS HANDLER:(" + event.type() + ") MESSAGE:" + event.getRawMessage());
 	    	} else {
 	    		System.out.println("BUS HANDLER:(" + event.type() + ")");
 	    	}
@@ -184,7 +205,7 @@ public class App extends AbstractVerticle {
 		//System.out.println("ENDPOINT POST RECEIVED DATA -> "+ routingContext.getBodyAsString().toString()); 
 		
 		
-    	System.out.println("ON (SERVER) | PUBLISH: ADDRESS(school://vertx-app/stream) | VALUE:" + lastValue );    	
+    	System.out.println("PUBLISH: ADDRESS(school://vertx-app/stream) | VALUE:" + lastValue );    	
 		vertx.eventBus().publish("school://vertx-app/stream", routingContext.getBodyAsString().toString());
 		
 		lastValue = Integer.parseInt(routingContext.getBodyAsString().toString());
