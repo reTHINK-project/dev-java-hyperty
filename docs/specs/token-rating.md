@@ -1,4 +1,4 @@
-## Abstract Token Rating Vertx verticle
+## Abstract Token Rating Vertx Hyperty
 
 Abstract class to be extended, that implements the following generic token rating arch pattern:
 
@@ -6,8 +6,9 @@ Abstract class to be extended, that implements the following generic token ratin
 
 Config file with:
 
-* hyperty resource where to setup announcement handlers in case the data source is dynamic eg produced by the smart citizen
+* hyperty address where to setup an handler to process invitations in case the data source is dynamic eg produced by the smart citizen
 * the stream address to setup the handler in case the address is static e.g. when the stream is produced via the Smart IoT.
+* Wallet Manager Hyperty address.
 
 ### private addStreamHandler()
 
@@ -20,7 +21,7 @@ An empty rating engine function (separate class?) when the data evaluation in to
 
 ### private mine(int numTokens, data)
 
-A Token miner function that generates numTokens as uint type as well as associated transaction that is stored in a DB (or the transaction is only stored in the recipient wallet ?) (future in a blockchain?):
+A Token miner function that generates numTokens as uint type as well as an associated transaction that is stored in a DB (or the transaction is only stored in the recipient wallet ?) (future in a blockchain?):
 
 ```
 {
@@ -36,14 +37,25 @@ A Token miner function that generates numTokens as uint type as well as associat
 
 ### transfer(transaction)
 
-Publishes the transaction in the wallet address stream.
+Performs the transaction to Wallet Address.
 
-### getWalletAddress()
+### getWalletAddress(userId)
+
+Send message to Wallet Manager address:
+
+```
+type: read,
+from: <rating address>,
+body: { resource: 'user/<userId>'}
+```
+
+with callback to return the value returned in case it is found.
+
 
 ### getSource()
 
-### addAnnouncementHandler()
+### addMyHandler()
 
-Has an handler in the announcement address specified in the config file and calls `addStreamHandler()` or `removeStreamHandler` according to received announcement events.
+Add an handler in the Rating Hyperty address specified in the config file and calls `addStreamHandler()` for valid received invitations (create messages) or `removeStreamHandler` for valid received delete messages.
 
 ### private removeStreamHandler()

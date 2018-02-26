@@ -1,0 +1,49 @@
+@startuml
+
+
+node "reTHINK App" as app {
+
+node "Hyperty" as hy
+
+interface "Hyperty DO" as hyDO
+
+node "Runtime Core" as core {
+
+  node "Registry" as reg
+
+  node "Sync Manager" as coreSM
+
+  interface "announcements:x" as ra
+  }
+}
+
+node "Vertx App Server Stub" as stub {
+  node "Subscription Manager" as sm
+  node "Observer" as observer
+
+}
+
+node "Vertx App Server" as appServer {
+interface "announcements:x" as announcement
+node "Announcements Handler" as ah
+}
+
+hy -> hyDO : 1:report
+
+hy -> reg : 2:register new data object
+
+reg -> ra : 3:announce new stream
+
+ra <- sm : 4:observe new data\n object announcement
+
+sm -> announcement : 5:translate to new\n stream vertx announcement
+
+ah -> announcement : 6:handles new\n stream announcement
+
+ah -> sm : 7:subscribe new stream
+
+sm -> coreSM : 8:subscribe new DO
+
+coreSM -> hyDO : 9:subscribe
+
+@enduml

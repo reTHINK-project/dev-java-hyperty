@@ -1,0 +1,44 @@
+@startuml
+
+
+
+node "Vertx App Server" as appServer {
+interface stream
+}
+
+node "reTHINK App" as app {
+
+node "Hyperty" as hy
+
+interface "Hyperty DO" as hyDO
+
+node "Vertx App Server Stub" as stub {
+  node "Context Reporter" as ctxtR
+  node "Observer" as ctxtO
+
+  interface "Vertx DO" as vertxDO
+}
+
+}
+
+node "Smart IoT" as siot {
+
+interface "Smart IoT Stream" as sstream
+
+}
+
+sstream <-up-> stream : data stream
+
+stream -up-> ctxtR : translate to DO
+
+ctxtR -up-> vertxDO : report
+
+hy -down-> vertxDO : observe
+
+hy -> hyDO : report
+
+hyDO <- ctxtO : observe
+
+ctxtO -> stream : translate to stream
+
+@enduml
