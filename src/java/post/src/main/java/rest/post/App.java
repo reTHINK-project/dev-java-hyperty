@@ -73,8 +73,8 @@ public class App extends AbstractVerticle {
     // Create Router object
     Router router = Router.router(vertx);
     
-    /*router.route().handler(CorsHandler.create("*").allowedHeaders(allowedHeaders).allowedMethods(allowedMethods));
-    */
+    //router.route().handler(CorsHandler.create("*").allowedHeaders(allowedHeaders).allowedMethods(allowedMethods));
+    
     
     // handle post
     router.route("/requestpub*").handler(BodyHandler.create());
@@ -93,6 +93,7 @@ public class App extends AbstractVerticle {
 			vertx.eventBus().publish("school://vertx-app/stream", toSend);
 	});		
 	*/							
+	
 	
 	int BUFF_SIZE = 32 * 1024;
 	final JksOptions jksOptions = new JksOptions()
