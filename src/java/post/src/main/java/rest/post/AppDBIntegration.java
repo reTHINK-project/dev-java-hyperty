@@ -76,6 +76,8 @@ public class AppDBIntegration extends AbstractVerticle {
     // handle get
 	router.get("/requestpub/dataOUT").handler(this::handleDataOUT);
 	router.delete("/requestpub/dataDELETE").handler(this::handleDataDELETE);
+	router.post("/requestpub/dataUPDATE").handler(this::handleDataUPDATE);
+	
 
 	
 	int BUFF_SIZE = 32 * 1024;
@@ -154,6 +156,24 @@ public class AppDBIntegration extends AbstractVerticle {
 	          System.out.println("Product removed ");
 	        }
 	        
+	        HttpServerResponse httpServerResponse = routingContext.response();
+
+    		httpServerResponse.putHeader("Content-Type", "application/json").setStatusMessage("OK").end();
+	      });
+		
+	}
+	
+	private void handleDataUPDATE(RoutingContext routingContext) {
+		System.out.println("UPDATE");
+		System.out.println(routingContext.getBodyAsString());
+	
+		JsonObject document = new JsonObject(routingContext.getBodyAsString());
+		JsonObject query = document.getJsonObject("query");
+		JsonObject update= document.getJsonObject("update");
+		String colletion = document.getString("collection");
+	
+		mongoClient.updateCollection(colletion, query, update, res -> {
+
 	        HttpServerResponse httpServerResponse = routingContext.response();
 
     		httpServerResponse.putHeader("Content-Type", "application/json").setStatusMessage("OK").end();
