@@ -16,6 +16,7 @@
 
 package rest.post;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,9 +28,11 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.ServerWebSocket;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JksOptions;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -44,7 +47,8 @@ import util.Runner;
  */
 public class App extends AbstractVerticle {
   public int lastValue = 0;
-  private boolean alreadyRegister = false;
+  private MongoClient mongoClient = null;
+  private ArrayList<String> contextList = new ArrayList<String>();
   public static void main(String[] args) {
     Runner.runExample(App.class);
   }
@@ -53,7 +57,18 @@ public class App extends AbstractVerticle {
   @Override
   public void start() {
 	
+	
 	  
+	String uri = "mongodb://localhost:27017";
+		
+	String db = "test";
+	
+    JsonObject mongoconfig = new JsonObject()
+            .put("connection_string", uri)
+            .put("db_name", db);
+
+    mongoClient = MongoClient.createShared(vertx, mongoconfig);
+    
 	Set<String> allowedHeaders = new HashSet<>();
     allowedHeaders.add("x-requested-with");
     allowedHeaders.add("Access-Control-Allow-Origin");
@@ -156,27 +171,36 @@ public class App extends AbstractVerticle {
     vertx.eventBus().consumer("school://vertx-app/announcements", message -> {
     	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
     	
-    	vertx.eventBus().publish("school://vertx-app/subscription", message.body());
-    	//vertx.eventBus().consumer()
-    	JsonObject receivedObj = new JsonObject(message.body().toString());
-    	JsonArray arrayEvents = receivedObj.getJsonArray("events");
+    	JsonObject newAnnouncement = new JsonObject(message.body().toString());
+    	JsonArray arrayEvents = newAnnouncement.getJsonArray("events");
     	JsonObject event = arrayEvents.getJsonObject(0);
     	
-
-    	if (!this.alreadyRegister) {
-    		this.alreadyRegister  = true;
+    	
+    	JsonObject toSubscribe = new JsonObject().put("url", event.getString("url"));
+    	toSubscribe.put("identity", "user://vertx-app/location");
+    	
+    	vertx.eventBus().publish("school://vertx-app/subscription", toSubscribe.toString());
+    	//vertx.eventBus().consumer()
+    	
+    	System.out.println("check url:" + event.getString("url") + "  LIST-URLS" + contextList.toString());
+    	if (!contextList.contains(event.getString("url"))) {
+    		contextList.add(event.getString("url"));
+    		
     		System.out.println("CHANGES-CONSUMER" + event.getString("url"));
-            vertx.eventBus().consumer("" + event.getString("url"), message2 -> {
-            	System.out.println("CHANGES-OBJ - " + message2.address() + ") | message:" + message2.body());
-            	});
+            
+    		vertx.eventBus().consumer("" + event.getString("url"), message2 -> {
+    			JsonObject allMessage = new JsonObject(message2.body().toString());
+    			System.out.println(allMessage.toString());
+            	System.out.println("****NEW CHANGE *****\nCHANGES-OBJ (" + message2.address() + ") \nDATA:" + 
+            			allMessage.getJsonArray("values").toString() + "\nTIMESTAMP:" + allMessage.getLong("timestamp") + "\n**********");
+            
+            	JsonObject document = new JsonObject(allMessage.toString());
+        		
+        	    mongoClient.save("location_data", document, id -> { System.out.println("New Document with ID:" + id); });
+    		});
     	}
 
-
-    	});
-    vertx.eventBus().consumer("school://vertx-app/location-changes", message -> {
-    	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
-
-    	});
+    });
     
     System.out.println("Ready");
   }
