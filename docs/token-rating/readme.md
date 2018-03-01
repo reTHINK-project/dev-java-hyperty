@@ -1,8 +1,17 @@
-## Abstract Token Rating Vertx Hyperty
 
-Abstract class to be extended, that implements the following generic token rating arch pattern:
+## Token Mining from Data architectural pattern
 
-![token rating arch](../token_mining.png)
+The Token Rating Hyperty evaluates IoT data according to some algorithm that calculates its value in tokens (tokens rating) e.g. to measure eco-mobility behavior of citizens in smart cities.
+
+![Tokens Mining from Data architectural pattern](token_mining.png)
+
+*(to be reviewed according to existing blockchain related IoT architectures like [IOTA](http://iotatoken.com/IOTA_Whitepaper.pdf) )*
+
+The generated tokens should be validated as a transaction by a decentralized network to avoid frauds like tokens generation from data already used before (to be implemented in the future). When the transaction is confirmed tokens are saved in the wallet.
+
+## Abstract Token Rating Hyperty
+
+There is an abstract class to be extended, that implements the token rating arch pattern introduced above.
 
 Config file with:
 

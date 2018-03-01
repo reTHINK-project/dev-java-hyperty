@@ -1,0 +1,37 @@
+@startuml
+
+node "JVM Hyperty Runtime" {
+  node  vertx.io {
+
+    node "Abstract Vertx Hyperty" as vertxHy
+
+    node "Hyperty" as hy
+
+    node "Vertx Event BUS" as eb
+
+    node "Web Socket Server" as wss
+  }
+
+}
+
+node "Javascript Hyperty Core Runtime" as node {
+  node "Javascript Hyperty" as jsHy
+
+  node "Message BUS" as bus
+
+  node "P2P Requester Vertx Protostub" as vertxStub
+}
+
+hy -down-> vertxHy : extends
+
+vertxHy <-down-> eb : stream
+
+eb <-down-> wss : stream
+
+wss <-left-> vertxStub : Vertx Event BUS over Web Socket
+
+vertxStub <-up-> bus : data synchronisation stream
+
+bus <-up-> jsHy : data synchronisation stream
+
+@enduml
