@@ -1,0 +1,8 @@
+language: java
+
+before_install:
+    - sudo apt-get update
+    - sudo apt-get install oracle-java8-installer
+    - sudo apt-get install maven
+    - export JAVA_HOME='/usr/lib/jvm/java-8-oracle/jre'
+test: mvn test
