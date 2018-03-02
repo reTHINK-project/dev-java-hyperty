@@ -6,4 +6,6 @@ before_install:
     - sudo apt-get install maven
     - export JAVA_HOME='/usr/lib/jvm/java-8-oracle/jre'
     - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+    - ls
+    - cd src/post
 test: mvn test
