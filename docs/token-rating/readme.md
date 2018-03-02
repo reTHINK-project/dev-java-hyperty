@@ -9,6 +9,13 @@ The Token Rating Hyperty evaluates IoT data according to some algorithm that cal
 
 The generated tokens should be validated as a transaction by a decentralized network to avoid frauds like tokens generation from data already used before (to be implemented in the future). When the transaction is confirmed tokens are saved in the wallet.
 
+Currently specified Token Rating Hyerties:
+
+* [Check-in Rating Hyperty](checkin-rating.md);
+* [e-Learning Rating Hyperty](elearning-rating.md);
+* [Mobility Rating Hyperty](mobility-rating.md);
+* [School Rating Hyperty](school-rating.md);
+
 ## Abstract Token Rating Hyperty
 
 There is an abstract class to be extended, that implements the token rating arch pattern introduced above.
