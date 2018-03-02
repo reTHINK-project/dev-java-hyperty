@@ -8,4 +8,4 @@ before_install:
     - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
     - ls
     - cd src/post
-test: mvn test
+test: mvn test -B
