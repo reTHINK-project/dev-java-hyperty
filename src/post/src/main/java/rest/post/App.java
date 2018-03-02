@@ -19,7 +19,6 @@ package rest.post;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
-
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -28,7 +27,6 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.ServerWebSocket;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JksOptions;
@@ -166,8 +164,6 @@ public class App extends AbstractVerticle {
     	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
     	});
     
-    
-    boolean alreadyRegister = false;
     vertx.eventBus().consumer("school://vertx-app/announcements", message -> {
     	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
     	
@@ -259,4 +255,8 @@ public class App extends AbstractVerticle {
 		httpServerResponse.putHeader("Content-Type", "text/html").end();
 		System.out.println("HANDLING GET");
 	}
+	public static int doSum(int a, int b) {
+		return a+b;
+	}
+
 }
