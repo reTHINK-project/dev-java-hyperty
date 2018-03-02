@@ -11,12 +11,25 @@ The Wallet Manager hyperty handles Token Wallets on behalf of a user.
 Each wallet is store as a JSON object:
 
 ```
+{
   address: <wallet address>,
   identity: <wallet owner identity>,
   created: <timestamp creation>,
   balance: <amount of token>,
   transactions: <JSON OBject. see below>,
   status: <active,deleted>
+}
+```
+
+Transaction JSON Object:
+```
+{
+  recipient: <wallet address of the recipient>,
+  source: <data stream address>,
+  date: <ISO 8601 compliant>,
+  value: <amount of tokens in the transaction>
+  nonce: < the count of the number of performed mining transactions, starting with 0>
+}
 ```
 
 ### Wallet creation requests
@@ -45,7 +58,7 @@ An invitation is sent to `config.observers`.
 
 ```
 type: read,
-body: { resource: 'user/<userId>'}
+body: { resource: 'user', value: <userId>}
 ```
 
 ### Wallet transfer
@@ -56,12 +69,25 @@ body: { resource: 'user/<userId>'}
 
 ```
 type: create,
-body: { resource: 'wallet/<wallet-address>', transaction: <transaction JSON Object>}
+body: { resource: 'wallet/<wallet-address>', value: <transaction JSON Object>}
 ```
 
 If valid, the transaction is stored and the balance updated.
 
 The transaction is published in the event bus using the wallet address.
+
+### Wallet read
+
+**handler:** wallet manager address.
+
+**message:**
+
+```
+type: read,
+body: { resource: 'wallet', value: <wallet-address> }
+```
+
+Returns the stored Wallet value.
 
 ### Wallet delete requests
 
@@ -77,4 +103,4 @@ from: <wallet observer hyperty address>
 
 It checks there is wallet for the identity and deletes from the storage.
 
-An delete is sent to `config.observers`.
+A delete info message is sent to `config.observers`.
