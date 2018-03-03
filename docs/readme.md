@@ -17,3 +17,9 @@ The main data flows for Vertx Hyperties Observing Data Objects reported by Javas
 The main data flows for Vertx Hyperties Reporting Data Objects that are observed by Javascript Hyperties, are:
 
 ![Vertx Hyperties Reporting Data Objects that are observed by Javascript Hyperties](reporter-interoperability.png)
+
+### Protostubs
+
+This is a [reTHINK protostub like](https://rethink-project.github.io/specs/concepts/protofly/) component to interface with remote Hyperty Runtimes by using some messaging protocol when the connection is triggered by the Vertx Runtime. Currently, Vertx protostubs are not published in reTHINK Catalogue from where they are dynamically deployed on Vertx Hyperty Runtime. Instead, they are implemented and deployed as Vertx Verticles. *should we also have an Abstract Protostub?*
+
+Remote addresses that are interfaced with protostubs are set as a Verticle configuration in an array. Event BUS handlers are set with these addresses to forward Vertx Hyperty messages to remote entities. 
