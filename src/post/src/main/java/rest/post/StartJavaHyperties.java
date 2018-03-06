@@ -29,16 +29,16 @@ public class StartJavaHyperties extends AbstractVerticle {
 	
 		//Vertx.clusteredVertx(options, res -> {
 		Consumer<Vertx> runner = res -> {
-			Vertx vertx = res;
 			StartJavaHyperties startHyperties = new StartJavaHyperties();
-			vertx.deployVerticle(startHyperties);
+			res.deployVerticle(startHyperties);
 		};
 		
 		final ClusterManager mgr = new HazelcastClusterManager();
-		final VertxOptions vertxOptions = new VertxOptions().setClusterManager(mgr);
+		final VertxOptions vertxOptions = new VertxOptions().setClustered(true).setClusterManager(mgr);
 		
-		Vertx vertx = Vertx.vertx(vertxOptions);
-		runner.accept(vertx);
+		Vertx.clusteredVertx(vertxOptions, res -> {
+			runner.accept(res.result());
+		});
 		
 	}
 
@@ -69,7 +69,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		JsonObject config = new JsonObject().put("url", "urlstring").put("identity", "identitystring");
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config);
 		
-		vertx.deployVerticle(new LocationHyperty(), optionsLocation);
+		vertx.deployVerticle("rest.post.LocationHyperty", optionsLocation);
 		
 		
 		int BUFF_SIZE = 32 * 1024;

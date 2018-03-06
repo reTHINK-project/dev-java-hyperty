@@ -14,31 +14,27 @@ import io.vertx.core.json.JsonObject;
 
 public class AbstractHyperty extends AbstractVerticle{
 	
-	private Vertx vertx;
-	private String url;
+	private String url = "asd";
 	private String identity;
 	private EventBus eb;
 	private Context context;
 	
-
+/*
 	public void init(Vertx vertx, Context context) {
 		this.vertx = vertx;
 		this.context = context;
 		this.url = context.get("url");
 		this.identity = context.get("identity");
 		this.eb = vertx.eventBus();
-	}
+	}*/
 	
-	public void start(Future<Void> startFuture) throws Exception {
-
-		
-		start();
-	    //startFuture.complete();
-	    
-	}
+	@Override
 	public void start() throws Exception {
-	  this.eb.consumer(this.url, onMessage());
-		  
+		this.url = config().getString("url");
+		this.identity = config().getString("identity");
+		this.eb = vertx.eventBus();
+		this.eb.<String>consumer(this.url, onMessage());
+	  	  
 	}
 
 
@@ -73,10 +69,12 @@ public class AbstractHyperty extends AbstractVerticle{
 		vertx.eventBus().publish(address, message, deliveryOptions);
 	}
 		
-	private Handler<Message<Object>> onMessage() {
+	
+	private Handler<Message<String>> onMessage() {
 		return message -> {
-	    	System.out.println("CONSUMER:  message:" + message);
-	    	};
+		        System.out.println("[Worker] Consuming data in " + Thread.currentThread().getName() + "\nData:" + message);
+		        message.reply(message);
+		      };
 	}
 
 }
