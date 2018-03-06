@@ -19,9 +19,15 @@ package rest.post;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
+
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -30,6 +36,7 @@ import io.vertx.core.http.ServerWebSocket;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JksOptions;
+import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -38,6 +45,7 @@ import io.vertx.ext.web.handler.sockjs.BridgeEventType;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import util.Runner;
 
 /**
@@ -48,7 +56,38 @@ public class App extends AbstractVerticle {
   private MongoClient mongoClient = null;
   private ArrayList<String> contextList = new ArrayList<String>();
   public static void main(String[] args) {
-    Runner.runExample(App.class);
+    //Runner.runExample(App.class);
+	/*final ClusterManager mgr = new HazelcastClusterManager();
+
+	final VertxOptions options = new VertxOptions().setClusterManager(mgr);
+	
+	Vertx.clusteredVertx(options, res -> { 
+		Vertx vertx = res.result();
+		App app = new App();
+		vertx.deployVerticle(app);
+		
+		JsonObject config = new JsonObject().put("url", "urlstring").put("identity", "identitystring");
+		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config);
+		
+		vertx.deployVerticle(new LocationHyperty(), optionsLocation, resDep -> {
+			System.out.println("dep result:" + resDep);
+		});
+	});*/
+	 
+	 App app = new App();
+	  
+    Consumer<Vertx> runner = vertx -> {
+	    try {
+	        vertx.deployVerticle(app);
+	      
+	    } catch (Throwable t) {
+	      t.printStackTrace();
+	    }
+    };
+    
+    final ClusterManager mgr = new HazelcastClusterManager();
+	  Vertx vertx = Vertx.vertx(new VertxOptions().setClusterManager(mgr));
+	  runner.accept(vertx);
   }
 
 
@@ -155,11 +194,7 @@ public class App extends AbstractVerticle {
   });
 	
     server.listen(9091);
-    vertx.eventBus().consumer("school://vertx-app", message -> {
-    	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
-    	System.out.println("PUBLISH: ADDRESS(school://vertx-app/stream) | VALUE:" + lastValue );    	
-    	vertx.eventBus().publish("school://vertx-app/stream", lastValue);
-    	});
+    vertx.eventBus().consumer("school://vertx-app", onMessage());
     vertx.eventBus().consumer("school://vertx-app/stream", message -> { 
     	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
     	});
@@ -200,6 +235,15 @@ public class App extends AbstractVerticle {
     
     System.out.println("Ready");
   }
+
+
+private Handler<Message<Object>> onMessage() {
+	return message -> {
+    	System.out.println("CONSUMER: ADDRESS(" + message.address() + ") | message:" + message.body());
+    	System.out.println("PUBLISH: ADDRESS(school://vertx-app/stream) | VALUE:" + lastValue );    	
+    	vertx.eventBus().publish("school://vertx-app/stream", lastValue);
+    	};
+}
 
 	private Handler<RoutingContext> eventBusHandler() {
 		BridgeOptions options = new BridgeOptions()
