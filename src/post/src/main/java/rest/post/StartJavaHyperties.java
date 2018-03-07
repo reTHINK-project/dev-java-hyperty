@@ -28,16 +28,17 @@ public class StartJavaHyperties extends AbstractVerticle {
 	public static void main(String[] args) {
 	
 		//Vertx.clusteredVertx(options, res -> {
-		Consumer<Vertx> runner = res -> {
+		Consumer<Vertx> runner = vertx -> {
 			StartJavaHyperties startHyperties = new StartJavaHyperties();
-			res.deployVerticle(startHyperties);
+			vertx.deployVerticle(startHyperties);
 		};
 		
 		final ClusterManager mgr = new HazelcastClusterManager();
 		final VertxOptions vertxOptions = new VertxOptions().setClustered(true).setClusterManager(mgr);
 		
 		Vertx.clusteredVertx(vertxOptions, res -> {
-			runner.accept(res.result());
+			Vertx vertx = res.result();
+			runner.accept(vertx);
 		});
 		
 	}
@@ -66,12 +67,15 @@ public class StartJavaHyperties extends AbstractVerticle {
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
 		
 		
-		JsonObject config = new JsonObject().put("url", "urlstring").put("identity", "identitystring");
-		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config);
-		
+		//Deploy extra Verticles
+		String locationHypertyURL = "vertx://location-hyperty-url/";
+		String locationHypertyIdentity = "vertx://location-hyperty-identity/";
+		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity);
+		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 		vertx.deployVerticle("rest.post.LocationHyperty", optionsLocation);
 		
 		
+		//Configure HttpServer and set it UP
 		int BUFF_SIZE = 32 * 1024;
 		final JksOptions jksOptions = new JksOptions()
 				.setPath("server-keystore.jks")
@@ -85,15 +89,21 @@ public class StartJavaHyperties extends AbstractVerticle {
 															.setAcceptBacklog(10000)
 															.setSendBufferSize(BUFF_SIZE);
 		
-		final HttpServer server = vertx.createHttpServer(httpOptions).requestHandler(router::accept);
-		
-	    server.listen(9091);	  
+		final HttpServer server = vertx.createHttpServer(httpOptions).requestHandler(router::accept).listen(9091);    
 	    
 	    toTest = 0;
-		vertx.setPeriodic(5000, _id -> {
-			toTest++;
-			vertx.eventBus().publish("urlstring", toTest);
-		});	
+	    vertx.setPeriodic(5000, _id -> {
+		    try {
+		    	
+					toTest++;
+					vertx.eventBus().publish("urlstring", "" + toTest);
+				
+		    } catch(Exception e) {
+		    	System.out.println("Error->");
+		    	e.printStackTrace();
+		    	
+		    }
+	    });	
 	}
 	
 	
