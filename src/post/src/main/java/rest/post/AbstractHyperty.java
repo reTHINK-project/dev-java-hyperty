@@ -14,53 +14,29 @@ import io.vertx.core.json.JsonObject;
 
 public class AbstractHyperty extends AbstractVerticle{
 	
-	private Vertx vertx;
 	private String url;
 	private String identity;
 	private EventBus eb;
-	private Context context;
-	
 
-	public void init(Vertx vertx, Context context) {
-		this.vertx = vertx;
-		this.context = context;
-		this.url = context.get("url");
-		this.identity = context.get("identity");
-		this.eb = vertx.eventBus();
-	}
 	
-	public void start(Future<Void> startFuture) throws Exception {
-
-		
-		start();
-	    //startFuture.complete();
-	    
-	}
+	@Override
 	public void start() throws Exception {
-	  this.eb.consumer(this.url, onMessage());
-		  
+		this.url = config().getString("url");
+		this.identity = config().getString("identity");
+		this.eb = vertx.eventBus();
+		this.eb.<String>consumer(this.url, onMessage());
 	}
 
-
-	//Set from and identity headers before calling eb.send(..).
 	public void send (String address, String message, Handler replyHandler) {
-		String type = new JsonObject(message).getString("type");
-		
-		
-		DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader("from", this.url)
+		final String type = new JsonObject(message).getString("type");
+			
+		final DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader("from", this.url)
 						.addHeader("identity", this.identity)
 						.addHeader("type", type);
 		
 		this.eb.send(address, message, deliveryOptions, replyHandler);
 	}
 	
-	
-	/**Set from and identity headers before calling eb.publish(..).
-	 * 
-	 * from with value config().getString("url"),
-	 * identity with value config().getString("identity"),
-	 * type with value set by the Hyperty itself e.g. create
-	 */
 	
 	public void publish (String address, String message) {
 		String type = new JsonObject(message).getString("type");
@@ -70,13 +46,15 @@ public class AbstractHyperty extends AbstractVerticle{
 						.addHeader("identity", this.identity)
 						.addHeader("type", type);
 		
-		vertx.eventBus().publish(address, message, deliveryOptions);
+		this.eb.publish(address, message, deliveryOptions);
 	}
 		
-	private Handler<Message<Object>> onMessage() {
+	
+	private Handler<Message<String>> onMessage() {
 		return message -> {
-	    	System.out.println("CONSUMER:  message:" + message);
-	    	};
+		        System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + message.body());
+		        message.reply(message);
+		      };
 	}
 
 }
