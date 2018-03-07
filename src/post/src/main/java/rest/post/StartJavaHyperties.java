@@ -72,7 +72,9 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String locationHypertyIdentity = "vertx://location-hyperty-identity/";
 		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity);
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
-		vertx.deployVerticle("rest.post.LocationHyperty", optionsLocation);
+		vertx.deployVerticle("rest.post.LocationHyperty", optionsLocation, res -> {
+			System.out.println("Location Deploy Result->" + res.result());
+		});
 		
 		
 		//Configure HttpServer and set it UP
@@ -96,7 +98,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		    try {
 		    	
 					toTest++;
-					vertx.eventBus().publish("urlstring", "" + toTest);
+					vertx.eventBus().publish(locationHypertyURL, "" + toTest);
 				
 		    } catch(Exception e) {
 		    	System.out.println("Error->");

@@ -17,14 +17,7 @@ public class AbstractHyperty extends AbstractVerticle{
 	private String url;
 	private String identity;
 	private EventBus eb;
-	private Context context;
 
-	
-	@Override
-	public void init(Vertx vertx, Context context) {
-		this.vertx = vertx;
-		this.context = context;
-	}
 	
 	@Override
 	public void start() throws Exception {
@@ -59,7 +52,7 @@ public class AbstractHyperty extends AbstractVerticle{
 	
 	private Handler<Message<String>> onMessage() {
 		return message -> {
-		        System.out.println("[Worker] Consuming data in " + Thread.currentThread().getName() + "\nData:" + message.body());
+		        System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + message.body());
 		        message.reply(message);
 		      };
 	}
