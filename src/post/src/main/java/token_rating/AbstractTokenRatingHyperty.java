@@ -7,15 +7,16 @@ import java.io.IOException;
 
 import com.google.gson.Gson;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.Message;
+import rest.post.AbstractHyperty;
 
-public class AbstractTokenRatingHyperty extends AbstractVerticle {
+public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 	private Config config;
 
 	@Override
-	public void start(Future<Void> fut) {
+	public void start() {
 //		System.out.println("Configuration: " + config().getString("name"));
 
 		// parse config file
@@ -26,8 +27,6 @@ public class AbstractTokenRatingHyperty extends AbstractVerticle {
 			Config config = (Config) gson.fromJson(br, Config.class);
 			if (config != null) {
 				this.config = config;
-				// finish deploying the verticle
-				fut.complete();
 			}
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -106,14 +105,18 @@ public class AbstractTokenRatingHyperty extends AbstractVerticle {
 		msg.setType("read");
 		msg.setFrom(config.getHyperty());
 		msg.setBody("{ resource: 'user/" + userId + "'}");
-
-		vertx.eventBus().send(config.getWalletManagerAddress(), msg, reply -> {
-			// with callback to return the value returned in case it is found.
-			// return reply;
-		});
+		
+		send(config.getWalletManagerAddress(), new Gson().toJson(msg), onMessage());
 
 		return "123";
 
+	}
+	
+	private Handler<Message<String>> onMessage() {
+		return reply -> {
+			// with callback to return the value returned in case it is found.
+			// return reply;
+		};
 	}
 
 	/**
