@@ -16,7 +16,7 @@ public class AbstractTokenRatingHyperty extends AbstractVerticle {
 
 	@Override
 	public void start(Future<Void> fut) {
-		System.out.println("Configuration: " + config().getString("name"));
+//		System.out.println("Configuration: " + config().getString("name"));
 
 		// parse config file
 		Gson gson = new Gson();

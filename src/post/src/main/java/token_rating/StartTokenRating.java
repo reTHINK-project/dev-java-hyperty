@@ -1,23 +1,21 @@
 package token_rating;
 
-import org.junit.Before;
-import org.junit.runner.RunWith;
+
 
 import com.google.gson.Gson;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 
-@RunWith(VertxUnitRunner.class)
+
 public class StartTokenRating {
 
 	private static Vertx vertx;
 
 	private static String from = "tester";
 
-	@Before
+	
 	public static void main(String[] args) {
 		vertx = Vertx.vertx();
 
