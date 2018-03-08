@@ -186,7 +186,7 @@ public class Runner {
       Runner.runRubyExample("io/vertx/example/web/templating/mvel/server.rb");
     }
   }
-
+  //runExample(WEB_EXAMPLES_JAVA_DIR, clazz, new VertxOptions().setClustered(false), null);
   public static void runExample(String exampleDir, Class clazz, VertxOptions options, DeploymentOptions
       deploymentOptions) {
     runExample(exampleDir + clazz.getPackage().getName().replace(".", "/"), clazz.getName(), options, deploymentOptions);
