@@ -26,10 +26,3 @@ Set `from` and `identity` headers before calling `eb.publish(..)`.
 ### onMessage( message )
 
 Vertx Event BUS handler at `config.url` address to receive messages targeting the Hyperty. *Do we need to use vertx [Buffers](http://vertx.io/docs/vertx-core/java/#_buffers)?*
-
-### future features
-
-**Registration**
-
-Use [Vertx factory API](http://vertx.io/docs/vertx-core/java/#_deploying_verticles_programmatically) to register an Hyperty in a Runtime Registry using a JSON object compliant with [reTHINK Hyperty Instance Data Model](https://rethink-project.github.io/specs/datamodel/core/hyperty-registry/readme/).
-As soon as the Hyperty is instantiated it sends a registration message to Vertx Runtime Registry.

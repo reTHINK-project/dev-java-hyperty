@@ -1,4 +1,4 @@
-## School Rating
+## Mobility Rating
 
 The Mobility Rating Hyperty uses the Mobility stub to observe eco-mobility behaviors and calculate the tokens according to the algorithm defined below.
 
