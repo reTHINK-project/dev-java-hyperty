@@ -48,7 +48,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	            .addOutboundPermitted(new PermittedOptions().setAddressRegex(".*"))
 	            .addInboundPermitted(new PermittedOptions().setAddressRegex(".*"));
 	    return SockJSHandler.create(vertx).bridge(options, event -> {
-	    	if (BridgeEventType.PUBLISH == event.type()) {
+	    	if (BridgeEventType.PUBLISH == event.type() || BridgeEventType.SEND == event.type()) {
 	    		System.out.println("BUS HANDLER:(" + event.type() + ") MESSAGE:" + event.getRawMessage());
 	    	} else {
 	    		System.out.println("BUS HANDLER:(" + event.type() + ")");
@@ -66,10 +66,10 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
 		
-		
+
 		//Deploy extra Verticles
-		String locationHypertyURL = "vertx://location-hyperty-url/";
-		String locationHypertyIdentity = "vertx://location-hyperty-identity/";
+		String locationHypertyURL = "school://sharing-cities-dsm/location-url";
+		String locationHypertyIdentity = "school://sharing-cities-dsm/location-identity";
 		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity);
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 		vertx.deployVerticle("rest.post.LocationHyperty", optionsLocation, res -> {
@@ -91,9 +91,29 @@ public class StartJavaHyperties extends AbstractVerticle {
 															.setAcceptBacklog(10000)
 															.setSendBufferSize(BUFF_SIZE);
 		
-		final HttpServer server = vertx.createHttpServer(httpOptions).requestHandler(router::accept).listen(9091);    
+		final HttpServer server = vertx.createHttpServer(httpOptions).requestHandler(router::accept).websocketHandler(new Handler<ServerWebSocket>() {
+	        public void handle(final ServerWebSocket ws) {
+	        	
+				final StringBuilder sb = new StringBuilder();
+				System.out.println("RESOURCE-OPEN");
+				ws.frameHandler(frame -> {
+					sb.append(frame.textData());
+
+					if (frame.isFinal()) {
+						System.out.println("RESOURCE isFinal -> Data:" + sb.toString());
+						ws.writeFinalTextFrame("received");
+						sb.delete(0, sb.length());
+					}
+				});
+				ws.closeHandler(handler -> {
+					System.out.println("RESOURCE-CLOSE");
+				});
+	      }
+	  });
+				
+		server.listen(9091);    
 	    
-	    toTest = 0;
+	    /*toTest = 0;
 	    vertx.setPeriodic(5000, _id -> {
 		    try {
 		    	
@@ -105,7 +125,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		    	e.printStackTrace();
 		    	
 		    }
-	    });	
+	    });*/	
 	}
 	
 	

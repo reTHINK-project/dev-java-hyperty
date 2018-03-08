@@ -17,6 +17,7 @@ public class AbstractHyperty extends AbstractVerticle{
 	private String url;
 	private String identity;
 	private EventBus eb;
+	private JsonObject data;
 
 	
 	@Override
@@ -24,7 +25,8 @@ public class AbstractHyperty extends AbstractVerticle{
 		this.url = config().getString("url");
 		this.identity = config().getString("identity");
 		this.eb = vertx.eventBus();
-		this.eb.<String>consumer(this.url, onMessage());
+		this.eb.<JsonObject>consumer(this.url, onMessage());
+		this.data = new JsonObject().put("id", "_312312asd").put("values", new JsonObject());
 	}
 
 	public void send (String address, String message, Handler replyHandler) {
@@ -50,10 +52,16 @@ public class AbstractHyperty extends AbstractVerticle{
 	}
 		
 	
-	private Handler<Message<String>> onMessage() {
+	private Handler<Message<JsonObject>> onMessage() {
 		return message -> {
-		        System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + message.body());
-		        message.reply(message);
+		        System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + message.body().toString());
+		        
+		        JsonObject body = new JsonObject(message.body().toString());
+		        if (body.getString("type").equals("read")) {
+		        	JsonObject response = new JsonObject().put("data", this.data).put("identity", this.identity);
+		        	message.reply(response);
+		        }
+		        
 		      };
 	}
 
