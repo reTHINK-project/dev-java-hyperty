@@ -10,6 +10,7 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import util.InitialData;
 
 
 public class AbstractHyperty extends AbstractVerticle{
@@ -26,7 +27,7 @@ public class AbstractHyperty extends AbstractVerticle{
 		this.identity = config().getString("identity");
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
-		this.data = new JsonObject().put("id", "_312312asd").put("values", new JsonObject());
+		this.data = new InitialData(new JsonObject()).getJsonObject();
 	}
 
 	public void send (String address, String message, Handler replyHandler) {
