@@ -1,5 +1,12 @@
 ## Java based Hyperties
+### Build status
 
+| Master                                   |
+| ---------------------------------------- |
+| [![Build Status](https://travis-ci.org/reTHINK-project/dev-java-hyperty.svg?branch=master)](https://travis-ci.org/reTHINK-project/dev-java-hyperty) |
+
+
+## Overview
 Hyperties in java are supported by using the [Vertx framework](http://vertx.io/) and an [abstract java Hyperty verticle](abstract-hyperty.md) that implements some required features.
 
 ![Vertx Hyperties Architecture](jvm-abstract-hyperty.png)
