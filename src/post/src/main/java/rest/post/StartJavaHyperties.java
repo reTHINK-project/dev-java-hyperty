@@ -75,7 +75,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		//Deploy extra Verticles
 		String locationHypertyURL = "school://sharing-cities-dsm/location-url";
-		String locationHypertyIdentity = "school://sharing-cities-dsm/location-identity";
+		String locationHypertyIdentity = "user://sharing-cities-dsm/location-identity";
 		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity);
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 		
