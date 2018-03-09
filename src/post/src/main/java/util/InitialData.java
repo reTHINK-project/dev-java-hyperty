@@ -30,6 +30,7 @@ public class InitialData {
 
 	private String newID(int length) {
 		StringBuilder sb = new StringBuilder();
+		sb.append("_");
 		Random r = new Random();
 		
 		for (int x = 0; x<length; x++) {
