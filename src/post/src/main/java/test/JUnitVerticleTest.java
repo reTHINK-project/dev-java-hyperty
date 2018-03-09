@@ -41,11 +41,6 @@ public class JUnitVerticleTest {
 		vertx.deployVerticle(LocationHyperty.class.getName(), optionsLocation, context.asyncAssertSuccess());
 	}
 
-	@After
-	public void after(TestContext context) {
-		vertx.close(context.asyncAssertSuccess());
-	}
-
 	@Test
 	public void getInitialDataIdentity(TestContext context) {
 		JsonObject config = new JsonObject().put("type", "read");
