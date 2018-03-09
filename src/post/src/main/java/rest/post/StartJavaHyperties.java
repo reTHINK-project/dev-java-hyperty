@@ -80,7 +80,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 		
 		// deply location hyperty
-		vertx.deployVerticle("rest.post.LocationHyperty", optionsLocation, res -> {
+		vertx.deployVerticle(LocationHyperty.class.getName(), optionsLocation, res -> {
 			System.out.println("Location Deploy Result->" + res.result());
 		});
 		

@@ -21,4 +21,5 @@ public class doSumTest {
     	Assert.assertEquals(App.doSum(2,4), 6);
     }
 
+
 }
