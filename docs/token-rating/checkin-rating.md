@@ -6,8 +6,8 @@ The Check-in Rating Hyperty observes user's check-in location and reward with to
 
 **Observed Streams**
 
-* Citizen Location
+* Citizen Location: 
 
 **Produced Stream**
 
-* Check-in map
+* Check-in map: `ctxt://sharing-cities-dsm/shops-location`
