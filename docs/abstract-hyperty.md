@@ -23,6 +23,16 @@ Set `from` and `identity` headers before calling `eb.send(..)`.
 
 Set `from` and `identity` headers before calling `eb.publish(..)`.
 
-### onMessage( message )
+### onMessage( callback )
 
 Vertx Event BUS handler at `config.url` address to receive messages targeting the Hyperty. *Do we need to use vertx [Buffers](http://vertx.io/docs/vertx-core/java/#_buffers)?*
+
+Messages of type create are processed by the callback setup at `onNotification`.
+
+### onNotification( callback )
+
+Setup the callback to process invitations to be an Observer or to be notified some existing DataObjectObserver was deleted.
+
+### subscribe( address, handler )
+
+Send a subscription message towards `address` with a callback that sets the handler at `<address>/changes` (ie `eventBus.sendMessage( ..)`).
