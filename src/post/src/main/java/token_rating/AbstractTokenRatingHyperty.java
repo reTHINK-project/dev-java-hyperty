@@ -17,7 +17,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 	@Override
 	public void start() {
-//		System.out.println("Configuration: " + config().getString("name"));
+		// System.out.println("Configuration: " + config().getString("name"));
 
 		// parse config file
 		Gson gson = new Gson();
@@ -50,7 +50,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * An empty rating engine function (separate class?) when the data evaluation in
 	 * tokens is implemented according to a certain algorithm.
 	 */
-	private int rate(Object data) {
+	int rate(Object data) {
 		// TODO use rating algorithm
 		System.out.println("Rating message...");
 		return 10;
@@ -105,13 +105,13 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		msg.setType("read");
 		msg.setFrom(config.getHyperty());
 		msg.setBody("{ resource: 'user/" + userId + "'}");
-		
+
 		send(config.getWalletManagerAddress(), new Gson().toJson(msg), onMessage());
 
 		return "123";
 
 	}
-	
+
 	private Handler<Message<String>> onMessage() {
 		return reply -> {
 			// with callback to return the value returned in case it is found.
@@ -125,7 +125,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * removeStreamHandler for valid received delete messages.
 	 */
 	private void addMyHandler() {
-		
+
 		// add a stream handler
 		// vertx.eventBus().consumer(config.getStream(), onMessage());
 		vertx.eventBus().consumer(config.getStream(), message -> {
@@ -162,17 +162,20 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		// vertx.eventBus().consumer(config.getStream(), onMessage());
 		vertx.eventBus().consumer(from, message -> {
 
-			System.out.println("Received message from " + from);
+			System.out.println("Received message " + message.body() + " from " + from);
 
-			int numTokens = rate(message);
-			if (numTokens != -1) {
-				mine(numTokens, message);
+			int numTokens = rate(message.body());
+			if (numTokens == -1) {
+				// invalid message
+				System.out.println("Invalid message");
+				return;
 			}
+			mine(numTokens, message);
 		});
 	}
 
 	private void removeStreamHandler(String from) {
-		System.out.println("Removing stream handler from " + from); 
+		System.out.println("Removing stream handler from " + from);
 	}
 
 }

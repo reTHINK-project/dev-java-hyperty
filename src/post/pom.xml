@@ -53,6 +53,11 @@
       <artifactId>vertx-unit</artifactId>
       <version>3.5.1</version>
     </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
+      <version>3.5.1</version>
+    </dependency>
 
     <dependency>
       <groupId>junit</groupId>
