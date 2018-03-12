@@ -51,8 +51,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * tokens is implemented according to a certain algorithm.
 	 */
 	int rate(Object data) {
-		// TODO use rating algorithm
-		System.out.println("Rating message...");
 		return 10;
 	}
 
