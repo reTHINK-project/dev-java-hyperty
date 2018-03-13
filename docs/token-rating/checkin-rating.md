@@ -29,15 +29,6 @@ opening-hours: {
 location: { degrees-latitude: "", degrees-longitude: "" }
 ```
 
-**Checkin registry**
-
-```
-user: user:\\google.com\
-registrations: [{
-  timestamp: "",
-  shopId: 5465
-}]
-```
 
 
 ### Observed Streams
