@@ -10,6 +10,8 @@ The Check-in Rating Hyperty observes user's check-in location and reward with to
 
 This Hyperty handles the storage of local shops information including its location, description and picture:
 
+**shops**
+
 ```
 name: "Loja do Manel",
 description: "A Loja do Manel é porreira",
@@ -27,9 +29,22 @@ opening-hours: {
 location: { degrees-latitude: "", degrees-longitude: "" }
 ```
 
+**Checkin registry**
+
+```
+user: user:\\google.com\
+registrations: [{
+  timestamp: "",
+  shopId: 5465
+}]
+```
+
+
 ### Observed Streams
 
 * Citizen Location:
+
+- stores
 
 ### Produced Stream
 
