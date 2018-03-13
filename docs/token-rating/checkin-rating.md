@@ -13,6 +13,7 @@ This Hyperty handles the storage of local shops information including its locati
 **shops**
 
 ```
+id: "myid",
 name: "Loja do Manel",
 description: "A Loja do Manel é porreira",
 picture: "https://xpto/manel.gif",
