@@ -30,13 +30,18 @@ Vertx Event BUS handler at `config.url` address to receive messages targeting th
 
 Messages of type create are processed by the callback setup at `onNotification`.
 
-### onNotification( callback ) function
+### onNotification( handler ) function
 
-Setup the callback to process invitations to be an Observer or to be notified some existing DataObjectObserver was deleted.
+Setup the handler to process invitations to be an Observer or to be notified some existing DataObjectObserver was deleted.
 
 ### subscribe( address, handler ) function
 
 Send a subscription message towards `address` with a callback that sets the handler at `<address>/changes` (ie `eventBus.sendMessage( ..)`).
+
+### create( dataObjectUrl, runtimeUrl, handler ) function
+
+Send a create message towards `runtimeUrl/sm` with `body.resource = dataObjectUrl`.
+
 
 ### storage management
 
