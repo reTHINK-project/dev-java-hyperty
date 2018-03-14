@@ -9,10 +9,18 @@ import com.google.gson.Gson;
 
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 import rest.post.AbstractHyperty;
 
 public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
+	protected MongoClient mongoClient = null;
+	String uri = "mongodb://localhost:27017";
+	String db = "test";
+	String ratesCollection = "rates";
 	private Config config;
 
 	@Override
@@ -42,6 +50,10 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		}
 
 		addMyHandler();
+
+		// make connection with MongoDB
+		JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", db);
+		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 
 		// vertx.eventBus().consumer(this.url, onMessage());
 	}
@@ -164,16 +176,50 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 			int numTokens = rate(message.body());
 			if (numTokens == -1) {
-				// invalid message
-				System.out.println("Invalid message");
-				return;
+				System.out.println("User is not inside any shop");
+			} else {
+				mine(numTokens, message);
 			}
-			mine(numTokens, message);
 		});
 	}
 
 	private void removeStreamHandler(String from) {
 		System.out.println("Removing stream handler from " + from);
+	}
+
+	/**
+	 * Save data to MongoDB.
+	 * 
+	 * @param user
+	 *            user ID
+	 * @param timestamp
+	 *            time in millis since epoch
+	 * @param shopID
+	 *            shopID
+	 */
+	// TODO remove and insert whole document
+	void persistData(String dataSource, String user, long timestamp, String shopID, JsonObject userRates) {
+		
+		// add a new entry to the data source
+		JsonArray entryArray = userRates.getJsonArray(dataSource);
+
+		// build JSON to send to Mongo
+		JsonObject checkinInfo = new JsonObject();
+		checkinInfo.put("user", user);
+		
+		JsonObject entry = new JsonObject();
+		entry.put("timestamp", timestamp);
+		entry.put("id", shopID);
+		entryArray.add(entry);
+		checkinInfo.put(dataSource, entryArray);
+
+		System.out.println("Persisting");
+		JsonObject document = new JsonObject(checkinInfo.toString());
+		
+		JsonObject query = new JsonObject().put("user", user);
+		mongoClient.findOneAndReplace(ratesCollection, query, document, id  -> {
+			System.out.println("Document with ID:" + id +" was updated");
+		});
 	}
 
 }
