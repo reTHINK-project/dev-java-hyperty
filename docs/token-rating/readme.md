@@ -26,6 +26,21 @@ Config file with:
 * the stream address to setup the handler in case the address is static e.g. when the stream is produced via the Smart IoT.
 * Wallet Manager Hyperty address.
 
+### Persistence
+
+**rates**
+
+```
+{
+  user: "user:\\google.com\",
+  <rating-source>:  [{
+      timestamp: "",
+      id: 5465
+    }]
+}
+```
+
+
 ### private addStreamHandler()
 
 Add stream handlers and forwards it to `rate()` if rate returns a valid uint it calls `mine()` and transfers it to associated address
