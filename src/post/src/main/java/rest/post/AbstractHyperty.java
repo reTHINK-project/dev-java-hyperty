@@ -14,10 +14,10 @@ import util.InitialData;
 
 public class AbstractHyperty extends AbstractVerticle {
 
-	private String url;
-	private String identity;
-	private EventBus eb;
-	private JsonObject data;
+	protected String url;
+	protected String identity;
+	protected EventBus eb;
+	protected JsonObject data;
 
 	@Override
 	public void start() throws Exception {
@@ -46,18 +46,98 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.eb.publish(address, message, deliveryOptions);
 	}
 
+	
 	private Handler<Message<JsonObject>> onMessage() {
 		return message -> {
 			System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
 					+ message.body().toString());
 
-			JsonObject body = new JsonObject(message.body().toString());
-			if (body.getString("type").equals("read")) {
-				JsonObject response = new JsonObject().put("data", this.data).put("identity", this.identity);
-				message.reply(response);
+			final JsonObject body = new JsonObject(message.body().toString());
+			final String type = body.getString("type");
+			final String handler = body.getJsonObject("value").getString("url");
+					
+			JsonObject response = new JsonObject();
+			switch (type) {
+				case "read":
+					
+					/*
+					 * return the queried data. If the read message body does not contain any resource field, all persisted data is returned.
+					 */
+					
+					if (body.getJsonObject("resource") != null) {
+						
+					} else {
+						
+					}
+					response.put("data", this.data).put("identity", this.identity);
+					message.reply(response);
+					break;
+				case "create":
+					response.put("code", 200);
+					message.reply(response);
+					
+					onNotification( newmsg -> {
+						System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+								+ newmsg.body().toString());
+					});
+					break;
+				default:
+					break;
 			}
 
 		};
+	}	
+	
+	
+	
+	/**
+	 * 
+	 * Setup the handler to process invitations to be an Observer or to be notified some existing DataObjectObserver was deleted.
+	 * 
+	 */
+	private void onNotification(Handler<Message<JsonObject>> handler) {
+		this.eb.consumer(this.url, handler);
 	}
-
+	
+	
+	
+	/**
+	 * 
+	 * @param address
+	 * @param handler
+	 * 
+	 * Send a subscription message towards address with a callback that sets the handler at <address>/changes (ie eventBus.sendMessage( ..)).
+	 */
+	private void subscribe(String address) {
+		JsonObject toSend = new JsonObject();
+		toSend.put("type", "subscribe");
+		
+		send(address, toSend.toString(), reply -> {
+			//after reply wait for changes
+			
+			final String address_changes = address + "/changes";
+			
+			eb.consumer(address_changes, message -> {
+				System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+						+ message.body().toString());
+			});
+		});
+	}
+	
+	
+	
+	/**
+	 * create( dataObjectUrl, runtimeUrl, handler ) function
+	 * Send a create message towards runtimeUrl/sm with body.resource = dataObjectUrl.
+	 */
+	private void create(String dataObjectUrl, String runtimeUrl, Handler handler) {
+		JsonObject toSend = new JsonObject();
+		toSend.put("type", "create");
+		toSend.put("body", new JsonObject().put("resource", dataObjectUrl));
+		
+		send(runtimeUrl, toSend.toString(), reply -> {
+			System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+					+ reply.toString());
+		});	
+	}
 }

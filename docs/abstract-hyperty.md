@@ -28,20 +28,30 @@ Set `from` and `identity` headers before calling `eb.publish(..)`.
 
 Vertx Event BUS handler at `config.url` address to receive messages targeting the Hyperty. *Do we need to use vertx [Buffers](http://vertx.io/docs/vertx-core/java/#_buffers)?*
 
-Messages of type create are processed by the callback setup at `onNotification`.
+Invitations (ie type = create and from has `/subscription`) are processed by the callback setup at `onNotification`.
 
 ### onNotification( handler ) function
 
-Setup the handler to process invitations to be an Observer or to be notified some existing DataObjectObserver was deleted.
+Setup the handler to process invitations to be an Observer:
+
+
+Or to be notified some existing DataObjectObserver was deleted.
 
 ### subscribe( address, handler ) function
 
 Send a subscription message towards `address` with a callback that sets the handler at `<address>/changes` (ie `eventBus.sendMessage( ..)`).
 
-### create( dataObjectUrl, runtimeUrl, handler ) function
+### create(dataObjectUrl, observers, initialData ) function
 
-Send a create message towards `runtimeUrl/sm` with `body.resource = dataObjectUrl`.
+Send the following message to all `observers`:
 
+```
+  type: "create",
+  from: "dataObjectUrl/subscription",
+  body: { source: <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
+```
+
+It returns a Reporter object compliant with [Syncher DataObjectReporter](https://github.com/reTHINK-project/specs/blob/master/service-framework/syncher.md) i.e. it adds a handler to `dataObjectUrl/subscription` that will fire onSubscription events.
 
 ### storage management
 

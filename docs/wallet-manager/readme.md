@@ -78,13 +78,12 @@ The transaction is published in the event bus using the wallet address.
 
 ### Wallet read
 
-**handler:** wallet manager address.
+**handler:** wallet address.
 
 **message:**
 
 ```
 type: read,
-body: { resource: 'wallet', value: <wallet-address> }
 ```
 
 Returns the stored Wallet value.
