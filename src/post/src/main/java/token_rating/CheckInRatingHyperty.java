@@ -36,9 +36,10 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	public void start() {
 		super.start();
 
-		// fetch locations
+		// fetch shops from mongo and save them
 		fetchStoreData();
 
+		// reply with shops info
 		vertx.eventBus().consumer(shopsInfoStreamAddress, message -> {
 			message.reply(shops);
 		});
@@ -155,7 +156,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			System.out.println("User is close to store");
 
 			// persist check in
-//			persistData(dataSource, user, new Date().getTime(), shopID);
+			// persistData(dataSource, user, new Date().getTime(), shopID);
 			tokenAmount = checkInTokens;
 			checkinLatch.countDown();
 		} else {

@@ -19,7 +19,7 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import token_rating.CheckInRatingHyperty;
-import token_rating.TokenMessage;
+import token_rating.WalletManagerMessage;
 
 /*
  * Example of an asynchronous JUnit test for a Verticle.
@@ -59,7 +59,7 @@ class CheckInTest {
 	}
 
 	static void sendCreateMessage(Vertx vertx) {
-		TokenMessage msg = new TokenMessage();
+		WalletManagerMessage msg = new WalletManagerMessage();
 		msg.setType("create");
 		msg.setFrom(from);
 		Gson gson = new Gson();
@@ -84,7 +84,7 @@ class CheckInTest {
 
 
 	void tearDownStream(VertxTestContext testContext, Vertx vertx) {
-		TokenMessage msg = new TokenMessage();
+		WalletManagerMessage msg = new WalletManagerMessage();
 		msg.setType("delete");
 		msg.setFrom(from);
 		Gson gson = new Gson();

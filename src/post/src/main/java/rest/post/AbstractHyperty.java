@@ -1,5 +1,8 @@
 package rest.post;
 
+import java.util.Iterator;
+
+import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -9,6 +12,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import util.InitialData;
 
@@ -46,7 +50,6 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.eb.publish(address, message, deliveryOptions);
 	}
 
-	
 	private Handler<Message<JsonObject>> onMessage() {
 		return message -> {
 			System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
@@ -55,89 +58,109 @@ public class AbstractHyperty extends AbstractVerticle {
 			final JsonObject body = new JsonObject(message.body().toString());
 			final String type = body.getString("type");
 			final String handler = body.getJsonObject("value").getString("url");
-					
+
 			JsonObject response = new JsonObject();
 			switch (type) {
-				case "read":
-					
-					/*
-					 * return the queried data. If the read message body does not contain any resource field, all persisted data is returned.
-					 */
-					
-					if (body.getJsonObject("resource") != null) {
-						
-					} else {
-						
-					}
-					response.put("data", this.data).put("identity", this.identity);
-					message.reply(response);
-					break;
-				case "create":
-					response.put("code", 200);
-					message.reply(response);
-					
-					onNotification( newmsg -> {
-						System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-								+ newmsg.body().toString());
-					});
-					break;
-				default:
-					break;
+			case "read":
+
+				/*
+				 * return the queried data. If the read message body does not contain any
+				 * resource field, all persisted data is returned.
+				 */
+
+				if (body.getJsonObject("resource") != null) {
+
+				} else {
+
+				}
+				response.put("data", this.data).put("identity", this.identity);
+				message.reply(response);
+				break;
+			case "create":
+				response.put("code", 200);
+				message.reply(response);
+
+				onNotification(newmsg -> {
+					System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+							+ newmsg.body().toString());
+				});
+				break;
+			default:
+				break;
 			}
 
 		};
-	}	
-	
-	
-	
+	}
+
 	/**
 	 * 
-	 * Setup the handler to process invitations to be an Observer or to be notified some existing DataObjectObserver was deleted.
+	 * Setup the handler to process invitations to be an Observer or to be notified
+	 * some existing DataObjectObserver was deleted.
 	 * 
 	 */
 	private void onNotification(Handler<Message<JsonObject>> handler) {
 		this.eb.consumer(this.url, handler);
 	}
-	
-	
-	
+
 	/**
 	 * 
 	 * @param address
 	 * @param handler
 	 * 
-	 * Send a subscription message towards address with a callback that sets the handler at <address>/changes (ie eventBus.sendMessage( ..)).
+	 *            Send a subscription message towards address with a callback that
+	 *            sets the handler at <address>/changes (ie eventBus.sendMessage(
+	 *            ..)).
 	 */
 	private void subscribe(String address) {
 		JsonObject toSend = new JsonObject();
 		toSend.put("type", "subscribe");
-		
+
 		send(address, toSend.toString(), reply -> {
-			//after reply wait for changes
-			
+			// after reply wait for changes
+
 			final String address_changes = address + "/changes";
-			
+
 			eb.consumer(address_changes, message -> {
 				System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
 						+ message.body().toString());
 			});
 		});
 	}
-	
-	
-	
+
 	/**
-	 * create( dataObjectUrl, runtimeUrl, handler ) function
-	 * Send a create message towards runtimeUrl/sm with body.resource = dataObjectUrl.
+	 * create(dataObjectUrl, observers, initialData ) functions.
 	 */
-	private void create(String dataObjectUrl, String runtimeUrl, Handler handler) {
+	public void create(String dataObjectUrl, JsonArray observers, JsonObject initialData) {
+		/**
+		 * type: "create", from: "dataObjectUrl/subscription", body: { source:
+		 * <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
+		 */
 		JsonObject toSend = new JsonObject();
 		toSend.put("type", "create");
-		toSend.put("body", new JsonObject().put("resource", dataObjectUrl));
+		toSend.put("from", dataObjectUrl + "/subscription");
+		JsonObject body = new JsonObject();
+		body.put("source", "hyperty://<sp-domain>/<hyperty-instance-identifier>");
+		// TODO
+		body.put("schema", "hyperty-catalogue://<sp-domain>/dataObjectSchema/<schema-identifier>");
+		body.put("value", initialData);
+		toSend.put("body", body);
+
+		Iterator it = observers.getList().iterator();
+		while (it.hasNext()) {
+			JsonObject currentObs = (JsonObject) it.next();
+			String observer = currentObs.getString("observer");
+			send(observer, toSend.toString(), reply -> {
+				System.out.println(
+						"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + reply.toString());
+			});
+		}
 		
-		send(runtimeUrl, toSend.toString(), reply -> {
-			System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-					+ reply.toString());
-		});	
+		// deploy reporter
+		
+		
+
+		// create Reporter
+		DataObjectReporter reporter = new DataObjectReporter(dataObjectUrl);
+
 	}
 }

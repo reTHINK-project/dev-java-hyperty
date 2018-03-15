@@ -14,6 +14,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import rest.post.AbstractHyperty;
+import util.DateUtils;
 
 public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
@@ -79,10 +80,23 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		tr.setRecipient(config.getWalletManagerAddress());
 		tr.setSource(config.getStream());
 
-		// TODO store transaction
-		System.out.println("Storing transaction...");
+		// store transaction by sending it to wallet through wallet manager
+		String walletAddress = "123";
+		WalletManagerMessage msg = new WalletManagerMessage();
+		msg.setType(WalletManagerMessage.TYPE_CREATE);
 
-		transfer(tr);
+		// create transaction object
+		JsonObject transaction = new JsonObject();
+		transaction.put("address", walletAddress);
+		transaction.put("recipient", walletAddress);
+		transaction.put("source", "source");
+		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
+		transaction.put("value", 15);
+		transaction.put("nonce", 1);
+		String body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction).toString();
+		msg.setBody(body);
+
+		transfer(msg);
 	}
 
 	/**
@@ -90,12 +104,11 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * 
 	 * @param transaction
 	 */
-	private void transfer(Transaction transaction) {
-		// fetch wallet address
+	private void transfer(WalletManagerMessage msg) {
+		System.out.println("Sending transaction to Wallet Manager...");
 
-		// TODO send transaction to wallet address (message?)
-		System.out.println("Transfering transaction to Wallet Address...");
-
+		Gson gson = new Gson();
+		vertx.eventBus().publish(config.getWalletManagerAddress(), gson.toJson(msg));
 	}
 
 	/**
@@ -111,7 +124,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		 * type: read, from: <rating address>, body: { resource: 'user/<userId>'}
 		 */
 		// build message and convert to JSON string
-		TokenMessage msg = new TokenMessage();
+		WalletManagerMessage msg = new WalletManagerMessage();
 		msg.setType("read");
 		msg.setFrom(config.getHyperty());
 		msg.setBody("{ resource: 'user/" + userId + "'}");
@@ -141,7 +154,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		vertx.eventBus().consumer(config.getStream(), message -> {
 
 			Gson gson = new Gson();
-			TokenMessage msg = gson.fromJson(message.body().toString(), TokenMessage.class);
+			WalletManagerMessage msg = gson.fromJson(message.body().toString(), WalletManagerMessage.class);
 
 			// check message type
 			switch (msg.getType()) {
@@ -197,16 +210,15 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * @param shopID
 	 *            shopID
 	 */
-	// TODO remove and insert whole document
 	void persistData(String dataSource, String user, long timestamp, String shopID, JsonObject userRates) {
-		
+
 		// add a new entry to the data source
 		JsonArray entryArray = userRates.getJsonArray(dataSource);
 
 		// build JSON to send to Mongo
 		JsonObject checkinInfo = new JsonObject();
 		checkinInfo.put("user", user);
-		
+
 		JsonObject entry = new JsonObject();
 		entry.put("timestamp", timestamp);
 		entry.put("id", shopID);
@@ -215,10 +227,10 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		System.out.println("Persisting");
 		JsonObject document = new JsonObject(checkinInfo.toString());
-		
+
 		JsonObject query = new JsonObject().put("user", user);
-		mongoClient.findOneAndReplace(ratesCollection, query, document, id  -> {
-			System.out.println("Document with ID:" + id +" was updated");
+		mongoClient.findOneAndReplace(ratesCollection, query, document, id -> {
+			System.out.println("Document with ID:" + id + " was updated");
 		});
 	}
 

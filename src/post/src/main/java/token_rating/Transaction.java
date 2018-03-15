@@ -24,7 +24,7 @@ public class Transaction {
 	 */
 	@SerializedName("date")
 	@Expose
-	private String date;
+	private long date;
 	
 	/**
 	 * amount of tokens in the transaction
@@ -39,7 +39,7 @@ public class Transaction {
 	 */
 	@SerializedName("nonce")
 	@Expose
-	private String nonce;
+	private int nonce;
 
 	public String getRecipient() {
 		return recipient;
@@ -57,11 +57,11 @@ public class Transaction {
 		this.source = source;
 	}
 
-	public String getDate() {
+	public long getDate() {
 		return date;
 	}
 
-	public void setDate(String date) {
+	public void setDate(long date) {
 		this.date = date;
 	}
 
@@ -73,11 +73,11 @@ public class Transaction {
 		this.value = value;
 	}
 
-	public String getNonce() {
+	public int getNonce() {
 		return nonce;
 	}
 
-	public void setNonce(String nonce) {
+	public void setNonce(int nonce) {
 		this.nonce = nonce;
 	}
 

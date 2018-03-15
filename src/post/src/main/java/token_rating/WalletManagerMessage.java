@@ -3,12 +3,20 @@ package token_rating;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class TokenMessage {
+public class WalletManagerMessage {
+	
+	public static String TYPE_CREATE = "create";
+	public static String TYPE_READ = "read";
+	public static String TYPE_DELETE = "delete";
 
 
 	@SerializedName("type")
 	@Expose
 	private String type;
+	
+	@SerializedName("identity")
+	@Expose
+	private String identity;
 	
 
 	@SerializedName("from")
@@ -50,6 +58,17 @@ public class TokenMessage {
 		this.body = body;
 	}
 
+
+	public String getIdentity() {
+		return identity;
+	}
+
+
+	public void setIdentity(String identity) {
+		this.identity = identity;
+	}
+
+	
 	
 	
 

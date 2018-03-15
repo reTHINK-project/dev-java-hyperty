@@ -24,7 +24,7 @@ import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import token_rating.CheckInRatingHyperty;
-import token_rating.TokenMessage;
+import token_rating.WalletManagerMessage;
 
 public class StartJavaHyperties extends AbstractVerticle {
 
@@ -145,7 +145,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	}
 	
 	public  void sendCreateMessage() {
-		TokenMessage msg = new TokenMessage();
+		WalletManagerMessage msg = new WalletManagerMessage();
 		msg.setType("create");
 		msg.setFrom(from);
 		Gson gson = new Gson();
@@ -172,7 +172,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	}
 
 	public void tearDownStream() {
-		TokenMessage msg = new TokenMessage();
+		WalletManagerMessage msg = new WalletManagerMessage();
 		msg.setType("delete");
 		msg.setFrom(from);
 		Gson gson = new Gson();
