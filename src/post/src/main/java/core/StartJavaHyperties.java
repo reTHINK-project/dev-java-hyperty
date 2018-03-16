@@ -1,4 +1,4 @@
-package rest.post;
+package core;
 
 import java.util.function.Consumer;
 
@@ -25,6 +25,7 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import token_rating.CheckInRatingHyperty;
 import token_rating.WalletManagerMessage;
+import unused.LocationHyperty;
 
 public class StartJavaHyperties extends AbstractVerticle {
 
@@ -72,24 +73,24 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
 		
-
-		//Deploy extra Verticles
-		String locationHypertyURL = "school://sharing-cities-dsm/location-url";
-		String locationHypertyIdentity = "user://sharing-cities-dsm/location-identity";
-		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity);
-		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
-		
-		// deply location hyperty
-		vertx.deployVerticle(LocationHyperty.class.getName(), optionsLocation, res -> {
-			System.out.println("Location Deploy Result->" + res.result());
-		});
-		
-		// deply check-in rating hyperty
-		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), res -> {
-			System.out.println("CheckInRatingHyperty Result->" + res.result());
-			sendCreateMessage();
-			sendToStream();
-		});
+//
+//		//Deploy extra Verticles
+//		String locationHypertyURL = "school://sharing-cities-dsm/location-url";
+//		String locationHypertyIdentity = "user://sharing-cities-dsm/location-identity";
+//		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity);
+//		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
+//		
+//		// deply location hyperty
+//		vertx.deployVerticle(LocationHyperty.class.getName(), optionsLocation, res -> {
+//			System.out.println("Location Deploy Result->" + res.result());
+//		});
+//		
+//		// deply check-in rating hyperty
+//		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), res -> {
+//			System.out.println("CheckInRatingHyperty Result->" + res.result());
+//			sendCreateMessage();
+//			sendToStream();
+//		});
 		
 		
 		

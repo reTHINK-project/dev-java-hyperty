@@ -7,13 +7,13 @@ import java.io.IOException;
 
 import com.google.gson.Gson;
 
+import core.AbstractHyperty;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-import rest.post.AbstractHyperty;
 import util.DateUtils;
 
 public class AbstractTokenRatingHyperty extends AbstractHyperty {

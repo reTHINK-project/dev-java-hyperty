@@ -22,7 +22,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import rest.post.LocationHyperty;
+import unused.LocationHyperty;
 
 /*
  * Example of an asynchronous JUnit test for a Verticle.

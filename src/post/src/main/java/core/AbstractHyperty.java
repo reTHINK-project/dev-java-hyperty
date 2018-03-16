@@ -1,4 +1,4 @@
-package rest.post;
+package core;
 
 import java.util.Iterator;
 
