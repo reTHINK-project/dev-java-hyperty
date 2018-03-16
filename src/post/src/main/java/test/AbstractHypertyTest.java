@@ -15,6 +15,7 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -39,8 +40,9 @@ class AbstractHypertyTest {
 		
 
 		locationHypertyURL = "school://sharing-cities-dsm/location-url";
-		locationHypertyIdentity = "school://sharing-cities-dsm/location-identity";
-		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity);
+		locationHypertyIdentity = "user://sharing-cities-dsm/location-identity";
+		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity)
+											.put("collection", "location_data").put("database", "test").put("mongoHost", "localhost");
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();
@@ -54,12 +56,15 @@ class AbstractHypertyTest {
 	public void getInitialDataIdentity(VertxTestContext context, Vertx vertx) {
 		JsonObject config = new JsonObject().put("type", "read");
 		vertx.eventBus().send(locationHypertyURL, config, message -> {
+			
+			System.out.println("DATA returned" + message.result().body().toString());
+			
 			// assert reply contains data and identity fields
 			JsonObject body = new JsonObject(message.result().body().toString());
 			String identity = body.getString("identity");
 			assertEquals(locationHypertyIdentity, identity);
 			
-			JsonObject data = body.getJsonObject("data");
+			JsonArray data = body.getJsonArray("data");
 			assertNotNull(data);
 			context.completeNow();
 			

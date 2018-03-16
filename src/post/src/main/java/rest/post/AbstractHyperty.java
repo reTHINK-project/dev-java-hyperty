@@ -12,8 +12,10 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 import util.InitialData;
 
 public class AbstractHyperty extends AbstractVerticle {
@@ -21,7 +23,10 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String url;
 	protected String identity;
 	protected EventBus eb;
-	protected JsonObject data;
+	protected String collection;
+	protected String database;
+	protected String mongoHost;
+	private MongoClient mongoClient = null;
 
 	@Override
 	public void start() throws Exception {
@@ -29,7 +34,17 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.identity = config().getString("identity");
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
-		this.data = new InitialData(new JsonObject()).getJsonObject();
+		this.collection = config().getString("collection");
+		this.database = config().getString("database");
+		this.mongoHost = config().getString("mongoHost");
+		
+		final String uri = "mongodb://" + mongoHost +":27017";
+		
+	    final JsonObject mongoconfig = new JsonObject()
+	            .put("connection_string", uri)
+	            .put("db_name", this.database);
+
+	    mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
 	public void send(String address, String message, Handler replyHandler) {
@@ -57,7 +72,6 @@ public class AbstractHyperty extends AbstractVerticle {
 
 			final JsonObject body = new JsonObject(message.body().toString());
 			final String type = body.getString("type");
-			final String handler = body.getJsonObject("value").getString("url");
 
 			JsonObject response = new JsonObject();
 			switch (type) {
@@ -71,10 +85,14 @@ public class AbstractHyperty extends AbstractVerticle {
 				if (body.getJsonObject("resource") != null) {
 
 				} else {
-
+					mongoClient.find(this.collection, new JsonObject(), res -> {
+			            System.out.println(res.result().size() + " <-value returned" + res.result().toString());
+			    	
+			            response.put("data", new JsonArray(res.result().toString())).put("identity", this.identity);
+			            message.reply(response);
+			        });					
 				}
-				response.put("data", this.data).put("identity", this.identity);
-				message.reply(response);
+				
 				break;
 			case "create":
 				response.put("code", 200);
@@ -160,7 +178,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		
 
 		// create Reporter
-		DataObjectReporter reporter = new DataObjectReporter(dataObjectUrl);
+		//DataObjectReporter reporter = new DataObjectReporter(dataObjectUrl);
 
 	}
 }

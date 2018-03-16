@@ -16,10 +16,10 @@ public class DataObjectReporter extends DataObject {
 	private Handler<Message<JsonObject>> onSubscriptionHandler;
 	String[] subscriptions;
 
-	public DataObjectReporter(String dataObjectUrl) {
+	/*public DataObjectReporter(String dataObjectUrl) {
 		this.eb = vertx.eventBus();
 		this.eb.consumer(dataObjectUrl + "/subscription", onSubscription());
-	}
+	}*/
 
 	/**
 	 * Setup the handler for incoming subscriptions.
@@ -37,7 +37,7 @@ public class DataObjectReporter extends DataObject {
 	 * 
 	 * @param msg
 	 */
-	private void onSubscribe(JsonObject msg) {
+/*	private void onSubscribe(JsonObject msg) {
 
 		String hypertyUrl = msg.getString("from");
 		JsonObject dividedURL = divideURL(hypertyUrl);
@@ -166,6 +166,6 @@ public class DataObjectReporter extends DataObject {
 		result.put("identity", parts[2]);
 
 		return result;
-	}
+	}*/
 
 }
