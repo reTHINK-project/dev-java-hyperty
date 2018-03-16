@@ -26,7 +26,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String collection;
 	protected String database;
 	protected String mongoHost;
-	private MongoClient mongoClient = null;
+	protected MongoClient mongoClient = null;
 
 	@Override
 	public void start() throws Exception {
@@ -147,8 +147,9 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	/**
 	 * create(dataObjectUrl, observers, initialData ) functions.
+	 * @return 
 	 */
-	public void create(String dataObjectUrl, JsonArray observers, JsonObject initialData) {
+	public DataObjectReporter create(String dataObjectUrl, JsonArray observers, JsonObject initialData) {
 		/**
 		 * type: "create", from: "dataObjectUrl/subscription", body: { source:
 		 * <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
@@ -172,13 +173,8 @@ public class AbstractHyperty extends AbstractVerticle {
 						"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + reply.toString());
 			});
 		}
-		
-		// deploy reporter
-		
-		
-
 		// create Reporter
-		//DataObjectReporter reporter = new DataObjectReporter(dataObjectUrl);
+		return new DataObjectReporter(dataObjectUrl, vertx);
 
 	}
 }

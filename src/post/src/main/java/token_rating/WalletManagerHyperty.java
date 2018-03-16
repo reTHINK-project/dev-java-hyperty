@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 
+import data_objects.DataObjectReporter;
+import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -18,9 +20,6 @@ import util.DateUtils;
 
 public class WalletManagerHyperty extends AbstractHyperty {
 
-	protected MongoClient mongoClient = null;
-	String uri = "mongodb://localhost:27017";
-	String db = "test";
 	private String walletsCollection = "wallets";
 	private String dataObjectUrl;
 	/**
@@ -30,13 +29,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	@Override
 	public void start() {
+		try {
+			super.start();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		// read config
 		observers = config().getJsonArray("observer");
 		dataObjectUrl = config().getString("dataObjectUrl");
-
-		// make connection with MongoDB
-		JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", db);
-		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 
 		handleRequests();
 	}
@@ -292,7 +292,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					System.out.println("New wallet with ID:" + id);
 
 					// An invitation is sent to config.observers
-					create(address, observers, new JsonObject());
+					DataObjectReporter reporter = create(address, observers, new JsonObject());
+					// pass handler function that will handle subscription events
+					reporter.setSubscriptionHandler(requestsHandler());
+					reporter.setReadHandler(readHandler());
 				});
 
 			} else {
@@ -300,6 +303,53 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 		});
 
+	}
+
+	private Handler<Message<JsonObject>> requestsHandler() {
+		return msg -> {
+			// accept ? reject by handler
+			String from = msg.body().getString("from");
+			JsonObject response = new JsonObject();
+			response.put("type", "response");
+			response.put("from", msg.body().getString("to"));
+			response.put("to", msg.body().getString("from"));
+			JsonObject sendMsgBody = new JsonObject();
+			if (validateSource(from)) {
+				sendMsgBody.put("code", 200);
+				msg.reply(response);
+			} else {
+				sendMsgBody.put("code", 403);
+				msg.reply(response);
+			}
+
+		};
+
+	}
+
+	private Handler<Message<JsonObject>> readHandler() {
+		return msg -> {
+			// accept ? reject by handler
+			String from = msg.body().getString("from");
+			JsonObject response = new JsonObject();
+			response.put("type", "response");
+			response.put("from", msg.body().getString("to"));
+			response.put("to", msg.body().getString("from"));
+			JsonObject sendMsgBody = new JsonObject();
+			if (validateSource(from)) {
+				sendMsgBody.put("code", 200);
+				msg.reply(response);
+			} else {
+				sendMsgBody.put("code", 403);
+				msg.reply(response);
+			}
+
+		};
+
+	}
+
+	private boolean validateSource(String from) {
+		// TODO reject the entities who shouldn't have access to wallet
+		return true;
 	}
 
 	/**
