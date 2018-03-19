@@ -6,7 +6,7 @@ before_install:
     - sudo apt-get install maven
     - export JAVA_HOME='/usr/lib/jvm/java-8-oracle/jre'
     - echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.6 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.6.list
-    - sudo apt-get update
+    - sudo apt-get --allow-unauthenticated update
     - sudo apt-get install mongodb-org
     - sudo service mongod start
     - ls
