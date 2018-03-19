@@ -12,6 +12,13 @@ before_install:
     - sleep 15
     - ls
     - cd Java-Hyperties
+    - sudo mongo
+    - use test
+    - db.createCollection("location_data")
+    - db.createCollection("wallets")
+    - db.createCollection("shops")
+    - db.createCollection("rates")
+    - exit
     - mvn clean 
 
 test: mvn test -B
