@@ -5,19 +5,13 @@ import java.util.Iterator;
 
 import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
-import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-import util.InitialData;
 
 public class AbstractHyperty extends AbstractVerticle {
 
@@ -43,7 +37,9 @@ public class AbstractHyperty extends AbstractVerticle {
 		
 	    final JsonObject mongoconfig = new JsonObject()
 	            .put("connection_string", uri)
-	            .put("db_name", this.database);
+	            .put("db_name", this.database)
+	            .put("database", this.database)
+	            .put("collection", this.collection);
 
 	    mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
@@ -69,7 +65,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	private Handler<Message<JsonObject>> onMessage() {
 		return message -> {
 			System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-					+ message.body().toString());
+					+ message.body());
 
 			final JsonObject body = new JsonObject(message.body().toString());
 			final String type = body.getString("type");

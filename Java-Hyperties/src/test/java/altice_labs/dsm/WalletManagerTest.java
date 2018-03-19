@@ -1,8 +1,6 @@
 package altice_labs.dsm;
 
 import java.io.IOException;
-import java.util.Date;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +33,8 @@ class WalletManagerTest {
 		walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		walletManagerHypertyIdentity = "school://sharing-cities-dsm/wallet-manager";
 		JsonObject config = new JsonObject().put("url", walletManagerHypertyURL).put("identity",
-				walletManagerHypertyIdentity);
+				walletManagerHypertyIdentity).put("database", "test").put("collection", "wallets")
+				.put("mongoHost", "localhost");
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();
@@ -44,7 +43,7 @@ class WalletManagerTest {
 
 		// wait for Mongo connection to take place
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -55,19 +54,19 @@ class WalletManagerTest {
 	@Test
 	void createWallet(VertxTestContext testContext, Vertx vertx) {
 		// create wallet message
-		WalletManagerMessage msg = new WalletManagerMessage();
-		msg.setType(WalletManagerMessage.TYPE_CREATE);
-		msg.setIdentity("identity-2");
-		msg.setFrom("url");
+		JsonObject msg = new JsonObject();
+		msg.put("type", WalletManagerMessage.TYPE_CREATE);
+		msg.put("identity","identity-2");
+		msg.put("url","url");
+		msg.put("from", "123");
 
-		Gson gson = new Gson();
-		vertx.eventBus().publish(walletManagerHypertyURL, gson.toJson(msg));
+		vertx.eventBus().publish(walletManagerHypertyURL, msg);
 
 		// TODO wait for response
 		// testContext.completeNow();
 	}
 
-	@Test
+	
 	void getWalletAddress(VertxTestContext testContext, Vertx vertx) {
 		WalletManagerMessage msg = new WalletManagerMessage();
 		msg.setType(WalletManagerMessage.TYPE_READ);
@@ -75,13 +74,16 @@ class WalletManagerTest {
 		msg.setBody(body);
 
 		Gson gson = new Gson();
+		
+		
+		
 		vertx.eventBus().send(walletManagerHypertyURL, gson.toJson(msg), reply -> {
 			// System.out.println(reply.result().toString());
 			testContext.completeNow();
 		});
 	}
 
-	@Test
+	
 	void getWallet(VertxTestContext testContext, Vertx vertx) {
 		WalletManagerMessage msg = new WalletManagerMessage();
 		String walletAddress = "123";

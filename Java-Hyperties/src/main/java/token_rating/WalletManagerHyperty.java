@@ -9,13 +9,12 @@ import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 
-import core.AbstractHyperty;
+import altice_labs.dsm.AbstractHyperty;
 import data_objects.DataObjectReporter;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
 import util.DateUtils;
 
 public class WalletManagerHyperty extends AbstractHyperty {
@@ -29,10 +28,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	@Override
 	public void start() {
-		super.start();
+		try {
+			super.start();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		// read config
-		observers = config().getJsonArray("observer");
+		observers = config().getJsonArray("observers");
 		dataObjectUrl = config().getString("dataObjectUrl");
 
 		handleRequests();
