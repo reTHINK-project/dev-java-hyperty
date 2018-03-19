@@ -1,0 +1,9 @@
+-------------------------------------------------------------------------------
+Test set: altice_labs.dsm.AbstractHypertyTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.06 sec <<< FAILURE! - in altice_labs.dsm.AbstractHypertyTest
+getInitialDataIdentity{VertxTestContext, Vertx}  Time elapsed: 0.011 sec  <<< ERROR!
+java.lang.NullPointerException
+	at altice_labs.dsm.AbstractHypertyTest.lambda$0(AbstractHypertyTest.java:58)
+	at altice_labs.dsm.AbstractHypertyTest.getInitialDataIdentity(AbstractHypertyTest.java:56)
+

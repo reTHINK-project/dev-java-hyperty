@@ -1,0 +1,133 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>altice-labs</groupId>
+  <artifactId>dsm</artifactId>
+  <version>0.0.1</version>
+  <packaging>jar</packaging>
+
+  <name>dsm</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
+  
+  <dependencies>
+  <dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter-api</artifactId>
+    <version>5.0.3</version>
+    <scope>test</scope>
+  </dependency>
+    
+      	<dependency>
+	  <groupId>com.google.code.gson</groupId>
+	  <artifactId>gson</artifactId>
+	  <version>2.8.2</version>
+	</dependency>
+	
+    <dependency>
+		<groupId>io.vertx</groupId>
+		<artifactId>vertx-core</artifactId>
+		<version>3.5.1</version>
+	</dependency>
+	
+	
+	<dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web</artifactId>
+      <version>3.4.2</version>
+   	</dependency>
+   	
+   	
+   	<dependency>
+  		<groupId>io.vertx</groupId>
+  		<artifactId>vertx-mongo-client</artifactId>
+  		<version>3.5.1</version>
+	</dependency>
+	
+	<dependency>
+	  <groupId>io.vertx</groupId>
+	  <artifactId>vertx-hazelcast</artifactId>
+	  <version>3.5.1</version>
+	</dependency>
+	
+	
+	<dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-unit</artifactId>
+      <version>3.5.1</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
+      <version>3.5.1</version>
+    </dependency>
+ 
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>2.15.0</version>
+    </dependency>
+
+  <dependency>
+    <groupId>org.assertj</groupId>
+    <artifactId>assertj-core</artifactId>
+    <version>3.6.2</version>
+    <scope>test</scope>
+  </dependency>
+
+  <dependency>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-all</artifactId>
+    <version>4.1.19.Final</version>
+  </dependency>
+  
+  <dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-core</artifactId>
+    <version>2.9.3</version>
+    </dependency>
+  
+  <dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-databind</artifactId>
+    <version>2.9.3</version>
+  </dependency>
+      
+<!--   <dependency>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-surefire-plugin</artifactId>
+	<version>2.21.0</version>
+	<type>maven-plugin</type>
+  </dependency>
+     -->
+  </dependencies>
+  
+<build>
+  <plugins>        
+    <plugin>
+      <artifactId>maven-surefire-plugin</artifactId>
+      <!-- latest version (2.20.1) does not work well with JUnit5 -->
+      <version>2.19.1</version>
+      <dependencies>
+        <dependency>
+          <groupId>org.junit.platform</groupId>
+          <artifactId>junit-platform-surefire-provider</artifactId>
+          <version>1.0.3</version>
+        </dependency>
+        <dependency>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-engine</artifactId>
+          <version>5.0.3</version>
+        </dependency>
+      </dependencies>
+    </plugin>
+  </plugins>
+</build>
+</project>
