@@ -9,8 +9,9 @@ before_install:
     - sudo apt-get --allow-unauthenticated update
     - sudo apt-get --allow-unauthenticated install mongodb-org
     - sudo service mongod start
+    - sleep 15
     - ls
-    - cd java-hyperties
-    - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+    - cd Java-Hyperties
+    - mvn clean 
 
 test: mvn test -B
