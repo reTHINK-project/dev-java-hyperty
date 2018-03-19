@@ -5,6 +5,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 
 public class DataObjectReporter {
 
@@ -12,11 +13,24 @@ public class DataObjectReporter {
 	private Handler<Message<JsonObject>> onSubscriptionHandler = null;
 	private Handler<Message<JsonObject>> onReadHandler = null;
 	String[] subscriptions;
+	private MongoClient mongoClient;
+	private String dataObjectUrl;
+	private String walletsCollection;
 
 	public DataObjectReporter(String dataObjectUrl, Vertx vertx) {
 		this.eb = vertx.eventBus();
 		this.eb.consumer(dataObjectUrl + "/subscription", onSubscribe());
 		this.eb.consumer(dataObjectUrl, onRead());
+		this.dataObjectUrl = dataObjectUrl;
+		this.walletsCollection = "wallets";
+	}
+
+	public MongoClient getMongoClient() {
+		return mongoClient;
+	}
+
+	public void setMongoClient(MongoClient mongoClient) {
+		this.mongoClient = mongoClient;
 	}
 
 	/**
@@ -57,10 +71,26 @@ public class DataObjectReporter {
 	private Handler<Message<JsonObject>> onRead() {
 		return msg -> {
 
-			if (onReadHandler != null) {
-				// TODO pass event
-				onReadHandler.handle(msg);
-			}
+			mongoClient.find(walletsCollection, new JsonObject().put("address", dataObjectUrl), res -> {
+				JsonObject wallet = res.result().get(0);
+				System.out.println(wallet);
+
+				String from = msg.body().getString("from");
+				JsonObject response = new JsonObject();
+				response.put("type", "response");
+				response.put("from", msg.body().getString("to"));
+				response.put("to", msg.body().getString("from"));
+
+				JsonObject sendMsgBody = new JsonObject();
+				sendMsgBody.put("code", 200).put("wallet", wallet);
+				response.put("body", sendMsgBody);
+				msg.reply(response);
+			});
+
+			// if (onReadHandler != null) {
+			// // TODO pass event
+			// onReadHandler.handle(msg);
+			// }
 		};
 
 	}

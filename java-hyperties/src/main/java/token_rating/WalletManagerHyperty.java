@@ -29,11 +29,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	@Override
 	public void start() {
-		try {
-			super.start();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		super.start();
+		
 		// read config
 		observers = config().getJsonArray("observer");
 		dataObjectUrl = config().getString("dataObjectUrl");
@@ -274,7 +271,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		 */
 		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getIdentity()), res -> {
 			if (res.result().size() == 0) {
-				System.out.println("no wallet yet, create");
+				System.out.println("no wallet yet, creating");
 
 				// build wallet document
 				JsonObject newWallet = new JsonObject();
@@ -293,6 +290,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					// An invitation is sent to config.observers
 					DataObjectReporter reporter = create(address, observers, new JsonObject());
+					reporter.setMongoClient(mongoClient);
 					// pass handler function that will handle subscription events
 					reporter.setSubscriptionHandler(requestsHandler());
 					reporter.setReadHandler(readHandler());
@@ -305,6 +303,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
+	/**
+	 * Handler for subscription requests.
+	 * 
+	 * @return
+	 */
 	private Handler<Message<JsonObject>> requestsHandler() {
 		return msg -> {
 			// accept ? reject by handler
@@ -326,9 +329,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
+	/**
+	 * Handler for read requests.
+	 * 
+	 * @return
+	 */
 	private Handler<Message<JsonObject>> readHandler() {
 		return msg -> {
-			// accept ? reject by handler
+			// get wallet
 			String from = msg.body().getString("from");
 			JsonObject response = new JsonObject();
 			response.put("type", "response");
@@ -342,7 +350,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				sendMsgBody.put("code", 403);
 				msg.reply(response);
 			}
-
 		};
 
 	}
