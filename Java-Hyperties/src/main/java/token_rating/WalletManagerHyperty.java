@@ -102,7 +102,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getIdentity()), res -> {
 			JsonObject wallet = res.result().get(0);
 			changeWalletStatus(wallet, "deleted");
-
 		});
 
 	}

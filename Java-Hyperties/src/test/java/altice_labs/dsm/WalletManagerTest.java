@@ -186,12 +186,12 @@ class WalletManagerTest {
 		JsonObject msg = new JsonObject();
 		String walletAddress = "123";
 		msg.put("type", WalletManagerMessage.TYPE_READ);
-		String body = new JsonObject().put("resource", "wallet").put("value", walletAddress).toString();
+		String body = new JsonObject().put("resource", "wallet").put("value", "wallet-address").toString();
 		msg.put("body", body);
 
 		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
 			System.out.println(reply.result().toString());
-			testContext.completeNow();
+			testContext.completeNow(); 
 		});
 	}
 

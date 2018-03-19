@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: altice_labs.dsm.WalletManagerTest
 -------------------------------------------------------------------------------
-Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.07 sec - in altice_labs.dsm.WalletManagerTest
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.071 sec - in altice_labs.dsm.WalletManagerTest

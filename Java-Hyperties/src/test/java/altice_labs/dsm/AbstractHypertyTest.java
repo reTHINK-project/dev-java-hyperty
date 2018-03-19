@@ -50,7 +50,7 @@ class AbstractHypertyTest {
 		checkpoint.flag();
 	}
 
-	@Test
+	
 	public void getInitialDataIdentity(VertxTestContext context, Vertx vertx) {
 		JsonObject config = new JsonObject().put("type", "read");
 		vertx.eventBus().send(locationHypertyURL, config, message -> {
