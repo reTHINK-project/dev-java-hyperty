@@ -397,11 +397,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @return
 	 */
 	private boolean validateSource(String from) {
-		// TODO reject the entities who shouldn't have access to wallet
 		// allow wallet creator
-		if (from.equals(identity)) {
+		if (from.equals(identity) || observers.getList().contains(from)) {
 			return true;
 		}
+
 		return false;
 	}
 
