@@ -1,265 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" name="altice_labs.dsm.WalletManagerTest" time="92.077" tests="3" errors="3" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" name="altice_labs.dsm.WalletManagerTest" time="7.07" tests="6" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
-    <property name="sun.boot.library.path" value="/usr/lib/jvm/java-8-jdk/jre/lib/amd64"/>
-    <property name="java.vm.version" value="25.152-b16"/>
+    <property name="sun.boot.library.path" value="C:\Program Files\Java\jdk1.8.0_161\jre\bin"/>
+    <property name="java.vm.version" value="25.161-b12"/>
+    <property name="user.country.format" value="PT"/>
     <property name="java.vm.vendor" value="Oracle Corporation"/>
-    <property name="maven.multiModuleProjectDirectory" value="/home/suil/Desktop/Java-Hyperties"/>
+    <property name="maven.multiModuleProjectDirectory" value="C:\Users\p058076\Desktop\rethink\dev-java-hyperty\Java-Hyperties"/>
     <property name="java.vendor.url" value="http://java.oracle.com/"/>
-    <property name="path.separator" value=":"/>
+    <property name="path.separator" value=";"/>
     <property name="guice.disable.misplaced.annotation.check" value="true"/>
     <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
     <property name="file.encoding.pkg" value="sun.io"/>
-    <property name="user.country" value="GB"/>
+    <property name="user.script" value=""/>
+    <property name="user.country" value="US"/>
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
-    <property name="sun.os.patch.level" value="unknown"/>
+    <property name="sun.os.patch.level" value=""/>
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
-    <property name="user.dir" value="/home/suil/Desktop/Java-Hyperties"/>
-    <property name="java.runtime.version" value="1.8.0_152-b16"/>
-    <property name="java.awt.graphicsenv" value="sun.awt.X11GraphicsEnvironment"/>
-    <property name="java.endorsed.dirs" value="/usr/lib/jvm/java-8-jdk/jre/lib/endorsed"/>
+    <property name="user.dir" value="C:\Users\p058076\Desktop\rethink\dev-java-hyperty\Java-Hyperties"/>
+    <property name="java.runtime.version" value="1.8.0_161-b12"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.Win32GraphicsEnvironment"/>
+    <property name="java.endorsed.dirs" value="C:\Program Files\Java\jdk1.8.0_161\jre\lib\endorsed"/>
     <property name="os.arch" value="amd64"/>
-    <property name="java.io.tmpdir" value="/tmp"/>
+    <property name="java.io.tmpdir" value="C:\Users\p058076\AppData\Local\Temp\"/>
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
-    <property name="os.name" value="Linux"/>
-    <property name="classworlds.conf" value="/opt/maven/bin/m2.conf"/>
-    <property name="sun.jnu.encoding" value="UTF-8"/>
-    <property name="java.library.path" value="/usr/java/packages/lib/amd64:/usr/lib64:/lib64:/lib:/usr/lib"/>
-    <property name="maven.conf" value="/opt/maven/conf"/>
+    <property name="user.variant" value=""/>
+    <property name="os.name" value="Windows 10"/>
+    <property name="classworlds.conf" value="C:\Users\p058076\eclipse-workspace\.metadata\.plugins\org.eclipse.m2e.launching\launches\m2conf3171857527679924010.tmp"/>
+    <property name="sun.jnu.encoding" value="Cp1252"/>
+    <property name="java.library.path" value="C:\Program Files\Java\jdk1.8.0_161\bin;C:\WINDOWS\Sun\Java\bin;C:\WINDOWS\system32;C:\WINDOWS;C:/Program Files/Java/jre1.8.0_161/bin/server;C:/Program Files/Java/jre1.8.0_161/bin;C:/Program Files/Java/jre1.8.0_161/lib/amd64;C:\ProgramData\Oracle\Java\javapath;C:\Oracle806\bin;C:\Progra~1\Oracle\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\Oracle806\jdk\bin;C:\Program Files\apache-maven-3.5.2\bin;C:\Program Files\nodejs\;C:\Program Files\Git\cmd;C:\Program Files (x86)\Yarn\bin;C:\Users\p058076\AppData\Roaming\npm\node_modules\phantomjs\bin;C:\Ruby24-x64\bin;C:\Users\p058076\AppData\Local\Programs\Python\Python36-32\Scripts\;C:\Users\p058076\AppData\Local\Programs\Python\Python36-32\;C:\Users\p058076\AppData\Local\Microsoft\WindowsApps;C:\Users\p058076\AppData\Local\atom\bin;C:\Program Files\Microsoft VS Code\bin;C:\Users\p058076\AppData\Roaming\npm;C:\Users\p058076\AppData\Local\Yarn\bin;C:\Users\p058076\AppData\Roaming\npm\node_modules\phantomjs\bin;C:\Program Files\Heroku\bin;C:\Users\p058076\AppData\Local\Programs\MiKTeX 2.9\miktex\bin\x64\;C:\Program Files\flutter\bin;C:\Program Files\MongoDB\Server\3.6\bin;C:\WINDOWS\System32;;."/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
     <property name="java.class.version" value="52.0"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
-    <property name="os.version" value="4.14.10-2-MANJARO"/>
-    <property name="library.jansi.path" value="/opt/maven/lib/jansi-native"/>
-    <property name="user.home" value="/home/suil"/>
-    <property name="user.timezone" value="Europe/Lisbon"/>
-    <property name="java.awt.printerjob" value="sun.print.PSPrinterJob"/>
+    <property name="os.version" value="10.0"/>
+    <property name="user.home" value="C:\Users\p058076"/>
+    <property name="user.timezone" value="Europe/London"/>
+    <property name="java.awt.printerjob" value="sun.awt.windows.WPrinterJob"/>
     <property name="java.specification.version" value="1.8"/>
-    <property name="file.encoding" value="UTF-8"/>
-    <property name="user.name" value="suil"/>
-    <property name="java.class.path" value="/opt/maven/boot/plexus-classworlds-2.5.2.jar"/>
+    <property name="file.encoding" value="Cp1252"/>
+    <property name="user.name" value="P058076"/>
+    <property name="java.class.path" value="C:\Users\p058076\.p2\pool\plugins\org.eclipse.m2e.maven.runtime_1.8.2.20171007-0216\jars\plexus-classworlds-2.5.2.jar"/>
     <property name="java.vm.specification.version" value="1.8"/>
     <property name="sun.arch.data.model" value="64"/>
-    <property name="java.home" value="/usr/lib/jvm/java-8-jdk/jre"/>
-    <property name="sun.java.command" value="org.codehaus.plexus.classworlds.launcher.Launcher test"/>
+    <property name="java.home" value="C:\Program Files\Java\jdk1.8.0_161\jre"/>
+    <property name="sun.java.command" value="org.codehaus.plexus.classworlds.launcher.Launcher -B test"/>
     <property name="java.specification.vendor" value="Oracle Corporation"/>
     <property name="user.language" value="en"/>
-    <property name="awt.toolkit" value="sun.awt.X11.XToolkit"/>
+    <property name="user.language.format" value="pt"/>
+    <property name="awt.toolkit" value="sun.awt.windows.WToolkit"/>
     <property name="java.vm.info" value="mixed mode"/>
-    <property name="java.version" value="1.8.0_152"/>
-    <property name="java.ext.dirs" value="/usr/lib/jvm/java-8-jdk/jre/lib/ext:/usr/java/packages/lib/ext"/>
-    <property name="securerandom.source" value="file:/dev/./urandom"/>
-    <property name="sun.boot.class.path" value="/usr/lib/jvm/java-8-jdk/jre/lib/resources.jar:/usr/lib/jvm/java-8-jdk/jre/lib/rt.jar:/usr/lib/jvm/java-8-jdk/jre/lib/sunrsasign.jar:/usr/lib/jvm/java-8-jdk/jre/lib/jsse.jar:/usr/lib/jvm/java-8-jdk/jre/lib/jce.jar:/usr/lib/jvm/java-8-jdk/jre/lib/charsets.jar:/usr/lib/jvm/java-8-jdk/jre/lib/jfr.jar:/usr/lib/jvm/java-8-jdk/jre/classes"/>
+    <property name="java.version" value="1.8.0_161"/>
+    <property name="java.ext.dirs" value="C:\Program Files\Java\jdk1.8.0_161\jre\lib\ext;C:\WINDOWS\Sun\Java\lib\ext"/>
+    <property name="sun.boot.class.path" value="C:\Program Files\Java\jdk1.8.0_161\jre\lib\resources.jar;C:\Program Files\Java\jdk1.8.0_161\jre\lib\rt.jar;C:\Program Files\Java\jdk1.8.0_161\jre\lib\sunrsasign.jar;C:\Program Files\Java\jdk1.8.0_161\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.8.0_161\jre\lib\jce.jar;C:\Program Files\Java\jdk1.8.0_161\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.8.0_161\jre\lib\jfr.jar;C:\Program Files\Java\jdk1.8.0_161\jre\classes"/>
     <property name="java.vendor" value="Oracle Corporation"/>
-    <property name="maven.home" value="/opt/maven"/>
-    <property name="file.separator" value="/"/>
+    <property name="maven.home" value="C:\Users\p058076\Desktop\rethink\dev-java-hyperty\Java-Hyperties\EMBEDDED"/>
+    <property name="file.separator" value="\"/>
     <property name="java.vendor.url.bug" value="http://bugreport.sun.com/bugreport/"/>
     <property name="sun.cpu.endian" value="little"/>
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
-    <property name="sun.desktop" value="gnome"/>
-    <property name="sun.cpu.isalist" value=""/>
+    <property name="sun.desktop" value="windows"/>
+    <property name="sun.cpu.isalist" value="amd64"/>
   </properties>
-  <testcase name="getWalletAddress{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="30.006">
-    <error message="The test execution timed out" type="java.util.concurrent.TimeoutException">java.util.concurrent.TimeoutException: The test execution timed out
-</error>
-    <system-out><![CDATA[-> Wallet Manager deployed
-]]></system-out>
-    <system-err><![CDATA[Mar 19, 2018 12:05:17 PM com.mongodb.diagnostics.logging.JULLogger log
-INFO: Opened connection [connectionId{localValue:3, serverValue:8}] to localhost:27017
-Mar 19, 2018 12:05:17 PM com.mongodb.diagnostics.logging.JULLogger log
-INFO: Monitor thread successfully connected to server with description ServerDescription{address=localhost:27017, type=STANDALONE, state=CONNECTED, ok=true, version=ServerVersion{versionList=[3, 6, 1]}, minWireVersion=0, maxWireVersion=6, maxDocumentSize=16777216, logicalSessionTimeoutMinutes=30, roundTripTimeNanos=9596084}
-Mar 19, 2018 12:05:17 PM com.mongodb.diagnostics.logging.JULLogger log
-INFO: Cluster created with settings {hosts=[null:27017], mode=SINGLE, requiredClusterType=UNKNOWN, serverSelectionTimeout='30000 ms', maxWaitQueueSize=500}
-java.lang.IllegalArgumentException: databaseName can not be null
-	at com.mongodb.assertions.Assertions.notNull(Assertions.java:37)
-	at com.mongodb.MongoNamespace.checkDatabaseNameValidity(MongoNamespace.java:52)
-	at com.mongodb.async.client.MongoDatabaseImpl.<init>(MongoDatabaseImpl.java:58)
-	at com.mongodb.async.client.MongoClientImpl.getDatabase(MongoClientImpl.java:93)
-	at io.vertx.ext.mongo.impl.MongoClientImpl$MongoHolder.mongo(MongoClientImpl.java:930)
-	at io.vertx.ext.mongo.impl.MongoClientImpl.<init>(MongoClientImpl.java:113)
-	at io.vertx.ext.mongo.MongoClient.createShared(MongoClient.java:68)
-	at altice_labs.dsm.AbstractHyperty.start(AbstractHyperty.java:48)
-	at token_rating.WalletManagerHyperty.start(WalletManagerHyperty.java:33)
-	at io.vertx.core.AbstractVerticle.start(AbstractVerticle.java:106)
-	at io.vertx.core.impl.DeploymentManager.lambda$doDeploy$8(DeploymentManager.java:483)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-Mar 19, 2018 12:05:17 PM com.mongodb.diagnostics.logging.JULLogger log
-INFO: Exception in monitor thread while connecting to server null:27017
-com.mongodb.MongoSocketException: null: Name or service not known
-	at com.mongodb.ServerAddress.getSocketAddress(ServerAddress.java:188)
-	at com.mongodb.connection.AsynchronousSocketChannelStream.openAsync(AsynchronousSocketChannelStream.java:83)
-	at com.mongodb.connection.AsynchronousSocketChannelStream.open(AsynchronousSocketChannelStream.java:64)
-	at com.mongodb.connection.InternalStreamConnection.open(InternalStreamConnection.java:126)
-	at com.mongodb.connection.DefaultServerMonitor$ServerMonitorRunnable.run(DefaultServerMonitor.java:114)
-	at java.lang.Thread.run(Thread.java:748)
-Caused by: java.net.UnknownHostException: null: Name or service not known
-	at java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
-	at java.net.InetAddress$2.lookupAllHostAddr(InetAddress.java:928)
-	at java.net.InetAddress.getAddressesFromNameService(InetAddress.java:1323)
-	at java.net.InetAddress.getAllByName0(InetAddress.java:1276)
-	at java.net.InetAddress.getAllByName(InetAddress.java:1192)
-	at java.net.InetAddress.getAllByName(InetAddress.java:1126)
-	at java.net.InetAddress.getByName(InetAddress.java:1076)
-	at com.mongodb.ServerAddress.getSocketAddress(ServerAddress.java:186)
-	... 5 more
-
-Mar 19, 2018 12:05:19 PM io.vertx.core.eventbus.impl.HandlerRegistration
-SEVERE: Failed to handleMessage. address: hyperty://sharing-cities-dsm/wallet-manager
-java.lang.ClassCastException: java.lang.String cannot be cast to io.vertx.core.json.JsonObject
-	at altice_labs.dsm.AbstractHyperty.lambda$0(AbstractHyperty.java:72)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.deliver(HandlerRegistration.java:223)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.handle(HandlerRegistration.java:200)
-	at io.vertx.core.eventbus.impl.EventBusImpl.lambda$deliverToHandler$3(EventBusImpl.java:533)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-Mar 19, 2018 12:05:19 PM io.vertx.core.impl.ContextImpl
-SEVERE: Unhandled exception
-java.lang.ClassCastException: java.lang.String cannot be cast to io.vertx.core.json.JsonObject
-	at altice_labs.dsm.AbstractHyperty.lambda$0(AbstractHyperty.java:72)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.deliver(HandlerRegistration.java:223)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.handle(HandlerRegistration.java:200)
-	at io.vertx.core.eventbus.impl.EventBusImpl.lambda$deliverToHandler$3(EventBusImpl.java:533)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-]]></system-err>
-  </testcase>
-  <testcase name="getWallet{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="30.016">
-    <error message="The test execution timed out" type="java.util.concurrent.TimeoutException">java.util.concurrent.TimeoutException: The test execution timed out
-</error>
-    <system-out><![CDATA[Message received: {"type":"read","body":"{\"resource\":\"wallet\",\"value\":\"123\"}"}
-null
-Getting wallet by address
-]]></system-out>
-    <system-err><![CDATA[Mar 19, 2018 12:05:49 PM io.vertx.core.eventbus.impl.HandlerRegistration
-SEVERE: Failed to handleMessage. address: hyperty://sharing-cities-dsm/wallet-manager
-java.lang.NullPointerException
-	at token_rating.WalletManagerHyperty.walletRead(WalletManagerHyperty.java:256)
-	at token_rating.WalletManagerHyperty.lambda$0(WalletManagerHyperty.java:79)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.deliver(HandlerRegistration.java:223)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.handle(HandlerRegistration.java:200)
-	at io.vertx.core.eventbus.impl.EventBusImpl.lambda$deliverToHandler$3(EventBusImpl.java:533)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-Mar 19, 2018 12:05:49 PM io.vertx.core.impl.ContextImpl
-SEVERE: Unhandled exception
-java.lang.NullPointerException
-	at token_rating.WalletManagerHyperty.walletRead(WalletManagerHyperty.java:256)
-	at token_rating.WalletManagerHyperty.lambda$0(WalletManagerHyperty.java:79)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.deliver(HandlerRegistration.java:223)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.handle(HandlerRegistration.java:200)
-	at io.vertx.core.eventbus.impl.EventBusImpl.lambda$deliverToHandler$3(EventBusImpl.java:533)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-]]></system-err>
-  </testcase>
-  <testcase name="createWallet{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="30.006">
-    <error message="The test execution timed out" type="java.util.concurrent.TimeoutException">java.util.concurrent.TimeoutException: The test execution timed out
-</error>
-    <system-out><![CDATA[Message received: {"type":"create","identity":"identity-2","from":"url"}
-url
-Creating wallet
-]]></system-out>
-    <system-err><![CDATA[Mar 19, 2018 12:06:19 PM io.vertx.core.eventbus.impl.HandlerRegistration
-SEVERE: Failed to handleMessage. address: hyperty://sharing-cities-dsm/wallet-manager
-java.lang.ClassCastException: java.lang.String cannot be cast to io.vertx.core.json.JsonObject
-	at altice_labs.dsm.AbstractHyperty.lambda$0(AbstractHyperty.java:72)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.deliver(HandlerRegistration.java:223)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.handle(HandlerRegistration.java:200)
-	at io.vertx.core.eventbus.impl.EventBusImpl.lambda$deliverToHandler$3(EventBusImpl.java:533)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-Mar 19, 2018 12:06:19 PM io.vertx.core.impl.ContextImpl
-SEVERE: Unhandled exception
-java.lang.ClassCastException: java.lang.String cannot be cast to io.vertx.core.json.JsonObject
-	at altice_labs.dsm.AbstractHyperty.lambda$0(AbstractHyperty.java:72)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.deliver(HandlerRegistration.java:223)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.handle(HandlerRegistration.java:200)
-	at io.vertx.core.eventbus.impl.EventBusImpl.lambda$deliverToHandler$3(EventBusImpl.java:533)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-Mar 19, 2018 12:06:19 PM io.vertx.core.eventbus.impl.HandlerRegistration
-SEVERE: Failed to handleMessage. address: hyperty://sharing-cities-dsm/wallet-manager
-java.lang.NullPointerException
-	at token_rating.WalletManagerHyperty.walletCreationRequest(WalletManagerHyperty.java:275)
-	at token_rating.WalletManagerHyperty.lambda$0(WalletManagerHyperty.java:63)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.deliver(HandlerRegistration.java:223)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.handle(HandlerRegistration.java:200)
-	at io.vertx.core.eventbus.impl.EventBusImpl.lambda$deliverToHandler$3(EventBusImpl.java:533)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-Mar 19, 2018 12:06:19 PM io.vertx.core.impl.ContextImpl
-SEVERE: Unhandled exception
-java.lang.NullPointerException
-	at token_rating.WalletManagerHyperty.walletCreationRequest(WalletManagerHyperty.java:275)
-	at token_rating.WalletManagerHyperty.lambda$0(WalletManagerHyperty.java:63)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.deliver(HandlerRegistration.java:223)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.handle(HandlerRegistration.java:200)
-	at io.vertx.core.eventbus.impl.EventBusImpl.lambda$deliverToHandler$3(EventBusImpl.java:533)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-Mar 19, 2018 12:06:19 PM io.vertx.core.impl.ContextImpl
-SEVERE: Unhandled exception
-java.lang.NullPointerException
-	at altice_labs.dsm.WalletManagerTest.lambda$1(WalletManagerTest.java:94)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.sendAsyncResultFailure(HandlerRegistration.java:127)
-	at io.vertx.core.eventbus.impl.HandlerRegistration.lambda$new$0(HandlerRegistration.java:78)
-	at io.vertx.core.impl.VertxImpl$InternalTimerHandler.handle(VertxImpl.java:885)
-	at io.vertx.core.impl.VertxImpl$InternalTimerHandler.handle(VertxImpl.java:844)
-	at io.vertx.core.impl.ContextImpl.lambda$wrapTask$2(ContextImpl.java:339)
-	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:163)
-	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:404)
-	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:463)
-	at io.netty.util.concurrent.SingleThreadEventExecutor$5.run(SingleThreadEventExecutor.java:886)
-	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-	at java.lang.Thread.run(Thread.java:748)
-
-]]></system-err>
-  </testcase>
+  <testcase name="testReporterSubscription{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="0.018"/>
+  <testcase name="testReporterOnReadInvalidOrigin{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="0.015"/>
+  <testcase name="getWalletAddress{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="0.023"/>
+  <testcase name="testReporterOnReadValidOrigin{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="0.018"/>
+  <testcase name="getWallet{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="0.019"/>
+  <testcase name="testReporterSubscriptionInvalidOrigin{VertxTestContext, Vertx}" classname="altice_labs.dsm.WalletManagerTest" time="0.004"/>
 </testsuite>

@@ -1,7 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: altice_labs.dsm.CheckInTest
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 33.06 sec <<< FAILURE! - in altice_labs.dsm.CheckInTest
-userCloseToShop{VertxTestContext, Vertx}  Time elapsed: 30.03 sec  <<< ERROR!
-java.util.concurrent.TimeoutException: The test execution timed out
-
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.736 sec - in altice_labs.dsm.CheckInTest

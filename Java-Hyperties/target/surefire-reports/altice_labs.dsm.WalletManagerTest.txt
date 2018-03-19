@@ -1,13 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: altice_labs.dsm.WalletManagerTest
 -------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 3, Skipped: 0, Time elapsed: 92.077 sec <<< FAILURE! - in altice_labs.dsm.WalletManagerTest
-getWalletAddress{VertxTestContext, Vertx}  Time elapsed: 30.006 sec  <<< ERROR!
-java.util.concurrent.TimeoutException: The test execution timed out
-
-getWallet{VertxTestContext, Vertx}  Time elapsed: 30.016 sec  <<< ERROR!
-java.util.concurrent.TimeoutException: The test execution timed out
-
-createWallet{VertxTestContext, Vertx}  Time elapsed: 30.006 sec  <<< ERROR!
-java.util.concurrent.TimeoutException: The test execution timed out
-
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.07 sec - in altice_labs.dsm.WalletManagerTest
