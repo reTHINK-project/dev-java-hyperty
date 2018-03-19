@@ -16,7 +16,7 @@ before_install:
     - sudo mkdir data
     - cd data
     - sudo mkdir db
-    - cd ~/Java-Hyperties
+    - cd /home/travis/build/reTHINK-project/dev-java-hyperty/Java-Hyperties
     - sudo mongo
     - use test
     - db.createCollection("location_data")
