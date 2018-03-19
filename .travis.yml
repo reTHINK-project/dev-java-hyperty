@@ -11,7 +11,11 @@ before_install:
     - sudo service mongod start
     - sleep 15
     - ls
-    - cd Java-Hyperties
+    - cd / 
+    - mkdir data
+    - cd data
+    - mkdir db
+    - cd ~/Java-Hyperties
     - sudo mongo
     - use test
     - db.createCollection("location_data")
