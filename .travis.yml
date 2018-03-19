@@ -12,18 +12,12 @@ before_install:
     - sleep 15
     - ls
     - pwd
-    - cd / 
+    - cd /
     - sudo mkdir data
     - cd data
     - sudo mkdir db
     - cd /home/travis/build/reTHINK-project/dev-java-hyperty/Java-Hyperties
-    - sudo mongo
-    - use test
-    - db.createCollection("location_data")
-    - db.createCollection("wallets")
-    - db.createCollection("shops")
-    - db.createCollection("rates")
-    - exit
-    - mvn clean 
+    - sudo mongo --eval 'use test; db.createCollection("location_data"); db.createCollection("wallets"); db.createCollection("shops"); db.createCollection("rates"); exit;'
+    - mvn clean
 
 test: mvn test -B
