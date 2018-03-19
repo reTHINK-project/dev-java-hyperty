@@ -24,7 +24,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected MongoClient mongoClient = null;
 
 	@Override
-	public void start() throws Exception {
+	public void start(){
 		this.url = config().getString("url");
 		this.identity = config().getString("identity");
 		this.eb = vertx.eventBus();
@@ -155,23 +155,22 @@ public class AbstractHyperty extends AbstractVerticle {
 		toSend.put("type", "create");
 		toSend.put("from", dataObjectUrl + "/subscription");
 		JsonObject body = new JsonObject();
-		body.put("source", "hyperty://<sp-domain>/<hyperty-instance-identifier>");
 		// TODO
+		body.put("source", "hyperty://<sp-domain>/<hyperty-instance-identifier>");
 		body.put("schema", "hyperty-catalogue://<sp-domain>/dataObjectSchema/<schema-identifier>");
 		body.put("value", initialData);
 		toSend.put("body", body);
 
 		Iterator it = observers.getList().iterator();
 		while (it.hasNext()) {
-			JsonObject currentObs = (JsonObject) it.next();
-			String observer = currentObs.getString("observer");
+			String observer = (String) it.next();
 			send(observer, toSend.toString(), reply -> {
 				System.out.println(
 						"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + reply.toString());
 			});
 		}
 		// create Reporter
-		return new DataObjectReporter(dataObjectUrl, vertx);
+		return new DataObjectReporter(dataObjectUrl, vertx, identity);
 
 	}
 }

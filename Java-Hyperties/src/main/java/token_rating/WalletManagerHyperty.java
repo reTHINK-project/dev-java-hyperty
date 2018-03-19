@@ -28,13 +28,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	@Override
 	public void start() {
-		try {
-			super.start();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
+
+		super.start();
+
 		// read config
 		observers = config().getJsonArray("observers");
 		dataObjectUrl = config().getString("dataObjectUrl");
@@ -52,7 +48,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			Gson gson = new Gson();
 			WalletManagerMessage msg = gson.fromJson(message.body().toString(), WalletManagerMessage.class);
-			System.out.println(msg.getFrom());
 
 			switch (msg.getType()) {
 			case "delete":
@@ -106,15 +101,20 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// get wallet
 		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getIdentity()), res -> {
 			JsonObject wallet = res.result().get(0);
-			wallet.put("status", "deleted");
-			JsonObject document = new JsonObject(wallet.toString());
+			changeWalletStatus(wallet, "deleted");
 
-			JsonObject query = new JsonObject().put("identity", msg.getIdentity());
-			mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
-				System.out.println("Document with ID:" + id + " was updated");
-			});
 		});
 
+	}
+
+	private void changeWalletStatus(JsonObject wallet, String status) {
+		wallet.put("status", status);
+		JsonObject document = new JsonObject(wallet.toString());
+
+		JsonObject query = new JsonObject().put("identity", wallet.getString("identity"));
+		mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
+			System.out.println("Document with ID:" + id + " was updated");
+		});
 	}
 
 	/**
@@ -155,9 +155,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					publish(walletAddress, transaction.toString());
 				});
 			});
-
 		}
-
 	}
 
 	CompletableFuture<Boolean> result = new CompletableFuture<>();
@@ -256,7 +254,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject wallet = res.result().get(0);
-			System.out.println(wallet);
 			message.reply(wallet.toString());
 		});
 
@@ -274,6 +271,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		 * identity.
 		 */
 		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getIdentity()), res -> {
+			// TODO replace
+			String dataObjectUrl = "reporter";
+
 			if (res.result().size() == 0) {
 				System.out.println("no wallet yet, creating");
 
@@ -292,18 +292,39 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				mongoClient.save(walletsCollection, document, id -> {
 					System.out.println("New wallet with ID:" + id);
 
-					// An invitation is sent to config.observers
-					DataObjectReporter reporter = create(address, observers, new JsonObject());
-					reporter.setMongoClient(mongoClient);
-					// pass handler function that will handle subscription events
-					reporter.setSubscriptionHandler(requestsHandler());
-					reporter.setReadHandler(readHandler());
+					inviteObservers();
 				});
 
 			} else {
-				System.out.println("wallet already exists");
+				System.out.println("wallet already exists...");
+				JsonObject wallet = res.result().get(0);
+				// check its status
+				switch (wallet.getString("status")) {
+				case "active":
+					System.out.println("... and is active.");
+					break;
+				case "deleted":
+					System.out.println("... and was deleted, activating");
+					changeWalletStatus(wallet, "active");
+					inviteObservers();
+					break;
+
+				default:
+					break;
+				}
+
 			}
 		});
+
+	}
+
+	private void inviteObservers() {
+		// An invitation is sent to config.observers
+		DataObjectReporter reporter = create(dataObjectUrl, observers, new JsonObject());
+		reporter.setMongoClient(mongoClient);
+		// pass handler function that will handle subscription events
+		reporter.setSubscriptionHandler(requestsHandler());
+		reporter.setReadHandler(readHandler());
 
 	}
 
@@ -314,8 +335,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private Handler<Message<JsonObject>> requestsHandler() {
 		return msg -> {
-			// accept ? reject by handler
 			String from = msg.body().getString("from");
+			System.out.println("Reporter received a subscription from " + from);
+			// accept ? reject by handler
 			JsonObject response = new JsonObject();
 			response.put("type", "response");
 			response.put("from", msg.body().getString("to"));
@@ -323,9 +345,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonObject sendMsgBody = new JsonObject();
 			if (validateSource(from)) {
 				sendMsgBody.put("code", 200);
+				response.put("body", sendMsgBody);
 				msg.reply(response);
 			} else {
 				sendMsgBody.put("code", 403);
+				response.put("body", sendMsgBody);
 				msg.reply(response);
 			}
 
@@ -340,27 +364,46 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private Handler<Message<JsonObject>> readHandler() {
 		return msg -> {
-			// get wallet
 			String from = msg.body().getString("from");
+			System.out.println("READ HANDLER");
 			JsonObject response = new JsonObject();
 			response.put("type", "response");
 			response.put("from", msg.body().getString("to"));
 			response.put("to", msg.body().getString("from"));
+
 			JsonObject sendMsgBody = new JsonObject();
-			if (validateSource(from)) {
-				sendMsgBody.put("code", 200);
-				msg.reply(response);
-			} else {
+			if (!validateSource(from)) {
 				sendMsgBody.put("code", 403);
+				response.put("body", sendMsgBody);
 				msg.reply(response);
 			}
+
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", "random"), res -> {
+				JsonObject wallet = res.result().get(0);
+				System.out.println(wallet);
+
+				sendMsgBody.put("code", 200).put("wallet", wallet);
+				response.put("body", sendMsgBody);
+				msg.reply(response);
+			});
+
 		};
 
 	}
 
+	/**
+	 * Validate the source (from) of a request.
+	 * 
+	 * @param from
+	 * @return
+	 */
 	private boolean validateSource(String from) {
 		// TODO reject the entities who shouldn't have access to wallet
-		return true;
+		// allow wallet creator
+		if (from.equals(identity)) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
