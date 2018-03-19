@@ -12,9 +12,9 @@ before_install:
     - sleep 15
     - ls
     - cd / 
-    - mkdir data
+    - sudo mkdir data
     - cd data
-    - mkdir db
+    - sudo mkdir db
     - cd ~/Java-Hyperties
     - sudo mongo
     - use test
