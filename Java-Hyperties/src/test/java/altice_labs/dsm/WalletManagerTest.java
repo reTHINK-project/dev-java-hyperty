@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -13,6 +14,7 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -24,6 +26,7 @@ import util.DateUtils;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
+@Disabled
 class WalletManagerTest {
 
 	private static String walletManagerHypertyURL;
@@ -31,6 +34,11 @@ class WalletManagerTest {
 	private static String reporterFromValid;
 	private static String reporterFromInvalid = "invalid";
 	private static String userID = "identity";
+	// TODO update to be conform with Rethink data model
+	private static String identity = "random";
+	private static String reporterAddress = "reporter";
+	private static MongoClient mongoClient;
+	private static String walletsCollection = "wallets";
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
@@ -75,10 +83,39 @@ class WalletManagerTest {
 		}
 
 		checkpoint.flag();
+
+		// connect to Mongo
+		makeMongoConnection(vertx);
 	}
 
-	private static String identity = "random";
-	private static String reporterAddress = "reporter";
+	@AfterAll
+	static void deleteWallet(VertxTestContext testContext, Vertx vertx) {
+		// JsonObject msg = new JsonObject();
+		// msg.put("type", WalletManagerMessage.TYPE_DELETE);
+		// msg.put("identity", identity);
+		// msg.put("from", "from");
+		//
+		// vertx.eventBus().publish(walletManagerHypertyURL, msg);
+
+		JsonObject query = new JsonObject();
+		query.put("identity", identity);
+
+		mongoClient.removeDocument(walletsCollection, query, res -> {
+			System.out.println("Wallet removed from DB");
+			testContext.completeNow();
+		});
+
+	}
+
+	static void makeMongoConnection(Vertx vertx) {
+
+		final String uri = "mongodb://" + "localhost" + ":27017";
+
+		final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test")
+				.put("database", "test").put("collection", walletsCollection);
+
+		mongoClient = MongoClient.createShared(vertx, mongoconfig);
+	}
 
 	/**
 	 * Test reporter subscription
@@ -191,23 +228,11 @@ class WalletManagerTest {
 
 		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
 			System.out.println(reply.result().toString());
-			testContext.completeNow(); 
+			testContext.completeNow();
 		});
 	}
 
-	@AfterAll
-	static void deleteWallet(VertxTestContext testContext, Vertx vertx) {
-		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_DELETE);
-		msg.put("identity", identity);
-		msg.put("from", "from");
-
-		vertx.eventBus().publish(walletManagerHypertyURL, msg);
-
-		testContext.completeNow();
-	}
-
-	
+	@Test
 	void transferToWallet(VertxTestContext testContext, Vertx vertx) {
 		String walletAddress = "123";
 		JsonObject msg = new JsonObject();
@@ -216,18 +241,39 @@ class WalletManagerTest {
 		// create transaction object
 		JsonObject transaction = new JsonObject();
 		transaction.put("address", walletAddress);
+		transaction.put("type", "transfer");
 		transaction.put("recipient", walletAddress);
 		transaction.put("source", "source");
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
-		String body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction).toString();
+		String body = new JsonObject().put("resource", "wallet/" + "wallet-address").put("value", transaction)
+				.toString();
 		msg.put("body", body);
 
 		vertx.eventBus().publish(walletManagerHypertyURL, msg);
 
-		// TODO wait for response
-		// testContext.completeNow();
+		// wait sometime and check wallet
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// get wallet
+		mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
+			JsonObject walletInfo = res.result().get(0);
+
+			// check balance updated
+			int currentBalance = walletInfo.getInteger("balance");
+			assertEquals(15, currentBalance);
+
+			// check if transaction in transactions array
+			JsonArray transactions = walletInfo.getJsonArray("transactions");
+			assertEquals(1, transactions.size());
+			testContext.completeNow();
+		});
+
 	}
 
 }

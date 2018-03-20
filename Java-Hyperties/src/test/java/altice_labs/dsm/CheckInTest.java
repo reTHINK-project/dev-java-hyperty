@@ -2,17 +2,20 @@ package altice_labs.dsm;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -30,6 +33,9 @@ class CheckInTest {
 	private String shopsInfoStreamAddress = "data://sharing-cities-dsm/shops";
 	private static String from = "tester";
 	private static int msgID;
+	private static String ratesCollection = "rates";
+	private static MongoClient mongoClient;
+	private static String userID = "123";
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
@@ -40,10 +46,11 @@ class CheckInTest {
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();
-		CheckInRatingHyperty hyp = mock(CheckInRatingHyperty.class);
 
 		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), optionsLocation, context.succeeding());
 		System.out.println("Deployed");
+
+		makeMongoConnection(vertx);
 
 		// wait for Mongo connection to take place
 		try {
@@ -53,7 +60,26 @@ class CheckInTest {
 		}
 
 		sendCreateMessage(vertx);
+
+		// insert entry in "rates"
+		addUserEntryInRatesCollection();
+
+		// wait for handler setup
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		checkpoint.flag();
+	}
+
+	private static void addUserEntryInRatesCollection() {
+		JsonObject document = new JsonObject();
+		document.put("user", userID);
+		document.put("checkin", new JsonArray());
+		mongoClient.insert(ratesCollection, document, res -> {
+			System.out.println("Setup complete");
+		});
 	}
 
 	static void sendCreateMessage(Vertx vertx) {
@@ -63,12 +89,56 @@ class CheckInTest {
 		vertx.eventBus().publish("token-rating", msg);
 	}
 
+	static void makeMongoConnection(Vertx vertx) {
+
+		final String uri = "mongodb://" + "localhost" + ":27017";
+
+		final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test")
+				.put("database", "test").put("collection", ratesCollection);
+
+		mongoClient = MongoClient.createShared(vertx, mongoconfig);
+	}
+
+	@AfterAll
+	static void tearDown(VertxTestContext testContext, Vertx vertx) {
+
+		JsonObject query = new JsonObject();
+		query.put("user", userID);
+
+		mongoClient.removeDocument(ratesCollection, query, res -> {
+			System.out.println("Rates removed from DB");
+			testContext.completeNow();
+		});
+
+		testContext.completeNow();
+
+	}
+
+	@Test
 	void userCloseToShop(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("User close to shop");
 		JsonObject checkInMessage = new JsonObject().put("latitude", 40).put("longitude", 50);
-		checkInMessage.put("userID", "123");
+		checkInMessage.put("userID",userID);
 		checkInMessage.put("shopID", "2");
+		System.out.println("Sending message");
 		vertx.eventBus().publish(from, checkInMessage);
-		// testContext.completeNow();
+
+		// wait for op
+		try {
+			Thread.sleep(8000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// check if rate was added to user
+		JsonObject query = new JsonObject().put("user", userID);
+		mongoClient.find(ratesCollection, query, result -> {
+			JsonObject rates = result.result().get(0);
+			JsonArray checkIns = rates.getJsonArray("checkin");
+			assertEquals(1, checkIns.size());
+			testContext.completeNow();
+		});
+
 	}
 
 	void userNotInAnyShop(VertxTestContext testContext, Vertx vertx) {
@@ -84,7 +154,6 @@ class CheckInTest {
 		vertx.eventBus().publish("token-rating", msg);
 	}
 
-	
 	void getStoreLocations(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("Sending message");
 

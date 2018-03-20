@@ -129,37 +129,43 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		System.out.println("Transfer op");
 		JsonObject body = new JsonObject(msg.getBody());
 		String walletAddress = body.getString("resource").split("/")[1];
+		System.out.println("Wallet address is " + walletAddress);
 		JsonObject transaction = body.getJsonObject("value");
 
-		if (validateTransaction(transaction)) {
-			// get wallet document
-			mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
-				JsonObject walletInfo = res.result().get(0);
+		validateTransaction(transaction, walletAddress);
 
-				int currentBalance = walletInfo.getInteger("balance");
-				int transactionValue = transaction.getInteger("value");
+	}
 
-				// store transaction
-				JsonArray transactions = walletInfo.getJsonArray("transactions");
-				transactions.add(transaction);
-				// update balance
-				walletInfo.put("balance", currentBalance + transactionValue);
-				JsonObject document = new JsonObject(walletInfo.toString());
+	private void performTransaction(String walletAddress, JsonObject transaction) {
+		System.out.println("Transaction valid");
+		// get wallet document
+		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
+			JsonObject walletInfo = res.result().get(0);
 
-				JsonObject query = new JsonObject().put("address", walletAddress);
-				mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
-					System.out.println("Transaction added to wallet");
+			int currentBalance = walletInfo.getInteger("balance");
+			int transactionValue = transaction.getInteger("value");
 
-					// publish transaction in the event bus using the wallet address.
-					publish(walletAddress, transaction.toString());
-				});
+			// store transaction
+			JsonArray transactions = walletInfo.getJsonArray("transactions");
+			transactions.add(transaction);
+			// update balance
+			walletInfo.put("balance", currentBalance + transactionValue);
+			JsonObject document = new JsonObject(walletInfo.toString());
+
+			JsonObject query = new JsonObject().put("address", walletAddress);
+			mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
+				System.out.println("Transaction added to wallet");
+
+				// publish transaction in the event bus using the wallet address.
+				publish(walletAddress, transaction.toString());
 			});
-		}
+		});
+
 	}
 
 	CompletableFuture<Boolean> result = new CompletableFuture<>();
 
-	private boolean validateTransaction(JsonObject transaction) {
+	private void validateTransaction(JsonObject transaction, String walletAddress) {
 
 		System.out.println("Validating " + transaction.toString());
 
@@ -168,54 +174,45 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				|| !transaction.containsKey("date") || !transaction.containsKey("value")
 				|| !transaction.containsKey("nonce")) {
 			System.out.println("Invalid");
-			return false;
 		}
 
 		// check date validity
 		if (!DateUtils.validateDate(transaction.getString("date"))) {
 			System.out.println("Invalid date format");
-			return false;
 		}
 
 		// check tokens amount
 		if (transaction.getInteger("value") <= 0) {
-			return false;
+			System.out.println("Transaction value must be greater than 0");
 		}
 
 		// check if wallet address exists
-		mongoClient.find(walletsCollection, new JsonObject().put("address", transaction.getString("address")), res -> {
-			result.complete(true);
+		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			if (!res.succeeded()) {
 				System.out.println("Wallet does not exist");
 				// return false
-				result.complete(false);
 			} else {
 				System.out.println("Wallet exists");
-				result.complete(true);
 
-				// check if nonce is repeated
-				JsonObject wallet = res.result().get(0);
-				JsonArray transactions = wallet.getJsonArray("transactions");
+				performTransaction(walletAddress, transaction);
 
-				ArrayList<JsonObject> a = (ArrayList<JsonObject>) transactions.getList();
-				List<JsonObject> repeatedNonces = (List<JsonObject>) a.stream() // convert list to stream
-						.filter(element -> transaction.getInteger("nonce") == element.getInteger("nonce"))
-						.collect(Collectors.toList());
-
-				if (repeatedNonces.size() > 0) {
-					// nonce is repeated
-
-				}
+//				// check if nonce is repeated
+//				JsonObject wallet = res.result().get(0);
+//				JsonArray transactions = wallet.getJsonArray("transactions");
+//
+//				ArrayList<JsonObject> a = (ArrayList<JsonObject>) transactions.getList();
+//				List<JsonObject> repeatedNonces = (List<JsonObject>) a.stream() // convert list to stream
+//						.filter(element -> transaction.getInteger("nonce") == element.getInteger("nonce"))
+//						.collect(Collectors.toList());
+//
+//				if (repeatedNonces.size() > 0) {
+//					// nonce is repeated
+//
+//				}
 			}
 
 		});
 
-		try {
-			return result.get();
-		} catch (InterruptedException | ExecutionException e) {
-			e.printStackTrace();
-		}
-		return false;
 	}
 
 	/**
