@@ -26,16 +26,14 @@ import util.DateUtils;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
-@Disabled
 class WalletManagerTest {
 
 	private static String walletManagerHypertyURL;
 	private static String walletManagerHypertyIdentity;
-	private static String reporterFromValid;
+	private static String userURL = "user://sharing-cities-dsm/location-identity";
 	private static String reporterFromInvalid = "invalid";
 	private static String userID = "identity";
-	// TODO update to be conform with Rethink data model
-	private static String identity = "random";
+	private static JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", userURL));
 	private static String reporterAddress = "reporter";
 	private static MongoClient mongoClient;
 	private static String walletsCollection = "wallets";
@@ -45,10 +43,9 @@ class WalletManagerTest {
 
 		walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		walletManagerHypertyIdentity = "school://sharing-cities-dsm/wallet-manager";
-		reporterFromValid = walletManagerHypertyIdentity;
-		JsonObject config = new JsonObject().put("url", walletManagerHypertyURL)
-				.put("identity", walletManagerHypertyIdentity).put("database", "test").put("collection", "wallets")
-				.put("mongoHost", "localhost").put("dataObjectUrl", "reporter");
+		JsonObject config = new JsonObject().put("url", walletManagerHypertyURL).put("identity", identity)
+				.put("database", "test").put("collection", "wallets").put("mongoHost", "localhost")
+				.put("dataObjectUrl", "reporter");
 
 		// pass observers
 		JsonArray observers = new JsonArray();
@@ -128,7 +125,7 @@ class WalletManagerTest {
 		JsonObject msg = new JsonObject();
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
 		msg.put("url", "url");
-		msg.put("from", reporterFromValid);
+		msg.put("from", userURL);
 
 		String reporterSubscriptionAddress = reporterAddress + "/subscription";
 		System.out.println("sending message to reporter on " + reporterSubscriptionAddress);
@@ -143,13 +140,13 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-
+	
 	@Test
 	void testReporterOnReadValidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
 		msg.put("url", "url");
-		msg.put("from", reporterFromValid);
+		msg.put("from", userURL);
 
 		System.out.println("sending message to reporter on " + reporterAddress);
 
@@ -207,9 +204,10 @@ class WalletManagerTest {
 
 	@Test
 	void getWalletAddress(VertxTestContext testContext, Vertx vertx) {
+
 		JsonObject msg = new JsonObject();
 		msg.put("type", WalletManagerMessage.TYPE_READ);
-		String body = new JsonObject().put("resource", "user").put("value", userID).toString();
+		JsonObject body = new JsonObject().put("resource", "user").put("value", userID);
 		msg.put("body", body);
 
 		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
@@ -217,13 +215,13 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-
+	
 	@Test
 	void getWallet(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		String walletAddress = "123";
 		msg.put("type", WalletManagerMessage.TYPE_READ);
-		String body = new JsonObject().put("resource", "wallet").put("value", "wallet-address").toString();
+		JsonObject body = new JsonObject().put("resource", "wallet").put("value", "wallet-address");
 		msg.put("body", body);
 
 		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
@@ -231,7 +229,7 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-
+	
 	@Test
 	void transferToWallet(VertxTestContext testContext, Vertx vertx) {
 		String walletAddress = "123";
@@ -247,8 +245,7 @@ class WalletManagerTest {
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
-		String body = new JsonObject().put("resource", "wallet/" + "wallet-address").put("value", transaction)
-				.toString();
+		JsonObject body = new JsonObject().put("resource", "wallet/" + "wallet-address").put("value", transaction);
 		msg.put("body", body);
 
 		vertx.eventBus().publish(walletManagerHypertyURL, msg);

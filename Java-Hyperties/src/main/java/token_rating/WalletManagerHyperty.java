@@ -35,6 +35,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		observers = config().getJsonArray("observers");
 		dataObjectUrl = config().getString("dataObjectUrl");
 
+		System.out.println("Handling requests");
 		handleRequests();
 	}
 
@@ -46,15 +47,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		vertx.eventBus().consumer(config().getString("url"), message -> {
 			System.out.println("Message received: " + message.body().toString());
 
-			Gson gson = new Gson();
-			WalletManagerMessage msg = gson.fromJson(message.body().toString(), WalletManagerMessage.class);
+			JsonObject msg = new JsonObject(message.body().toString());
 
-			switch (msg.getType()) {
+			switch (msg.getString("type")) {
 			case "delete":
 				walletDelete(msg);
 				break;
 			case "create":
-				if (msg.getFrom() != null) {
+				if (msg.getString("from") != null) {
 					// Wallet creation requests
 					walletCreationRequest(msg);
 				} else {
@@ -63,7 +63,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				}
 				break;
 			case "read":
-				JsonObject body = new JsonObject(msg.getBody());
+				JsonObject body = msg.getJsonObject("body");
 				final String resource = body.getString("resource");
 				switch (resource) {
 				case "user":
@@ -80,7 +80,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				break;
 			default:
-				System.out.println("Incorrect message type: " + msg.getType());
+				System.out.println("Incorrect message type: " + msg.getString("type"));
 				break;
 			}
 		});
@@ -91,7 +91,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * 
 	 * @param msg
 	 */
-	private void walletDelete(WalletManagerMessage msg) {
+	private void walletDelete(JsonObject msg) {
 		System.out.println("Deleting wallet");
 		/**
 		 * type: delete, identity: <compliant with reTHINK identity model>, from:
@@ -99,7 +99,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		 */
 
 		// get wallet
-		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getIdentity()), res -> {
+		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getString("identity")), res -> {
 			JsonObject wallet = res.result().get(0);
 			changeWalletStatus(wallet, "deleted");
 		});
@@ -121,13 +121,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * 
 	 * @param msg
 	 */
-	private void walletTransfer(WalletManagerMessage msg) {
+	private void walletTransfer(JsonObject msg) {
 		/*
 		 * type: create, body: { resource: 'wallet/<wallet-address>', value:
 		 * <transaction JSON Object>}
 		 */
 		System.out.println("Transfer op");
-		JsonObject body = new JsonObject(msg.getBody());
+		JsonObject body = msg.getJsonObject("body");
 		String walletAddress = body.getString("resource").split("/")[1];
 		System.out.println("Wallet address is " + walletAddress);
 		JsonObject transaction = body.getJsonObject("value");
@@ -196,19 +196,21 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				performTransaction(walletAddress, transaction);
 
-//				// check if nonce is repeated
-//				JsonObject wallet = res.result().get(0);
-//				JsonArray transactions = wallet.getJsonArray("transactions");
-//
-//				ArrayList<JsonObject> a = (ArrayList<JsonObject>) transactions.getList();
-//				List<JsonObject> repeatedNonces = (List<JsonObject>) a.stream() // convert list to stream
-//						.filter(element -> transaction.getInteger("nonce") == element.getInteger("nonce"))
-//						.collect(Collectors.toList());
-//
-//				if (repeatedNonces.size() > 0) {
-//					// nonce is repeated
-//
-//				}
+				// // check if nonce is repeated
+				// JsonObject wallet = res.result().get(0);
+				// JsonArray transactions = wallet.getJsonArray("transactions");
+				//
+				// ArrayList<JsonObject> a = (ArrayList<JsonObject>) transactions.getList();
+				// List<JsonObject> repeatedNonces = (List<JsonObject>) a.stream() // convert
+				// list to stream
+				// .filter(element -> transaction.getInteger("nonce") ==
+				// element.getInteger("nonce"))
+				// .collect(Collectors.toList());
+				//
+				// if (repeatedNonces.size() > 0) {
+				// // nonce is repeated
+				//
+				// }
 			}
 
 		});
@@ -221,9 +223,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 * @param message
 	 */
-	private void walletAddressRequest(WalletManagerMessage msg, Message<Object> message) {
+	private void walletAddressRequest(JsonObject msg, Message<Object> message) {
 		System.out.println("Getting wallet address");
-		JsonObject body = new JsonObject(msg.getBody());
+		JsonObject body = msg.getJsonObject("body");
 		String userID = body.getString("value");
 
 		mongoClient.find(walletsCollection, new JsonObject().put("identity", userID), res -> {
@@ -241,9 +243,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 * @param message
 	 */
-	private void walletRead(WalletManagerMessage msg, Message<Object> message) {
+	private void walletRead(JsonObject msg, Message<Object> message) {
 		System.out.println("Getting wallet by address");
-		JsonObject body = new JsonObject(msg.getBody());
+		JsonObject body = msg.getJsonObject("body");
 		String walletAddress = body.getString("value");
 
 		JsonObject walletInfo = new JsonObject();
@@ -260,13 +262,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * 
 	 * @param msg
 	 */
-	private void walletCreationRequest(WalletManagerMessage msg) {
+	private void walletCreationRequest(JsonObject msg) {
 		System.out.println("Creating wallet");
 		/*
 		 * Before the wallet is created, it checks there is no wallet yet for the
 		 * identity.
 		 */
-		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getIdentity()), res -> {
+		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getJsonObject("identity")), res -> {
 			// TODO replace
 			String dataObjectUrl = "reporter";
 
@@ -276,9 +278,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				// build wallet document
 				JsonObject newWallet = new JsonObject();
 
-				String address = generateWalletAddress(msg.getIdentity());
+				String address = generateWalletAddress(msg.getJsonObject("identity"));
 				newWallet.put("address", address);
-				newWallet.put("identity", msg.getIdentity());
+				newWallet.put("identity", msg.getJsonObject("identity"));
 				newWallet.put("created", new Date().getTime());
 				newWallet.put("balance", 0);
 				newWallet.put("transactions", new JsonArray());
@@ -374,7 +376,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				msg.reply(response);
 			}
 
-			mongoClient.find(walletsCollection, new JsonObject().put("identity", "random"), res -> {
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
 				JsonObject wallet = res.result().get(0);
 				System.out.println(wallet);
 
@@ -395,7 +397,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private boolean validateSource(String from) {
 		// allow wallet creator
-		if (from.equals(identity) || observers.getList().contains(from)) {
+		System.out.println("validating source");
+		if (from.equals(identity.getJsonObject("userProfile").getString("userURL")) || observers.getList().contains(from)) {
 			return true;
 		}
 
@@ -406,10 +409,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * TODO The Wallet Address is generated by using some crypto function that uses
 	 * the identity GUID as seed and returned.
 	 * 
-	 * @param identity
+	 * @param jsonObject
 	 * @return wallet address
 	 */
-	private String generateWalletAddress(String identity) {
+	private String generateWalletAddress(JsonObject jsonObject) {
 		return "wallet-address";
 	}
 
