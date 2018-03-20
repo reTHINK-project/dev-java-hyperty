@@ -59,52 +59,55 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	private Handler<Message<JsonObject>> onMessage() {
 		return message -> {
-			System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-					+ message.body());
+			if (mandatoryFieldsValidator(message)) {
+			
+				System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+						+ message.body());
 
-			final JsonObject body = new JsonObject(message.body().toString());
-			final String type = body.getString("type");
-			final String from = body.getString("from");
-			JsonObject response = new JsonObject();
-			switch (type) {
-			case "read":
+				final JsonObject body = new JsonObject(message.body().toString());
+				final String type = body.getString("type");
+				final String from = body.getString("from");
+				JsonObject response = new JsonObject();
+				switch (type) {
+				case "read":
 
-				/*
-				 * return the queried data. If the read message body does not contain any
-				 * resource field, all persisted data is returned.
-				 */
+					/*
+					 * return the queried data. If the read message body does not contain any
+					 * resource field, all persisted data is returned.
+					 */
 
-				if (body.getJsonObject("resource") != null) {
+					if (body.getJsonObject("resource") != null) {
 
-				} else {
-					mongoClient.find(this.collection, new JsonObject(), res -> {
-			            System.out.println(res.result().size() + " <-value returned" + res.result().toString());
-			    	
-			            response.put("data", new JsonArray(res.result().toString())).put("identity", this.identity);
-			            message.reply(response);
-			        });					
+					} else {
+						mongoClient.find(this.collection, new JsonObject(), res -> {
+				            System.out.println(res.result().size() + " <-value returned" + res.result().toString());
+				    	
+				            response.put("data", new JsonArray(res.result().toString())).put("identity", this.identity);
+				            message.reply(response);
+				        });					
+					}
+					
+					break;
+				case "create":
+
+					if (from.contains("/subscription")) {
+						response.put("code", 200);
+						message.reply(response);
+
+						onNotification(newmsg -> {
+							System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+									+ newmsg.body().toString());
+						});
+					} else {
+						message.reply(response);
+					}
+
+					break;
+				default:
+					break;
 				}
-				
-				break;
-			case "create":
 
-				if (from.contains("/subscription")) {
-					response.put("code", 200);
-					message.reply(response);
-
-					onNotification(newmsg -> {
-						System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-								+ newmsg.body().toString());
-					});
-				} else {
-					message.reply(response);
-				}
-
-				break;
-			default:
-				break;
 			}
-
 		};
 	}
 
@@ -181,5 +184,41 @@ public class AbstractHyperty extends AbstractVerticle {
 		final JsonObject userProfile = this.identity.getJsonObject("userProfile");
 		return new DeliveryOptions().addHeader("from", this.url)
 				.addHeader("identity", userProfile.getString("userURL")).addHeader("type", type);
+	}
+	
+	/**
+	 * 
+	 * @param message
+	 * @return true when mandatory fields are defined
+	 */
+	public boolean mandatoryFieldsValidator(Message<JsonObject> message) {
+		//header validation...
+		final JsonObject json = new JsonObject(message.body().toString());
+		JsonObject response = new JsonObject();
+		response.put("code", 406);
+		
+		final String type = json.getString("type");
+		if(type == null) {
+			response.put("description", "No mandatory field 'type'");
+			message.reply(response);
+			return false;
+		}
+		
+		final String from = json.getString("from");
+		if(from == null) {
+			response.put("description", "No mandatory field 'from'");
+			message.reply(response);
+			return false;
+		}
+
+		final String to = json.getString("to");
+		if(to == null) {
+			response.put("description", "No mandatory field 'to'");
+			message.reply(response);
+			return false;
+		}
+		
+		return true;
+		
 	}
 }
