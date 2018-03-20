@@ -32,11 +32,11 @@ class WalletManagerTest {
 	private static String walletManagerHypertyIdentity;
 	private static String userURL = "user://sharing-cities-dsm/location-identity";
 	private static String reporterFromInvalid = "invalid";
-	private static String userID = "identity";
 	private static JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", userURL));
-	private static String reporterAddress = "reporter";
+	private static String dataObjectUrl = "reporter";
 	private static MongoClient mongoClient;
 	private static String walletsCollection = "wallets";
+	private static String walletAddress;
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
@@ -45,7 +45,7 @@ class WalletManagerTest {
 		walletManagerHypertyIdentity = "school://sharing-cities-dsm/wallet-manager";
 		JsonObject config = new JsonObject().put("url", walletManagerHypertyURL).put("identity", identity)
 				.put("database", "test").put("collection", "wallets").put("mongoHost", "localhost")
-				.put("dataObjectUrl", "reporter");
+				.put("dataObjectUrl", dataObjectUrl);
 
 		// pass observers
 		JsonArray observers = new JsonArray();
@@ -69,7 +69,7 @@ class WalletManagerTest {
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
 		msg.put("identity", identity);
 		msg.put("url", "url");
-		msg.put("from", "123");
+		msg.put("from", userURL);
 
 		vertx.eventBus().publish(walletManagerHypertyURL, msg);
 
@@ -78,6 +78,16 @@ class WalletManagerTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+
+		// get wallet address
+		msg = new JsonObject();
+		msg.put("type", WalletManagerMessage.TYPE_READ);
+		JsonObject body = new JsonObject().put("resource", "user").put("value", identity);
+		msg.put("body", body);
+
+		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
+			walletAddress = reply.result().body().toString();
+		});
 
 		checkpoint.flag();
 
@@ -127,7 +137,7 @@ class WalletManagerTest {
 		msg.put("url", "url");
 		msg.put("from", userURL);
 
-		String reporterSubscriptionAddress = reporterAddress + "/subscription";
+		String reporterSubscriptionAddress = dataObjectUrl + "/subscription";
 		System.out.println("sending message to reporter on " + reporterSubscriptionAddress);
 
 		// subscription
@@ -140,7 +150,7 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-	
+
 	@Test
 	void testReporterOnReadValidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -148,10 +158,10 @@ class WalletManagerTest {
 		msg.put("url", "url");
 		msg.put("from", userURL);
 
-		System.out.println("sending message to reporter on " + reporterAddress);
+		System.out.println("sending message to reporter on " + dataObjectUrl);
 
 		// subscription
-		vertx.eventBus().send(reporterAddress, msg, reply -> {
+		vertx.eventBus().send(dataObjectUrl, msg, reply -> {
 			// check reply 200
 			JsonObject rep = new JsonObject(reply.result().body().toString());
 			int code = rep.getJsonObject("body").getInteger("code");
@@ -168,10 +178,10 @@ class WalletManagerTest {
 		msg.put("url", "url");
 		msg.put("from", reporterFromInvalid);
 
-		System.out.println("sending message to reporter on " + reporterAddress);
+		System.out.println("sending message to reporter on " + dataObjectUrl);
 
 		// subscription
-		vertx.eventBus().send(reporterAddress, msg, reply -> {
+		vertx.eventBus().send(dataObjectUrl, msg, reply -> {
 			// check reply 403
 			JsonObject rep = new JsonObject(reply.result().body().toString());
 			int code = rep.getJsonObject("body").getInteger("code");
@@ -188,7 +198,7 @@ class WalletManagerTest {
 		msg.put("url", "url");
 		msg.put("from", reporterFromInvalid);
 
-		String reporterSubscriptionAddress = reporterAddress + "/subscription";
+		String reporterSubscriptionAddress = dataObjectUrl + "/subscription";
 		System.out.println("sending message to reporter on " + reporterSubscriptionAddress);
 
 		// subscription
@@ -203,36 +213,19 @@ class WalletManagerTest {
 	}
 
 	@Test
-	void getWalletAddress(VertxTestContext testContext, Vertx vertx) {
-
-		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_READ);
-		JsonObject body = new JsonObject().put("resource", "user").put("value", userID);
-		msg.put("body", body);
-
-		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
-			// System.out.println(reply.result().toString());
-			testContext.completeNow();
-		});
-	}
-	
-	@Test
 	void getWallet(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		String walletAddress = "123";
 		msg.put("type", WalletManagerMessage.TYPE_READ);
-		JsonObject body = new JsonObject().put("resource", "wallet").put("value", "wallet-address");
+		JsonObject body = new JsonObject().put("resource", "wallet").put("value", walletAddress);
 		msg.put("body", body);
 
 		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
-			System.out.println(reply.result().toString());
 			testContext.completeNow();
 		});
 	}
-	
+
 	@Test
 	void transferToWallet(VertxTestContext testContext, Vertx vertx) {
-		String walletAddress = "123";
 		JsonObject msg = new JsonObject();
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
 
@@ -245,12 +238,12 @@ class WalletManagerTest {
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
-		JsonObject body = new JsonObject().put("resource", "wallet/" + "wallet-address").put("value", transaction);
+		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
 		msg.put("body", body);
 
 		vertx.eventBus().publish(walletManagerHypertyURL, msg);
 
-		// wait sometime and check wallet
+		// wait some time and check wallet
 		try {
 			Thread.sleep(2000);
 		} catch (InterruptedException e) {
