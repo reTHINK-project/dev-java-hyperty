@@ -15,24 +15,27 @@ import io.vertx.ext.mongo.MongoClient;
 
 public class AbstractHyperty extends AbstractVerticle {
 
-	protected String url;
 	protected JsonObject identity;
-	protected EventBus eb;
+	protected JsonArray streams;
+	protected String url;
 	protected String collection;
 	protected String database;
 	protected String mongoHost;
+	protected EventBus eb;
 	protected MongoClient mongoClient = null;
 
 	@Override
 	public void start(){
 		this.url = config().getString("url");
 		this.identity = config().getJsonObject("identity");
-		this.eb = vertx.eventBus();
-		this.eb.<JsonObject>consumer(this.url, onMessage());
 		this.collection = config().getString("collection");
 		this.database = config().getString("database");
 		this.mongoHost = config().getString("mongoHost");
+		this.streams = config().getJsonArray("streams");
 		
+		this.eb = vertx.eventBus();
+		this.eb.<JsonObject>consumer(this.url, onMessage());
+
 		final String uri = "mongodb://" + mongoHost +":27017";
 		
 	    final JsonObject mongoconfig = new JsonObject()
@@ -61,7 +64,7 @@ public class AbstractHyperty extends AbstractVerticle {
 
 			final JsonObject body = new JsonObject(message.body().toString());
 			final String type = body.getString("type");
-
+			final String from = body.getString("from");
 			JsonObject response = new JsonObject();
 			switch (type) {
 			case "read":
@@ -84,13 +87,19 @@ public class AbstractHyperty extends AbstractVerticle {
 				
 				break;
 			case "create":
-				response.put("code", 200);
-				message.reply(response);
 
-				onNotification(newmsg -> {
-					System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-							+ newmsg.body().toString());
-				});
+				if (from.contains("/subscription")) {
+					response.put("code", 200);
+					message.reply(response);
+
+					onNotification(newmsg -> {
+						System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+								+ newmsg.body().toString());
+					});
+				} else {
+					message.reply(response);
+				}
+
 				break;
 			default:
 				break;
@@ -148,8 +157,9 @@ public class AbstractHyperty extends AbstractVerticle {
 		toSend.put("from", dataObjectUrl + "/subscription");
 		JsonObject body = new JsonObject();
 		// TODO
-		body.put("source", "hyperty://<sp-domain>/<hyperty-instance-identifier>");
-		body.put("schema", "hyperty-catalogue://<sp-domain>/dataObjectSchema/<schema-identifier>");
+		body.put("source", this.url);
+		//TODO should be passed on config?
+		body.put("schema", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
 		body.put("value", initialData);
 		toSend.put("body", body);
 
