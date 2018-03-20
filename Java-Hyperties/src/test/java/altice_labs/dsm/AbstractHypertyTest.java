@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -51,7 +52,7 @@ class AbstractHypertyTest {
 
 	@Test
 	public void getInitialDataIdentity(VertxTestContext context, Vertx vertx) {
-		JsonObject config = new JsonObject().put("type", "read");
+		JsonObject config = new JsonObject().put("type", "read").put("from", "hyperty://hypertyurlfrom").put("to", "hyperty://hypertyurlto");
 		vertx.eventBus().send(locationHypertyURL, config, message -> {
 			
 			System.out.println("DATA returned" + message.result().body().toString());
