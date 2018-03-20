@@ -16,7 +16,7 @@ import io.vertx.ext.mongo.MongoClient;
 public class AbstractHyperty extends AbstractVerticle {
 
 	protected String url;
-	protected String identity;
+	protected JsonObject identity;
 	protected EventBus eb;
 	protected String collection;
 	protected String database;
@@ -26,7 +26,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	@Override
 	public void start(){
 		this.url = config().getString("url");
-		this.identity = config().getString("identity");
+		this.identity = config().getJsonObject("identity");
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 		this.collection = config().getString("collection");
@@ -45,21 +45,13 @@ public class AbstractHyperty extends AbstractVerticle {
 	}
 
 	public void send(String address, String message, Handler replyHandler) {
-		final String type = new JsonObject(message).getString("type");
 
-		final DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader("from", this.url)
-				.addHeader("identity", this.identity).addHeader("type", type);
-
-		this.eb.send(address, message, deliveryOptions, replyHandler);
+		this.eb.send(address, message, getDeliveryOptions(message), replyHandler);
 	}
 
 	public void publish(String address, String message) {
-		String type = new JsonObject(message).getString("type");
 
-		DeliveryOptions deliveryOptions = new DeliveryOptions().addHeader("from", this.url)
-				.addHeader("identity", this.identity).addHeader("type", type);
-
-		this.eb.publish(address, message, deliveryOptions);
+		this.eb.publish(address, message, getDeliveryOptions(message));
 	}
 
 	private Handler<Message<JsonObject>> onMessage() {
@@ -172,5 +164,12 @@ public class AbstractHyperty extends AbstractVerticle {
 		// create Reporter
 		return new DataObjectReporter(dataObjectUrl, vertx, identity);
 
+	}
+	
+	public DeliveryOptions getDeliveryOptions(String message) {
+		final String type = new JsonObject(message).getString("type");
+		final JsonObject userProfile = this.identity.getJsonObject("userProfile");
+		return new DeliveryOptions().addHeader("from", this.url)
+				.addHeader("identity", userProfile.getString("userURL")).addHeader("type", type);
 	}
 }

@@ -15,7 +15,7 @@ public class DataObjectReporter {
 	String[] subscriptions;
 	private MongoClient mongoClient;
 
-	public DataObjectReporter(String dataObjectUrl, Vertx vertx, String identity) {
+	public DataObjectReporter(String dataObjectUrl, Vertx vertx, JsonObject identity) {
 		this.eb = vertx.eventBus();
 		this.eb.consumer(dataObjectUrl + "/subscription", onSubscribe());
 		System.out.println("Reporter listening in " + dataObjectUrl + "/subscription");
