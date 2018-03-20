@@ -78,11 +78,10 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			validateCheckinTimestamps(user, shopID, currentTimestamp);
 			JsonObject shopInfo = shopForIdResult.result().get(0);
 			validateUserPosition(user, userLatitude, userLongitude, shopInfo);
-
 		});
 
 		try {
-			if (checkinLatch.await(6L, TimeUnit.SECONDS))
+			if (checkinLatch.await(5L, TimeUnit.SECONDS))
 				return tokenAmount;
 			else
 				return tokenAmount;
