@@ -14,6 +14,7 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.ServerWebSocket;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JksOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
@@ -26,6 +27,7 @@ import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import token_rating.CheckInRatingHyperty;
+import token_rating.WalletManagerHyperty;
 import token_rating.WalletManagerMessage;
 import unused.LocationHyperty;
 
@@ -69,30 +71,49 @@ public class StartJavaHyperties extends AbstractVerticle {
 	}
 	
 	public void start() throws Exception { 
+		
+		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
+		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
+		
 		// Create Router object
 	    Router router = Router.router(vertx);
 	    
 		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
+
+		// deploy check-in rating hyperty
+		JsonObject identityCheckIN  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/checkin-identity"));
+		JsonObject configCheckIN = new JsonObject().put("url", checkINHypertyURL).put("identity", identityCheckIN);
+		configCheckIN.put("tokens_per_checkin", 10);
+		configCheckIN.put("checkin_radius", 500);
+		configCheckIN.put("min_frequency", 1);
+		//									.put("collection", "location_data").put("database", "test").put("mongoHost", "localhost")
+		//									.put("schemaURL", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
+		DeploymentOptions optionsCheckIN= new DeploymentOptions().setConfig(configCheckIN).setWorker(true);
+
+		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), optionsCheckIN, res -> {
+			System.out.println("CheckInRatingHyperty Result->" + res.result());
+		});
 		
-//
-//		//Deploy extra Verticles
-//		String locationHypertyURL = "school://sharing-cities-dsm/location-url";
-//		String locationHypertyIdentity = "user://sharing-cities-dsm/location-identity";
-//		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", locationHypertyIdentity);
-//		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
-//		
-//		// deply location hyperty
-//		vertx.deployVerticle(LocationHyperty.class.getName(), optionsLocation, res -> {
-//			System.out.println("Location Deploy Result->" + res.result());
-//		});
-//		
-//		// deply check-in rating hyperty
-//		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), res -> {
-//			System.out.println("CheckInRatingHyperty Result->" + res.result());
-//			sendCreateMessage();
-//			sendToStream();
-//		});
+		
+		// wallet manager hyperty deploy
+		
+		JsonObject identityWalletManager  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/wallet-manager"));
+
+		JsonObject configWalletManager  = new JsonObject().put("url", walletManagerHypertyURL).put("identity", identityWalletManager)
+				.put("database", "test").put("collection", "wallets").put("mongoHost", "localhost");
+
+		// pass observers
+		JsonArray observers = new JsonArray();
+		observers.add("");
+		configWalletManager.put("observers", observers);
+		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager).setWorker(true);
+		
+		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
+			System.out.println("WalletManagerHyperty Result->" + res.result());
+		});
+
+		
 		
 		
 		
@@ -145,9 +166,25 @@ public class StartJavaHyperties extends AbstractVerticle {
 		    	
 		    }
 	    });*/	
+		
+		
+		
+		
+		
+		
+		
 	}
 	
-	public  void sendCreateMessage() {
+	
+	
+	
+	
+	
+	
+	
+	
+	
+/*	public  void sendCreateMessage() {
 		WalletManagerMessage msg = new WalletManagerMessage();
 		msg.setType("create");
 		msg.setFrom(from);
@@ -180,7 +217,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		msg.setFrom(from);
 		Gson gson = new Gson();
 		vertx.eventBus().publish("token-rating", gson.toJson(msg));
-	}
+	}*/
 
 	
 }
