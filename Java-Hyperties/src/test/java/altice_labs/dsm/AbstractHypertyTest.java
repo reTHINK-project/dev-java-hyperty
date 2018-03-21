@@ -40,7 +40,8 @@ class AbstractHypertyTest {
 		identity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/location-identity"));
 		locationHypertyURL = "school://sharing-cities-dsm/location-url";
 		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", identity)
-											.put("collection", "location_data").put("database", "test").put("mongoHost", "localhost");
+											.put("collection", "location_data").put("database", "test").put("mongoHost", "localhost")
+											.put("schemaURL", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();
@@ -52,7 +53,7 @@ class AbstractHypertyTest {
 
 	@Test
 	public void getInitialDataIdentity(VertxTestContext context, Vertx vertx) {
-		JsonObject config = new JsonObject().put("type", "read").put("from", "hyperty://hypertyurlfrom").put("to", "hyperty://hypertyurlto");
+		JsonObject config = new JsonObject().put("type", "read").put("from", "hyperty://hypertyurlfrom").put("identity", identity);
 		vertx.eventBus().send(locationHypertyURL, config, message -> {
 			
 			System.out.println("DATA returned" + message.result().body().toString());
