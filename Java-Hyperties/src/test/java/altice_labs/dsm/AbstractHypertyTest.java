@@ -52,7 +52,7 @@ class AbstractHypertyTest {
 
 	@Test
 	public void getInitialDataIdentity(VertxTestContext context, Vertx vertx) {
-		JsonObject config = new JsonObject().put("type", "read").put("from", "hyperty://hypertyurlfrom").put("to", "hyperty://hypertyurlto");
+		JsonObject config = new JsonObject().put("type", "read").put("from", "hyperty://hypertyurlfrom").put("identity", identity);
 		vertx.eventBus().send(locationHypertyURL, config, message -> {
 			
 			System.out.println("DATA returned" + message.result().body().toString());

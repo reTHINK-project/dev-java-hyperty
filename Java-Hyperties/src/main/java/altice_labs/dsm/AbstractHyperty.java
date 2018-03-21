@@ -159,7 +159,6 @@ public class AbstractHyperty extends AbstractVerticle {
 		toSend.put("type", "create");
 		toSend.put("from", dataObjectUrl + "/subscription");
 		JsonObject body = new JsonObject();
-		// TODO
 		body.put("source", this.url);
 		//TODO should be passed on config?
 		body.put("schema", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
@@ -211,9 +210,9 @@ public class AbstractHyperty extends AbstractVerticle {
 			return false;
 		}
 
-		final String to = json.getString("to");
-		if(to == null) {
-			response.put("description", "No mandatory field 'to'");
+		final JsonObject identity = json.getJsonObject("identity");
+		if(identity == null) {
+			response.put("description", "No mandatory field 'identity'");
 			message.reply(response);
 			return false;
 		}
