@@ -36,7 +36,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	private JsonArray shops = null;
 	private String shopsInfoStreamAddress = "data://sharing-cities-dsm/shops";
 
-	private final CountDownLatch checkinLatch = new CountDownLatch(1);
+	private CountDownLatch checkinLatch;
 
 	@Override
 	public void start() {
@@ -72,8 +72,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	@Override
 	int rate(Object data) {
-
-		// TODO wait for async ops
+		// reset latch
+		System.out.println("1 - Rating");
 
 		tokenAmount = -1;
 		Long currentTimestamp = new Date().getTime();
@@ -85,22 +85,32 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		Double userLatitude = checkInMessage.getDouble("latitude");
 		Double userLongitude = checkInMessage.getDouble("longitude");
 
-		// get shop with that ID
-		mongoClient.find(shopsCollection, new JsonObject().put("id", shopID), shopForIdResult -> {
-			JsonObject shopInfo = shopForIdResult.result().get(0);
-			validateCheckinTimestamps(user, shopID, currentTimestamp);
-			validateUserPosition(user, userLatitude, userLongitude, shopInfo);
-		});
+		checkinLatch = new CountDownLatch(1);
+		new Thread(() -> {
+			System.out.println("2 - Started thread");
+			// get shop with that ID
+			mongoClient.find(shopsCollection, new JsonObject().put("id", shopID), shopForIdResult -> {
+				System.out.println("2 - Received shop info");
+				JsonObject shopInfo = shopForIdResult.result().get(0);
+				boolean validPosition = validateUserPosition(user, userLatitude, userLongitude, shopInfo);
+				if (!validPosition) {
+					checkinLatch.countDown();
+					return;
+				}
+				validateCheckinTimestamps(user, shopID, currentTimestamp);
+				checkinLatch.countDown();
+			});
+		}).start();
 
 		try {
-			if (checkinLatch.await(5L, TimeUnit.SECONDS))
-				return tokenAmount;
-			else
-				return tokenAmount;
+			checkinLatch.await(5L, TimeUnit.SECONDS);
+			System.out.println("3 - return from latch");
+			return tokenAmount;
 		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} // Timeout exceeded
-		return checkInTokens;
+			System.out.println("3 - interrupted exception");
+		}
+		System.out.println("3 - return other");
+		return tokenAmount;
 
 	}
 
@@ -152,7 +162,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @param userLongitude
 	 * @param shopInfo
 	 */
-	private void validateUserPosition(String user, Double userLatitude, Double userLongitude, JsonObject shopInfo) {
+	private boolean validateUserPosition(String user, Double userLatitude, Double userLongitude, JsonObject shopInfo) {
 		// access location
 		JsonObject location = shopInfo.getJsonObject("location");
 		Double latitude = location.getDouble("degrees-latitude");
@@ -160,17 +170,15 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// check if user in range
 		if (getDifferenceBetweenGPSCoordinates(userLatitude, userLongitude, latitude, longitude) <= checkin_radius) {
-			System.out.println("User is close to store");
+			System.out.println("2 - User is close to store");
 
 			// persist check in
 			// persistData(dataSource, user, new Date().getTime(), shopID);
 			tokenAmount = checkInTokens;
-			checkinLatch.countDown();
+			return true;
 		} else {
-			// TODO
-			tokenAmount = -1;
-			System.out.println("User is far from store");
-			checkinLatch.countDown();
+			System.out.println("2 - User is far from store");
+			return false;
 		}
 
 	}

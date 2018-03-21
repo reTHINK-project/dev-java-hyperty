@@ -3,6 +3,7 @@ package altice_labs.dsm;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -64,31 +65,39 @@ class CheckInTest {
 		msg.put("from", from);
 		vertx.eventBus().publish("token-rating", msg);
 
-		// insert entry in "rates"
-		JsonObject document = new JsonObject();
-		document.put("user", userID);
-		document.put("checkin", new JsonArray());
-		mongoClient.insert(ratesCollection, document, res -> {
-			System.out.println("Setup complete - rates");
-		});
+		CountDownLatch setupLatch = new CountDownLatch(2);
 
-		// add shops
-		document = new JsonObject();
-		document.put("id", storeID);
-		JsonObject storeLocation = new JsonObject();
-		storeLocation.put("degrees-latitude", 40);
-		storeLocation.put("degrees-longitude", 50);
-		document.put("location", storeLocation);
-		mongoClient.insert(shopsCollection, document, res -> {
-			System.out.println("Setup complete - shops");
-		});
+		new Thread(() -> {
+			// insert entry in "rates"
+			JsonObject document = new JsonObject();
+			document.put("user", userID);
+			document.put("checkin", new JsonArray());
+			mongoClient.insert(ratesCollection, document, res -> {
+				System.out.println("Setup complete - rates");
+				setupLatch.countDown();
+			});
+		}).start();
 
-		// wait for handler setup
+		new Thread(() -> {
+			// add shops
+			JsonObject document = new JsonObject();
+			document.put("id", storeID);
+			JsonObject storeLocation = new JsonObject();
+			storeLocation.put("degrees-latitude", 40);
+			storeLocation.put("degrees-longitude", 50);
+			document.put("location", storeLocation);
+			mongoClient.insert(shopsCollection, document, res -> {
+				System.out.println("Setup complete - shops");
+				setupLatch.countDown();
+			});
+		}).start();
+
 		try {
-			Thread.sleep(2000);
+			setupLatch.await();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+
 		checkpoint.flag();
 	}
 
@@ -123,15 +132,16 @@ class CheckInTest {
 
 	@Test
 	void userCloseToShop(VertxTestContext testContext, Vertx vertx) {
-		System.out.println("User close to shop");
-		JsonObject checkInMessage = new JsonObject().put("latitude", 40.1).put("longitude", 50);
+		System.out.println("-------------------------------------------------");
+		System.out.println("TEST - User close to shop");
+		JsonObject checkInMessage = new JsonObject().put("latitude", 40.0001).put("longitude", 50);
 		checkInMessage.put("userID", userID);
 		checkInMessage.put("shopID", storeID);
 		vertx.eventBus().publish(from, checkInMessage);
 
 		// wait for op
 		try {
-			Thread.sleep(8000);
+			Thread.sleep(3000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -145,15 +155,35 @@ class CheckInTest {
 			testContext.completeNow();
 		});
 
+		System.out.println("-------------------------------------------------");
 	}
 
-	// TODO
-	void userNotInAnyShop(VertxTestContext testContext, Vertx vertx) {
-		JsonObject userLocation = new JsonObject().put("latitude", -40).put("longitude", 50);
-		userLocation.put("userID", userID);
-		userLocation.put("shopID", storeID);
-		vertx.eventBus().publish(from, userLocation);
-		testContext.completeNow();
+	@Test
+	void userFarFromShop(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("-------------------------------------------------");
+		System.out.println("TEST - User far from shop");
+		JsonObject checkInMessage = new JsonObject().put("latitude", 40.1).put("longitude", 50);
+		checkInMessage.put("userID", userID);
+		checkInMessage.put("shopID", storeID);
+		vertx.eventBus().publish(from, checkInMessage);
+
+		// wait for op
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// check if rate was added to user
+		JsonObject query = new JsonObject().put("user", userID);
+		mongoClient.find(ratesCollection, query, result -> {
+			JsonObject rates = result.result().get(0);
+			JsonArray checkIns = rates.getJsonArray("checkin");
+			assertEquals(0, checkIns.size());
+			testContext.completeNow();
+		});
+
+		System.out.println("-------------------------------------------------");
 	}
 
 	void tearDownStream(VertxTestContext testContext, Vertx vertx) {
