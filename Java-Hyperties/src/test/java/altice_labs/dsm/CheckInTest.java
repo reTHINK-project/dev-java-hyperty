@@ -34,7 +34,7 @@ class CheckInTest {
 	private static String ratesCollection = "rates";
 	private static String shopsCollection = "shops";
 	private static MongoClient mongoClient;
-	private static String userID = "123";
+	private static String userID = "test-userID";
 	private static String storeID = "test-shopID";
 
 	@BeforeAll
@@ -42,6 +42,9 @@ class CheckInTest {
 
 		locationHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", identity);
+		config.put("tokens_per_checkin", 10);
+		config.put("checkin_radius", 500);
+		config.put("min_frequency", 1);
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();
@@ -121,7 +124,7 @@ class CheckInTest {
 	@Test
 	void userCloseToShop(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("User close to shop");
-		JsonObject checkInMessage = new JsonObject().put("latitude", 40).put("longitude", 50);
+		JsonObject checkInMessage = new JsonObject().put("latitude", 40.1).put("longitude", 50);
 		checkInMessage.put("userID", userID);
 		checkInMessage.put("shopID", storeID);
 		vertx.eventBus().publish(from, checkInMessage);
@@ -144,6 +147,7 @@ class CheckInTest {
 
 	}
 
+	// TODO
 	void userNotInAnyShop(VertxTestContext testContext, Vertx vertx) {
 		JsonObject userLocation = new JsonObject().put("latitude", -40).put("longitude", 50);
 		userLocation.put("userID", userID);
