@@ -18,12 +18,18 @@ import io.vertx.core.json.JsonObject;
  */
 public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
-	// TODO define value
-	private int checkInTokens = 10;
-	// TODO max difference between user and store location
-	private Double maxDifference = 0.01;
-	// TODO min difference between current and last checkin times
-	private Double minDifferenceTimestamps = 10.0;
+	/**
+	 * Number of tokens awarded per checkin.
+	 */
+	private int checkInTokens;
+	/**
+	 * Max difference (in meters) between user and store location
+	 */
+	private int checkin_radius;
+	/**
+	 * Min difference (in hours) between current and last checkin times.
+	 */
+	private int min_frequency;
 
 	private String shopsCollection = "shops";
 	private String dataSource = "checkin";
@@ -35,6 +41,11 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	@Override
 	public void start() {
 		super.start();
+
+		// read config
+		checkInTokens = config().getInteger("tokens_per_checkin");
+		checkin_radius = config().getInteger("checkin_radius");
+		min_frequency = config().getInteger("min_frequency");
 
 		// fetch shops from mongo and save them
 		fetchStoreData();
@@ -62,6 +73,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	@Override
 	int rate(Object data) {
 
+		// TODO wait for async ops
+
 		tokenAmount = -1;
 		Long currentTimestamp = new Date().getTime();
 
@@ -74,9 +87,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// get shop with that ID
 		mongoClient.find(shopsCollection, new JsonObject().put("id", shopID), shopForIdResult -> {
-
-			validateCheckinTimestamps(user, shopID, currentTimestamp);
 			JsonObject shopInfo = shopForIdResult.result().get(0);
+			validateCheckinTimestamps(user, shopID, currentTimestamp);
 			validateUserPosition(user, userLatitude, userLongitude, shopInfo);
 		});
 
@@ -93,12 +105,10 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	}
 
 	private void validateCheckinTimestamps(String user, String shopID, long currentTimestamp) {
+
 		// get previous checkin from that user for that rating source
-		JsonObject query = new JsonObject().put("user", user);
+		mongoClient.find(ratesCollection, new JsonObject().put("user", user), result -> {
 
-		mongoClient.find(ratesCollection, query, result -> {
-
-			System.out.println("Found user profile: " + result.result().size());
 			// access checkins data source
 			JsonObject userRates = result.result().get(0);
 			JsonArray checkInRates = userRates.getJsonArray(dataSource);
@@ -107,7 +117,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			List<JsonObject> rrr = (List<JsonObject>) a.stream() // convert list to stream
 					.filter(element -> shopID.equals(element.getString("id"))).collect(Collectors.toList());
 			if (rrr.size() == 0) {
-				System.out.println("user never went to this shop");
+				System.out.println("User never went to this shop");
 				persistData(dataSource, user, currentTimestamp, shopID, userRates);
 			} else {
 				// order by timestamp
@@ -122,9 +132,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					}
 				});
 
-				JsonObject latestCheckInForShop = rrr.get(0);
-				// compare timestamps
-				if (latestCheckInForShop.getDouble("timestamp") + minDifferenceTimestamps <= currentTimestamp) {
+				double lastVisitTimestamp = rrr.get(0).getDouble("timestamp");
+				if (lastVisitTimestamp + (min_frequency * 60 * 60) <= currentTimestamp) {
 					System.out.println("continue");
 					persistData(dataSource, user, currentTimestamp, shopID, userRates);
 				} else {
@@ -150,8 +159,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		Double longitude = location.getDouble("degrees-longitude");
 
 		// check if user in range
-		if (Math.abs(userLatitude - latitude) <= maxDifference
-				&& Math.abs(userLongitude - longitude) <= maxDifference) {
+		if (getDifferenceBetweenGPSCoordinates(userLatitude, userLongitude, latitude, longitude) <= checkin_radius) {
 			System.out.println("User is close to store");
 
 			// persist check in
@@ -159,9 +167,49 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			tokenAmount = checkInTokens;
 			checkinLatch.countDown();
 		} else {
+			// TODO
+			tokenAmount = -1;
+			System.out.println("User is far from store");
 			checkinLatch.countDown();
 		}
 
+	}
+
+	/**
+	 * Get difference (in meters) between two points (in GPS coordinates)
+	 * 
+	 * @param userLatitude
+	 * @param userLongitude
+	 * @param shopLatitude
+	 * @param shopLongitude
+	 * @return
+	 */
+	private double getDifferenceBetweenGPSCoordinates(double userLatitude, double userLongitude, double shopLatitude,
+			double shopLongitude) {
+		int earthRadiusKm = 6371;
+
+		double dLat = degreesToRadians(shopLatitude - userLatitude);
+		double dLon = degreesToRadians(shopLongitude - userLongitude);
+
+		double lat1 = degreesToRadians(userLatitude);
+		double lat2 = degreesToRadians(shopLatitude);
+
+		double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+				+ Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+		double distanceInMeters = earthRadiusKm * c * 1000;
+		System.out.println("Distance: " + distanceInMeters);
+		return distanceInMeters;
+	}
+
+	/**
+	 * Convert degrees to radians.
+	 * 
+	 * @param degrees
+	 * @return
+	 */
+	private double degreesToRadians(double degrees) {
+		return degrees * Math.PI / 180;
 	}
 
 }
