@@ -1,16 +1,10 @@
 package token_rating;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-
 import com.google.gson.Gson;
 
 import altice_labs.dsm.AbstractHyperty;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -22,41 +16,38 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	String uri = "mongodb://localhost:27017";
 	String db = "test";
 	String ratesCollection = "rates";
-	private Config config;
+	/**
+	 * hyperty address where to setup an handler to process invitations in case the
+	 * data source is dynamic eg produced by the smart citizen
+	 */
+	private String hyperty;
+	/**
+	 * the stream address to setup the handler in case the address is static e.g.
+	 * when the stream is produced via the Smart IoT.
+	 */
+	private String streamAddress;
+	/**
+	 * Wallet Manager Hyperty address.
+	 */
+	private String walletManagerAddress;
 
 	@Override
 	public void start() {
-		// System.out.println("Configuration: " + config().getString("name"));
+		super.start();
+		System.out.println("Abstract started");
 
-		// parse config file
-		Gson gson = new Gson();
-		BufferedReader br = null;
-		try {
-			br = new BufferedReader(new FileReader("./src/main/java/token_rating/config.json"));
-			Config config = (Config) gson.fromJson(br, Config.class);
-			if (config != null) {
-				this.config = config;
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+		// read config
+		hyperty = config().getString("hyperty");
+		streamAddress = config().getString("stream");
+		walletManagerAddress = config().getString("wallet");
 
-		} finally {
-			if (br != null) {
-				try {
-					br.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-
+		System.out.println("...adding");
 		addMyHandler();
 
 		// make connection with MongoDB
 		JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", db);
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 
-		// vertx.eventBus().consumer(this.url, onMessage());
 	}
 
 	/*
@@ -72,16 +63,22 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * associated transaction that is stored in a DB (or the transaction is only
 	 * stored in the recipient wallet ?) (future in a blockchain?):
 	 */
-	private void mine(int numTokens, Object data) {
+	private void mine(int numTokens, Message<JsonObject> message) {
 		System.out.println("Mining " + numTokens + " tokens...");
+		JsonObject msgOriginal = message.body();
+		String userId = msgOriginal.getString("user");
+		System.out.println("MINING: " + msgOriginal);
+
 		// create transaction
 		Transaction tr = new Transaction();
 		tr.setValue(numTokens);
-		tr.setRecipient(config.getWalletManagerAddress());
-		tr.setSource(config.getStream());
+		tr.setRecipient(walletManagerAddress);
+		tr.setSource(streamAddress);
 
 		// store transaction by sending it to wallet through wallet manager
-		String walletAddress = "123";
+		// TODO get wallet address
+		String walletAddress = getWalletAddress(userId);
+
 		WalletManagerMessage msg = new WalletManagerMessage();
 		msg.setType(WalletManagerMessage.TYPE_CREATE);
 
@@ -108,28 +105,30 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		System.out.println("Sending transaction to Wallet Manager...");
 
 		Gson gson = new Gson();
-		vertx.eventBus().publish(config.getWalletManagerAddress(), gson.toJson(msg));
+		vertx.eventBus().publish(walletManagerAddress, gson.toJson(msg));
 	}
 
 	/**
-	 * TODO Send message to Wallet Manager address with callback to return the value
+	 * Send message to Wallet Manager address with callback to return the value
 	 * returned in case it is found.
 	 * 
 	 * @param userId
 	 * @return
 	 */
-	private String getWalletAddress(String userId) {
+	String getWalletAddress(String userId) {
+		// TODO send request to AbstractTokenRatingHyperty/CheckInRating
 		// send message to Wallet Manager address
 		/*
 		 * type: read, from: <rating address>, body: { resource: 'user/<userId>'}
 		 */
 		// build message and convert to JSON string
-		WalletManagerMessage msg = new WalletManagerMessage();
-		msg.setType("read");
-		msg.setFrom(config.getHyperty());
-		msg.setBody("{ resource: 'user/" + userId + "'}");
+		JsonObject msg = new JsonObject();
+		msg.put("type", "read");
+		msg.put("from", hyperty);
+		msg.put("body", new JsonObject().put("resource", "user/" + userId));
+		msg.put("identity", new JsonObject());
 
-		send(config.getWalletManagerAddress(), new Gson().toJson(msg), onMessage());
+		send(walletManagerAddress, msg.toString(), onMessage());
 
 		return "123";
 
@@ -148,10 +147,10 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * removeStreamHandler for valid received delete messages.
 	 */
 	private void addMyHandler() {
-
-		// add a stream handler
-		// vertx.eventBus().consumer(config.getStream(), onMessage());
-		vertx.eventBus().consumer(config.getStream(), message -> {
+		System.out.println("..." + streamAddress);
+		vertx.eventBus().<JsonObject>consumer(streamAddress, message -> {
+			System.out.println("Abstract REC");
+			mandatoryFieldsValidator(message);
 
 			Gson gson = new Gson();
 			WalletManagerMessage msg = gson.fromJson(message.body().toString(), WalletManagerMessage.class);
@@ -160,6 +159,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			switch (msg.getType()) {
 			case "create":
 				// valid received invitations (create messages)
+				System.out.println("Abstract ADD STREAM");
 				addStreamHandler(msg.getFrom());
 				break;
 			case "delete":
@@ -182,8 +182,8 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	private void addStreamHandler(String from) {
 		System.out.println("Adding stream handler from " + from);
 		// add a stream handler
-		// vertx.eventBus().consumer(config.getStream(), onMessage());
-		vertx.eventBus().consumer(from, message -> {
+		vertx.eventBus().<JsonObject>consumer(from, message -> {
+			mandatoryFieldsValidator(message);
 
 			System.out.println("Received message " + message.body() + " from " + from);
 
@@ -225,7 +225,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		entryArray.add(entry);
 		checkinInfo.put(dataSource, entryArray);
 
-		System.out.println("Persisting");
 		JsonObject document = new JsonObject(checkinInfo.toString());
 
 		JsonObject query = new JsonObject().put("user", user);

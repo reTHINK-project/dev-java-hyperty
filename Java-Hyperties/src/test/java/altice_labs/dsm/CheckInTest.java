@@ -46,6 +46,10 @@ class CheckInTest {
 		config.put("tokens_per_checkin", 10);
 		config.put("checkin_radius", 500);
 		config.put("min_frequency", 1);
+		config.put("hyperty", "123");
+		config.put("stream", "token-rating");
+		config.put("identity", identity);
+		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();
@@ -158,7 +162,7 @@ class CheckInTest {
 		System.out.println("-------------------------------------------------");
 	}
 
-	@Test
+	
 	void userFarFromShop(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("-------------------------------------------------");
 		System.out.println("TEST - User far from shop");
