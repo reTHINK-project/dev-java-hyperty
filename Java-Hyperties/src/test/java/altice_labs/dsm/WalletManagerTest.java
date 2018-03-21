@@ -3,10 +3,10 @@ package altice_labs.dsm;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -55,7 +55,6 @@ class WalletManagerTest {
 
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsLocation, context.succeeding());
-		System.out.println("-> Wallet Manager deployed");
 
 		// wait for Mongo connection to take place
 		try {
@@ -70,29 +69,43 @@ class WalletManagerTest {
 		msg.put("identity", identity);
 		msg.put("url", "url");
 		msg.put("from", userURL);
-
 		vertx.eventBus().publish(walletManagerHypertyURL, msg);
 
 		try {
-			Thread.sleep(3000);
+			Thread.sleep(6000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 
-		// get wallet address
-		msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_READ);
-		JsonObject body = new JsonObject().put("resource", "user").put("value", identity);
-		msg.put("body", body);
+		CountDownLatch setupLatch = new CountDownLatch(1);
+		new Thread(() -> {
+			System.out.println("getting walllll");
+			// get wallet address
+			JsonObject msg2 = new JsonObject();
+			msg2.put("type", WalletManagerMessage.TYPE_READ);
+			JsonObject body = new JsonObject().put("resource", "user").put("value", identity);
+			msg2.put("body", body);
+			msg2.put("from", "");
+			msg2.put("identity", new JsonObject());
 
-		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
-			walletAddress = reply.result().body().toString();
-		});
+			vertx.eventBus().send(walletManagerHypertyURL, msg2, reply -> {
+				walletAddress = reply.result().body().toString();
+				System.out.println("Wallet add is " + walletAddress);
+				setupLatch.countDown();
+			});
+		}).start();
 
-		checkpoint.flag();
+		try {
+			setupLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 		// connect to Mongo
 		makeMongoConnection(vertx);
+
+		checkpoint.flag();
+
 	}
 
 	@AfterAll
@@ -150,7 +163,6 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-
 	@Test
 	void testReporterOnReadValidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -170,7 +182,6 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-
 	@Test
 	void testReporterOnReadInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -190,7 +201,6 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-
 	@Test
 	void testReporterSubscriptionInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -211,7 +221,6 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-
 	@Test
 	void getWallet(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -238,14 +247,16 @@ class WalletManagerTest {
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
+		transaction.put("from", "");
 		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
 		msg.put("body", body);
+		msg.put("from", "");
 
 		vertx.eventBus().publish(walletManagerHypertyURL, msg);
 
 		// wait some time and check wallet
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

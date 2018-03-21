@@ -112,7 +112,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	}
 
 	/**
-	 * Send message to Wallet Manager address with callback to return the value
+	 * TODO Send message to Wallet Manager address with callback to return the value
 	 * returned in case it is found.
 	 * 
 	 * @param userId
@@ -189,7 +189,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 			int numTokens = rate(message.body());
 			if (numTokens == -1) {
-				System.out.println("User is not inside any shop");
+				System.out.println("ABSTRACT TOKEN: User is not inside any shop");
 			} else {
 				mine(numTokens, message);
 			}

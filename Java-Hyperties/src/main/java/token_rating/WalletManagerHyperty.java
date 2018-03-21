@@ -40,7 +40,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private void handleRequests() {
 
-		vertx.eventBus().consumer(config().getString("url"), message -> {
+		vertx.eventBus().<JsonObject>consumer(config().getString("url"), message -> {
+			mandatoryFieldsValidator(message);
 			System.out.println("Message received: " + message.body().toString());
 
 			JsonObject msg = new JsonObject(message.body().toString());
@@ -50,7 +51,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				walletDelete(msg);
 				break;
 			case "create":
-				if (msg.getString("from") != null) {
+				if (msg.getJsonObject("body") == null) {
 					// Wallet creation requests
 					walletCreationRequest(msg);
 				} else {
@@ -216,7 +217,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 * @param message
 	 */
-	private void walletAddressRequest(JsonObject msg, Message<Object> message) {
+	private void walletAddressRequest(JsonObject msg, Message<JsonObject> message) {
 		System.out.println("Getting wallet address");
 		JsonObject body = msg.getJsonObject("body");
 		JsonObject identity = body.getJsonObject("value");
@@ -236,7 +237,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 * @param message
 	 */
-	private void walletRead(JsonObject msg, Message<Object> message) {
+	private void walletRead(JsonObject msg, Message<JsonObject> message) {
 		System.out.println("Getting wallet by address");
 		JsonObject body = msg.getJsonObject("body");
 		String walletAddress = body.getString("value");
@@ -256,7 +257,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 */
 	private void walletCreationRequest(JsonObject msg) {
-		System.out.println("Creating wallet");
+		System.out.println("Creating wallet: " + msg);
 		/*
 		 * Before the wallet is created, it checks there is no wallet yet for the
 		 * identity.
@@ -329,7 +330,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// accept ? reject by handler
 			JsonObject response = new JsonObject();
 			response.put("type", "response");
-			response.put("from", msg.body().getString("to"));
+			response.put("from", "");
 			response.put("to", msg.body().getString("from"));
 			JsonObject sendMsgBody = new JsonObject();
 			if (validateSource(from)) {
@@ -357,7 +358,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			System.out.println("READ HANDLER");
 			JsonObject response = new JsonObject();
 			response.put("type", "response");
-			response.put("from", msg.body().getString("to"));
+			response.put("from", "");
 			response.put("to", msg.body().getString("from"));
 
 			JsonObject sendMsgBody = new JsonObject();
@@ -405,6 +406,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @return wallet address
 	 */
 	private String generateWalletAddress(JsonObject jsonObject) {
+		System.out.println("JSON is " + jsonObject);
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			byte[] hashed1 = digest.digest(jsonObject.toString().getBytes());
