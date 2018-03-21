@@ -13,12 +13,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import token_rating.CheckInRatingHyperty;
 
 /*
@@ -162,7 +165,7 @@ class CheckInTest {
 		System.out.println("-------------------------------------------------");
 	}
 
-	
+	@Test
 	void userFarFromShop(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("-------------------------------------------------");
 		System.out.println("TEST - User far from shop");

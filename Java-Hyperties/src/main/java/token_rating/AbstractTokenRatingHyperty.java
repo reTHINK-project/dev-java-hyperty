@@ -1,5 +1,7 @@
 package token_rating;
 
+import java.util.concurrent.CountDownLatch;
+
 import com.google.gson.Gson;
 
 import altice_labs.dsm.AbstractHyperty;
@@ -30,6 +32,8 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * Wallet Manager Hyperty address.
 	 */
 	private String walletManagerAddress;
+	
+	private String walletAddress = "";
 
 	@Override
 	public void start() {
@@ -76,7 +80,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		tr.setSource(streamAddress);
 
 		// store transaction by sending it to wallet through wallet manager
-		// TODO get wallet address
 		String walletAddress = getWalletAddress(userId);
 
 		WalletManagerMessage msg = new WalletManagerMessage();
@@ -116,7 +119,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * @return
 	 */
 	String getWalletAddress(String userId) {
-		// TODO send request to AbstractTokenRatingHyperty/CheckInRating
 		// send message to Wallet Manager address
 		/*
 		 * type: read, from: <rating address>, body: { resource: 'user/<userId>'}
@@ -128,17 +130,23 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		msg.put("body", new JsonObject().put("resource", "user/" + userId));
 		msg.put("identity", new JsonObject());
 
-		send(walletManagerAddress, msg.toString(), onMessage());
+		CountDownLatch setupLatch = new CountDownLatch(1);
 
-		return "123";
+		new Thread(() -> {
+			send(walletManagerAddress, msg.toString(), reply -> {
+				walletAddress = reply.toString();
+				setupLatch.countDown();
+			});
+		}).start();
+		
+		try {
+			setupLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
-	}
+		return walletAddress;
 
-	private Handler<Message<String>> onMessage() {
-		return reply -> {
-			// with callback to return the value returned in case it is found.
-			// return reply;
-		};
 	}
 
 	/**
