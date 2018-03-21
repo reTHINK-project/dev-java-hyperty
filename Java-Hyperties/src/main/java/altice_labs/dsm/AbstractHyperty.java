@@ -21,6 +21,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String collection;
 	protected String database;
 	protected String mongoHost;
+	protected String schemaURL;
 	protected EventBus eb;
 	protected MongoClient mongoClient = null;
 
@@ -32,6 +33,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.database = config().getString("database");
 		this.mongoHost = config().getString("mongoHost");
 		this.streams = config().getJsonArray("streams");
+		this.schemaURL = config().getString("schemaURL");
 		
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
@@ -158,10 +160,10 @@ public class AbstractHyperty extends AbstractVerticle {
 		JsonObject toSend = new JsonObject();
 		toSend.put("type", "create");
 		toSend.put("from", dataObjectUrl + "/subscription");
+		
 		JsonObject body = new JsonObject();
 		body.put("source", this.url);
-		//TODO should be passed on config?
-		body.put("schema", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
+		body.put("schema", this.schemaURL);
 		body.put("value", initialData);
 		toSend.put("body", body);
 
