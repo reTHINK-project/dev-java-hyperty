@@ -40,7 +40,7 @@ class AbstractHypertyTest {
 		identity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/location-identity"));
 		locationHypertyURL = "school://sharing-cities-dsm/location-url";
 		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", identity)
-											.put("collection", "location_data").put("database", "test").put("mongoHost", "localhost")
+											.put("collection", "location_data").put("db_name", "test").put("mongoHost", "localhost")
 											.put("schemaURL", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
