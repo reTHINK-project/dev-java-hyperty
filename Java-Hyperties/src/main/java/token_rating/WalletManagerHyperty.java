@@ -16,16 +16,10 @@ import util.DateUtils;
 public class WalletManagerHyperty extends AbstractHyperty {
 
 	private String walletsCollection = "wallets";
-	/**
-	 * Array with all vertx hyperty observers to be invited for all wallets.
-	 */
-	private JsonArray observers;
+	
 
 	@Override
 	public void start() {
-
-		// read config
-		observers = config().getJsonArray("observers");
 
 		System.out.println("Handling requests");
 		handleRequests();
@@ -289,7 +283,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				mongoClient.save(walletsCollection, document, id -> {
 					System.out.println("New wallet with ID:" + id);
 
-					inviteObservers(address, observers, requestsHandler(), readHandler());
+					inviteObservers(address, requestsHandler(), readHandler());
 				});
 
 				message.reply(newWallet);

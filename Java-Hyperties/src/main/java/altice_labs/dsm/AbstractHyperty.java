@@ -1,6 +1,5 @@
 package altice_labs.dsm;
 
-
 import java.util.Iterator;
 
 import data_objects.DataObjectReporter;
@@ -24,9 +23,13 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String schemaURL;
 	protected EventBus eb;
 	protected MongoClient mongoClient = null;
+	/**
+	 * Array with all vertx hyperty observers to be invited for all wallets.
+	 */
+	protected JsonArray observers;
 
 	@Override
-	public void start(){
+	public void start() {
 		this.url = config().getString("url");
 		this.identity = config().getJsonObject("identity");
 		this.collection = config().getString("collection");
@@ -34,18 +37,17 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.mongoHost = config().getString("mongoHost");
 		this.streams = config().getJsonArray("streams");
 		this.schemaURL = config().getString("schemaURL");
-		
+		this.observers = config().getJsonArray("observers");
+
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 
 		if (mongoHost != null) {
-			final String uri = "mongodb://" + mongoHost +":27017";
-			
-		    final JsonObject mongoconfig = new JsonObject()
-		            .put("connection_string", uri)
-		            .put("db_name", this.database);
-	
-		    mongoClient = MongoClient.createShared(vertx, mongoconfig);
+			final String uri = "mongodb://" + mongoHost + ":27017";
+
+			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", this.database);
+
+			mongoClient = MongoClient.createShared(vertx, mongoconfig);
 		}
 
 	}
@@ -63,9 +65,9 @@ public class AbstractHyperty extends AbstractVerticle {
 	private Handler<Message<JsonObject>> onMessage() {
 		return message -> {
 			if (mandatoryFieldsValidator(message)) {
-			
-				System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-						+ message.body());
+
+				System.out.println(
+						"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + message.body());
 
 				final JsonObject body = new JsonObject(message.body().toString());
 				final String type = body.getString("type");
@@ -83,13 +85,13 @@ public class AbstractHyperty extends AbstractVerticle {
 
 					} else {
 						mongoClient.find(this.collection, new JsonObject(), res -> {
-				            System.out.println(res.result().size() + " <-value returned" + res.result().toString());
-				    	
-				            response.put("data", new JsonArray(res.result().toString())).put("identity", this.identity);
-				            message.reply(response);
-				        });					
+							System.out.println(res.result().size() + " <-value returned" + res.result().toString());
+
+							response.put("data", new JsonArray(res.result().toString())).put("identity", this.identity);
+							message.reply(response);
+						});
 					}
-					
+
 					break;
 				case "create":
 
@@ -151,9 +153,10 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	/**
 	 * create(dataObjectUrl, observers, initialData ) functions.
-	 * @return 
+	 * 
+	 * @return
 	 */
-	public DataObjectReporter create(String dataObjectUrl, JsonArray observers, JsonObject initialData) {
+	public DataObjectReporter create(String dataObjectUrl, JsonObject initialData) {
 		/**
 		 * type: "create", from: "dataObjectUrl/subscription", body: { source:
 		 * <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
@@ -161,7 +164,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		JsonObject toSend = new JsonObject();
 		toSend.put("type", "create");
 		toSend.put("from", dataObjectUrl + "/subscription");
-		
+
 		JsonObject body = new JsonObject();
 		body.put("source", this.url);
 		body.put("schema", this.schemaURL);
@@ -180,57 +183,57 @@ public class AbstractHyperty extends AbstractVerticle {
 		return new DataObjectReporter(dataObjectUrl, vertx, identity);
 
 	}
-	
+
 	public DeliveryOptions getDeliveryOptions(String message) {
 		final String type = new JsonObject(message).getString("type");
 		final JsonObject userProfile = this.identity.getJsonObject("userProfile");
-		return new DeliveryOptions().addHeader("from", this.url)
-				.addHeader("identity", userProfile.getString("userURL")).addHeader("type", type);
+		return new DeliveryOptions().addHeader("from", this.url).addHeader("identity", userProfile.getString("userURL"))
+				.addHeader("type", type);
 	}
-	
-	public void inviteObservers(String dataObjectUrl, JsonArray observers, Handler<Message<JsonObject>> requestsHandler,
+
+	public void inviteObservers(String dataObjectUrl, Handler<Message<JsonObject>> requestsHandler,
 			Handler<Message<JsonObject>> readHandler) {
 		// An invitation is sent to config.observers
-		DataObjectReporter reporter = create(dataObjectUrl, observers, new JsonObject());
+		DataObjectReporter reporter = create(dataObjectUrl, new JsonObject());
 		reporter.setMongoClient(mongoClient);
 		// pass handler function that will handle subscription events
 		reporter.setSubscriptionHandler(requestsHandler);
 		reporter.setReadHandler(readHandler);
 	}
-	
+
 	/**
 	 * 
 	 * @param message
 	 * @return true when mandatory fields are defined
 	 */
 	public boolean mandatoryFieldsValidator(Message<JsonObject> message) {
-		//header validation...
+		// header validation...
 		final JsonObject json = new JsonObject(message.body().toString());
 		JsonObject response = new JsonObject();
 		response.put("code", 406);
-		
+
 		final String type = json.getString("type");
-		if(type == null) {
+		if (type == null) {
 			response.put("description", "No mandatory field 'type'");
 			message.reply(response);
 			return false;
 		}
-		
+
 		final String from = json.getString("from");
-		if(from == null) {
+		if (from == null) {
 			response.put("description", "No mandatory field 'from'");
 			message.reply(response);
 			return false;
 		}
 
 		final JsonObject identity = json.getJsonObject("identity");
-		if(identity == null) {
+		if (identity == null) {
 			response.put("description", "No mandatory field 'identity'");
 			message.reply(response);
 			return false;
 		}
-		
+
 		return true;
-		
+
 	}
 }
