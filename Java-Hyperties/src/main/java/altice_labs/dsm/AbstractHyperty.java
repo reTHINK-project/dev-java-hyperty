@@ -188,6 +188,16 @@ public class AbstractHyperty extends AbstractVerticle {
 				.addHeader("identity", userProfile.getString("userURL")).addHeader("type", type);
 	}
 	
+	public void inviteObservers(String dataObjectUrl, JsonArray observers, Handler<Message<JsonObject>> requestsHandler,
+			Handler<Message<JsonObject>> readHandler) {
+		// An invitation is sent to config.observers
+		DataObjectReporter reporter = create(dataObjectUrl, observers, new JsonObject());
+		reporter.setMongoClient(mongoClient);
+		// pass handler function that will handle subscription events
+		reporter.setSubscriptionHandler(requestsHandler);
+		reporter.setReadHandler(readHandler);
+	}
+	
 	/**
 	 * 
 	 * @param message
