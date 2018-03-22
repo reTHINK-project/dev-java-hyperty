@@ -49,7 +49,14 @@ public class AbstractHyperty extends AbstractVerticle {
 
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
 		}
+		setUpDataObjects();
 
+	}
+
+	private void setUpDataObjects() {
+		for (int i = 0; i < this.streams.size(); i++) {
+			create(this.streams.getString(i), new JsonObject(), false);
+		}
 	}
 
 	public void send(String address, String message, Handler replyHandler) {
@@ -156,7 +163,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * 
 	 * @return
 	 */
-	public DataObjectReporter create(String dataObjectUrl, JsonObject initialData) {
+	public DataObjectReporter create(String dataObjectUrl, JsonObject initialData, boolean toInvite) {
 		/**
 		 * type: "create", from: "dataObjectUrl/subscription", body: { source:
 		 * <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
@@ -170,14 +177,15 @@ public class AbstractHyperty extends AbstractVerticle {
 		body.put("schema", this.schemaURL);
 		body.put("value", initialData);
 		toSend.put("body", body);
-
-		Iterator it = observers.getList().iterator();
-		while (it.hasNext()) {
-			String observer = (String) it.next();
-			send(observer, toSend.toString(), reply -> {
-				System.out.println(
-						"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + reply.toString());
-			});
+		if (toInvite) {
+			Iterator it = observers.getList().iterator();
+			while (it.hasNext()) {
+				String observer = (String) it.next();
+				send(observer, toSend.toString(), reply -> {
+					System.out.println(
+							"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + reply.toString());
+				});
+			}
 		}
 		// create Reporter
 		return new DataObjectReporter(dataObjectUrl, vertx, identity);
@@ -194,7 +202,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	public void inviteObservers(String dataObjectUrl, Handler<Message<JsonObject>> requestsHandler,
 			Handler<Message<JsonObject>> readHandler) {
 		// An invitation is sent to config.observers
-		DataObjectReporter reporter = create(dataObjectUrl, new JsonObject());
+		DataObjectReporter reporter = create(dataObjectUrl, new JsonObject(), true);
 		reporter.setMongoClient(mongoClient);
 		// pass handler function that will handle subscription events
 		reporter.setSubscriptionHandler(requestsHandler);
