@@ -44,7 +44,7 @@ class WalletManagerTest {
 		walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		walletManagerHypertyIdentity = "school://sharing-cities-dsm/wallet-manager";
 		JsonObject config = new JsonObject().put("url", walletManagerHypertyURL).put("identity", identity)
-				.put("database", "test").put("collection", "wallets").put("mongoHost", "localhost")
+				.put("db_name", "test").put("collection", walletsCollection).put("mongoHost", "localhost")
 				.put("dataObjectUrl", dataObjectUrl);
 
 		// pass observers

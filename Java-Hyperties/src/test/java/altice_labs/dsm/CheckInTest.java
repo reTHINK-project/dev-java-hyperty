@@ -31,11 +31,15 @@ class CheckInTest {
 	private static String from = "tester";
 	private static String userURL = "user://sharing-cities-dsm/location-identity";
 	private static JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", userURL));
-	private static String ratesCollection = "rates";
-	private static String shopsCollection = "shops";
-	private static MongoClient mongoClient;
+
 	private static String userID = "test-userID";
 	private static String storeID = "test-shopID";
+	// mongo config
+	private static MongoClient mongoClient;
+	private static String ratesCollection = "rates";
+	private static String shopsCollection = "shops";
+	private static String db_name = "test";
+	private static String mongoHost = "localhost";
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
@@ -51,8 +55,8 @@ class CheckInTest {
 		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		// mongo
 		config.put("collection", ratesCollection);
-		config.put("db_name", "test");
-		config.put("mongoHost", "localhost");
+		config.put("db_name", db_name);
+		config.put("mongoHost", mongoHost);
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();
@@ -114,8 +118,9 @@ class CheckInTest {
 
 		final JsonObject mongoconfig = new JsonObject();
 		mongoconfig.put("connection_string", uri);
-		mongoconfig.put("db_name", "test");
-		mongoconfig.put("database", "test").put("collection", ratesCollection);
+		mongoconfig.put("db_name", db_name);
+		mongoconfig.put("database", db_name);
+		mongoconfig.put("collection", ratesCollection);
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
