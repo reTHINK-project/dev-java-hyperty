@@ -42,6 +42,7 @@ class AbstractHypertyTest {
 		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", identity)
 											.put("collection", "location_data").put("db_name", "test").put("mongoHost", "localhost")
 											.put("schemaURL", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
+		config.put("streams", new JsonArray());
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();

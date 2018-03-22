@@ -9,6 +9,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import io.vertx.core.Handler;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -33,8 +35,6 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	private String shopsCollection = "shops";
 	private String dataSource = "checkin";
-	private JsonArray shops = null;
-	private String shopsInfoStreamAddress = "data://sharing-cities-dsm/shops";
 
 	private CountDownLatch checkinLatch;
 
@@ -47,24 +47,46 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		checkin_radius = config().getInteger("checkin_radius");
 		min_frequency = config().getInteger("min_frequency");
 
-		// fetch shops from mongo and save them
-		fetchStoreData();
+		createStreams();
+	}
 
-		// reply with shops info
-		vertx.eventBus().consumer(shopsInfoStreamAddress, message -> {
-			message.reply(shops);
-		});
+	private void createStreams() {
+		JsonObject streams = config().getJsonObject("streams");
+
+		// shops stream
+		String shopsStreamAddress = streams.getString("shops");
+		create(shopsStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
+	}
+
+	/**
+	 * Handler for subscription requests.
+	 * 
+	 * @return
+	 */
+	private Handler<Message<JsonObject>> subscriptionHandler() {
+		return msg -> {
+			mongoClient.find(shopsCollection, new JsonObject(), res -> {
+				JsonArray shops = new JsonArray(res.result());
+				// reply with shops info
+				msg.reply(shops);
+			});
+		};
 
 	}
 
 	/**
-	 * Fetch store locations from MongoDB.
+	 * Handler for read requests.
+	 * 
+	 * @return
 	 */
-	private void fetchStoreData() {
-
-		mongoClient.find(shopsCollection, new JsonObject(), res -> {
-			shops = new JsonArray(res.result());
-		});
+	private Handler<Message<JsonObject>> readHandler() {
+		return msg -> {
+			mongoClient.find(shopsCollection, new JsonObject(), res -> {
+				JsonArray shops = new JsonArray(res.result());
+				// reply with shops info
+				msg.reply(shops);
+			});
+		};
 
 	}
 

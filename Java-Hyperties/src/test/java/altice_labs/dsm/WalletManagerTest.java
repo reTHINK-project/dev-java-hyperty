@@ -7,6 +7,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -44,6 +45,7 @@ class WalletManagerTest {
 		walletManagerHypertyIdentity = "school://sharing-cities-dsm/wallet-manager";
 		JsonObject config = new JsonObject().put("url", walletManagerHypertyURL).put("identity", identity)
 				.put("db_name", "test").put("collection", walletsCollection).put("mongoHost", "localhost");
+		config.put("streams", new JsonArray());
 
 		// pass observers
 		JsonArray observers = new JsonArray();
@@ -90,24 +92,16 @@ class WalletManagerTest {
 
 	}
 
-	
-
 	@AfterAll
 	static void deleteWallet(VertxTestContext testContext, Vertx vertx) {
-		// JsonObject msg = new JsonObject();
-		// msg.put("type", WalletManagerMessage.TYPE_DELETE);
-		// msg.put("identity", identity);
-		// msg.put("from", "from");
-		//
-		// vertx.eventBus().publish(walletManagerHypertyURL, msg);
+		System.out.println("DELETING");
+		JsonObject msg = new JsonObject();
+		msg.put("type", WalletManagerMessage.TYPE_DELETE);
+		msg.put("identity", identity);
+		msg.put("from", userURL);
 
-		JsonObject query = new JsonObject();
-		query.put("identity", identity);
-
-		mongoClient.removeDocument(walletsCollection, query, res -> {
-			System.out.println("Wallet removed from DB");
-			testContext.completeNow();
-		});
+		vertx.eventBus().publish(walletManagerHypertyURL, msg);
+		testContext.completeNow();
 
 	}
 
@@ -167,7 +161,6 @@ class WalletManagerTest {
 		});
 	}
 
-	
 	void testReporterOnReadInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
@@ -187,7 +180,6 @@ class WalletManagerTest {
 		});
 	}
 
-	
 	@Test
 	void testReporterSubscriptionInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -208,7 +200,7 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-	
+
 	@Test
 	void getWalletAddress(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -220,7 +212,6 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-	
 
 	@Test
 	void getWallet(VertxTestContext testContext, Vertx vertx) {

@@ -15,11 +15,15 @@ public class DataObjectReporter {
 	String[] subscriptions;
 	private MongoClient mongoClient;
 
-	public DataObjectReporter(String dataObjectUrl, Vertx vertx, JsonObject identity) {
+	public DataObjectReporter(String dataObjectUrl, Vertx vertx, JsonObject identity,
+			Handler<Message<JsonObject>> subscriptionHandler,
+			Handler<Message<JsonObject>> readHandler) {
 		this.eb = vertx.eventBus();
 		this.eb.consumer(dataObjectUrl + "/subscription", onSubscribe());
 		System.out.println("Reporter listening in " + dataObjectUrl + "/subscription");
 		this.eb.consumer(dataObjectUrl, onRead());
+		this.onSubscriptionHandler = subscriptionHandler;
+		this.onReadHandler = readHandler;
 	}
 
 	public MongoClient getMongoClient() {
@@ -30,17 +34,6 @@ public class DataObjectReporter {
 		this.mongoClient = mongoClient;
 	}
 
-	/**
-	 * Setup the handler for incoming subscriptions.
-	 */
-	public void setSubscriptionHandler(Handler<Message<JsonObject>> handler) {
-		onSubscriptionHandler = handler;
-	}
-
-	public void setReadHandler(Handler<Message<JsonObject>> handler) {
-		// setup the handler for read ops
-		onReadHandler = handler;
-	}
 
 	/**
 	 * Receive subscribe message and pass it on to the handler.
