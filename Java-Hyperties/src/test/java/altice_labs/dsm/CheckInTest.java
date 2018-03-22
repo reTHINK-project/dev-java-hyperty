@@ -7,21 +7,17 @@ import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import token_rating.CheckInRatingHyperty;
 
 /*
@@ -53,6 +49,10 @@ class CheckInTest {
 		config.put("stream", "token-rating");
 		config.put("identity", identity);
 		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
+		// mongo
+		config.put("collection", ratesCollection);
+		config.put("db_name", "test");
+		config.put("mongoHost", "localhost");
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 
 		Checkpoint checkpoint = context.checkpoint();
@@ -112,8 +112,10 @@ class CheckInTest {
 
 		final String uri = "mongodb://" + "localhost" + ":27017";
 
-		final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test")
-				.put("database", "test").put("collection", ratesCollection);
+		final JsonObject mongoconfig = new JsonObject();
+		mongoconfig.put("connection_string", uri);
+		mongoconfig.put("db_name", "test");
+		mongoconfig.put("database", "test").put("collection", ratesCollection);
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 

@@ -64,35 +64,19 @@ class WalletManagerTest {
 		}
 
 		// create wallet message
-		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_CREATE);
-		msg.put("identity", identity);
-		msg.put("url", "url");
-		msg.put("from", userURL);
-		vertx.eventBus().publish(walletManagerHypertyURL, msg);
-
-		try {
-			Thread.sleep(6000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
 		CountDownLatch setupLatch = new CountDownLatch(1);
-		new Thread(() -> {
-			System.out.println("getting walllll");
-			// get wallet address
-			JsonObject msg2 = new JsonObject();
-			msg2.put("type", WalletManagerMessage.TYPE_READ);
-			JsonObject body = new JsonObject().put("resource", "user").put("value", identity);
-			msg2.put("body", body);
-			msg2.put("from", "");
-			msg2.put("identity", new JsonObject());
 
-			vertx.eventBus().send(walletManagerHypertyURL, msg2, reply -> {
-				walletAddress = reply.result().body().toString();
-				System.out.println("Wallet add is " + walletAddress);
+		new Thread(() -> {
+			JsonObject msg = new JsonObject();
+			msg.put("type", WalletManagerMessage.TYPE_CREATE);
+			msg.put("identity", identity);
+			msg.put("url", "url");
+			msg.put("from", userURL);
+			vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
+				walletAddress = new JsonObject(reply.result().body().toString()).getString("address");
 				setupLatch.countDown();
 			});
+
 		}).start();
 
 		try {
@@ -107,6 +91,8 @@ class WalletManagerTest {
 		checkpoint.flag();
 
 	}
+
+	
 
 	@AfterAll
 	static void deleteWallet(VertxTestContext testContext, Vertx vertx) {
@@ -143,7 +129,7 @@ class WalletManagerTest {
 	 * @param testContext
 	 * @param vertx
 	 */
-	@Test
+	
 	void testReporterSubscription(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
@@ -158,11 +144,11 @@ class WalletManagerTest {
 			// check reply 200
 			JsonObject rep = new JsonObject(reply.result().body().toString());
 			int code = rep.getJsonObject("body").getInteger("code");
-			System.out.println("Reporter reply: " + reply.result().body().toString());
 			assertEquals(200, code);
 			testContext.completeNow();
 		});
 	}
+
 	@Test
 	void testReporterOnReadValidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -182,7 +168,8 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
-	@Test
+
+	
 	void testReporterOnReadInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
@@ -201,6 +188,7 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
+
 	@Test
 	void testReporterSubscriptionInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -221,6 +209,20 @@ class WalletManagerTest {
 			testContext.completeNow();
 		});
 	}
+	
+	@Test
+	void getWalletAddress(VertxTestContext testContext, Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", WalletManagerMessage.TYPE_READ);
+		JsonObject body = new JsonObject().put("resource", "user").put("value", identity);
+		msg.put("body", body);
+
+		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
+			testContext.completeNow();
+		});
+	}
+	
+
 	@Test
 	void getWallet(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();

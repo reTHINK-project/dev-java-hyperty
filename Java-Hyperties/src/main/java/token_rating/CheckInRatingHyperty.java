@@ -117,7 +117,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	private void validateCheckinTimestamps(String user, String shopID, long currentTimestamp) {
 
 		// get previous checkin from that user for that rating source
-		mongoClient.find(ratesCollection, new JsonObject().put("user", user), result -> {
+		mongoClient.find(collection, new JsonObject().put("user", user), result -> {
 
 			// access checkins data source
 			JsonObject userRates = result.result().get(0);

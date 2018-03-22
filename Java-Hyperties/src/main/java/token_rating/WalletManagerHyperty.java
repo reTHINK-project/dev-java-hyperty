@@ -53,7 +53,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			case "create":
 				if (msg.getJsonObject("body") == null) {
 					// Wallet creation requests
-					walletCreationRequest(msg);
+					walletCreationRequest(msg, message);
 				} else {
 					// Wallet transfer
 					walletTransfer(msg);
@@ -255,8 +255,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * Create a new wallet.
 	 * 
 	 * @param msg
+	 * @param message 
 	 */
-	private void walletCreationRequest(JsonObject msg) {
+	private void walletCreationRequest(JsonObject msg, Message<JsonObject> message) {
 		System.out.println("Creating wallet: " + msg);
 		/*
 		 * Before the wallet is created, it checks there is no wallet yet for the
@@ -284,6 +285,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					inviteObservers();
 				});
+				
+				// TODO generate and return data object URL
+				
+				message.reply(newWallet);
 
 			} else {
 				System.out.println("wallet already exists...");

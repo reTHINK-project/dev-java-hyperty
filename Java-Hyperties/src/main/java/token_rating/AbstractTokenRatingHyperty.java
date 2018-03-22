@@ -5,19 +5,13 @@ import java.util.concurrent.CountDownLatch;
 import com.google.gson.Gson;
 
 import altice_labs.dsm.AbstractHyperty;
-import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
 import util.DateUtils;
 
 public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
-	protected MongoClient mongoClient = null;
-	String uri = "mongodb://localhost:27017";
-	String db = "test";
-	String ratesCollection = "rates";
 	/**
 	 * hyperty address where to setup an handler to process invitations in case the
 	 * data source is dynamic eg produced by the smart citizen
@@ -33,7 +27,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 */
 	private String walletManagerAddress;
 	
-	private String walletAddress = "";
+	private String walletAddress;
 
 	@Override
 	public void start() {
@@ -44,14 +38,8 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		hyperty = config().getString("hyperty");
 		streamAddress = config().getString("stream");
 		walletManagerAddress = config().getString("wallet");
-
-		System.out.println("...adding");
+		
 		addMyHandler();
-
-		// make connection with MongoDB
-		JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", db);
-		mongoClient = MongoClient.createShared(vertx, mongoconfig);
-
 	}
 
 	/*
@@ -236,7 +224,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		JsonObject document = new JsonObject(checkinInfo.toString());
 
 		JsonObject query = new JsonObject().put("user", user);
-		mongoClient.findOneAndReplace(ratesCollection, query, document, id -> {
+		mongoClient.findOneAndReplace(collection, query, document, id -> {
 			System.out.println("Document with ID:" + id + " was updated");
 		});
 	}
