@@ -38,13 +38,16 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 
-		final String uri = "mongodb://" + mongoHost +":27017";
-		
-	    final JsonObject mongoconfig = new JsonObject()
-	            .put("connection_string", uri)
-	            .put("db_name", this.database);
+		if (mongoHost != null) {
+			final String uri = "mongodb://" + mongoHost +":27017";
+			
+		    final JsonObject mongoconfig = new JsonObject()
+		            .put("connection_string", uri)
+		            .put("db_name", this.database);
+	
+		    mongoClient = MongoClient.createShared(vertx, mongoconfig);
+		}
 
-	    mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
 	public void send(String address, String message, Handler replyHandler) {

@@ -81,41 +81,69 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
 
+		
+		/*
+		String testHypertyURL = "hyperty://sharing-cities-dsm/test";
+		JsonObject identityTest  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/test-identity"));
+		JsonObject configTest = new JsonObject().put("url", testHypertyURL).put("identity", identityTest);
+
+		configTest.put("collection", "location_data");
+		configTest.put("db_name", "test");
+		configTest.put("mongoHost", "localhost");
+		configTest.put("streams", new JsonArray());
+		configTest.put("schemaURL", "schemaurl");
+
+		
+		//									.put("collection", "location_data").put("database", "test").put("mongoHost", "localhost")
+		//									.put("schemaURL", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
+		DeploymentOptions optionsTest= new DeploymentOptions().setConfig(configTest).setWorker(true);
+
+		vertx.deployVerticle(LocationHyperty.class.getName(), optionsTest, res -> {
+			System.out.println("LocationHyperty Result->" + res.result());
+		});
+		*/
+		
 		// deploy check-in rating hyperty
 		JsonObject identityCheckIN  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/checkin-identity"));
-		JsonObject configCheckIN = new JsonObject().put("url", checkINHypertyURL).put("identity", identityCheckIN);
+		JsonObject configCheckIN = new JsonObject();
+		configCheckIN.put("url", checkINHypertyURL);
+		configCheckIN.put("identity", identityCheckIN);
+		configCheckIN.put("db_name", "test");
+		configCheckIN.put("collection", "rates");
+		configCheckIN.put("mongoHost", "localhost");
+		
 		configCheckIN.put("tokens_per_checkin", 10);
 		configCheckIN.put("checkin_radius", 500);
 		configCheckIN.put("min_frequency", 1);
-		//									.put("collection", "location_data").put("database", "test").put("mongoHost", "localhost")
-		//									.put("schemaURL", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
+		configCheckIN.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");		
+		configCheckIN.put("hyperty", "123");
+		configCheckIN.put("stream", "token-rating");
+		
+		
 		DeploymentOptions optionsCheckIN= new DeploymentOptions().setConfig(configCheckIN).setWorker(true);
-
 		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), optionsCheckIN, res -> {
 			System.out.println("CheckInRatingHyperty Result->" + res.result());
 		});
 		
-		
+	
 		// wallet manager hyperty deploy
 		
 		JsonObject identityWalletManager  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/wallet-manager"));
 
-		JsonObject configWalletManager  = new JsonObject().put("url", walletManagerHypertyURL).put("identity", identityWalletManager)
-				.put("database", "test").put("collection", "wallets").put("mongoHost", "localhost");
-
-		// pass observers
-		JsonArray observers = new JsonArray();
-		observers.add("");
-		configWalletManager.put("observers", observers);
-		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager).setWorker(true);
+		JsonObject configWalletManager  = new JsonObject();
+		configWalletManager.put("url", walletManagerHypertyURL);
+		configWalletManager.put("identity", identityWalletManager);
+		configWalletManager.put("db_name", "test");
+		configWalletManager.put("collection", "wallets");
+		configWalletManager.put("mongoHost", "localhost");
 		
+		configWalletManager.put("observers", new JsonArray().add(""));
+		
+		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager).setWorker(true);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
 
-		
-		
-		
 		
 		//Configure HttpServer and set it UP
 		int BUFF_SIZE = 32 * 1024;
