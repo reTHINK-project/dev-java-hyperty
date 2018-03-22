@@ -76,7 +76,7 @@ body: { resource: 'wallet/<wallet-address>', value: <transaction JSON Object>}
 
 If valid, the transaction is stored and the balance updated.
 
-The transaction is published in the event bus using the wallet address.
+The transaction is published in the event bus sending a [Wallet update message](https://rethink-project.github.io/specs/messages/wallet-messages/).
 
 ### Wallet read
 
