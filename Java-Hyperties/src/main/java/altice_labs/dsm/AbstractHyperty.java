@@ -30,7 +30,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.url = config().getString("url");
 		this.identity = config().getJsonObject("identity");
 		this.collection = config().getString("collection");
-		this.database = config().getString("database");
+		this.database = config().getString("db_name");
 		this.mongoHost = config().getString("mongoHost");
 		this.streams = config().getJsonArray("streams");
 		this.schemaURL = config().getString("schemaURL");
@@ -42,9 +42,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		
 	    final JsonObject mongoconfig = new JsonObject()
 	            .put("connection_string", uri)
-	            .put("db_name", this.database)
-	            .put("database", this.database)
-	            .put("collection", this.collection);
+	            .put("db_name", this.database);
 
 	    mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
