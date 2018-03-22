@@ -200,6 +200,24 @@ public class AbstractHyperty extends AbstractVerticle {
 		reporter.setSubscriptionHandler(requestsHandler);
 		reporter.setReadHandler(readHandler);
 	}
+	
+	/**
+	 * Validate the source (from) of a request.
+	 * 
+	 * @param from
+	 * @return
+	 */
+	public boolean validateSource(String from) {
+		// allow wallet creator
+		System.out.println("validating source ...");
+		if (from.equals(identity.getJsonObject("userProfile").getString("userURL"))
+				|| observers.getList().contains(from)) {
+			System.out.println("VALID");
+			return true;
+		}
+		System.out.println("INVALID");
+		return false;
+	}
 
 	/**
 	 * 
