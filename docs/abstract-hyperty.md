@@ -6,8 +6,14 @@ Use [Verticle Configuration](http://vertx.io/docs/vertx-core/java/#_passing_conf
 
 * `url` hyperty url
 * `identity` Identity JSON compliant [reTHINK Identity](https://rethink-project.github.io/specs/datamodel/core/user-identity/readme/) to be associated with the hyperty.
-* `streams` array with addresses of streams to be published by the Hyperty
+* `streams` json object identifying streams to be published by the Hyperty. Example: 
 
+```
+   {
+     "id": "mystream",
+     "url": "stream://mydomain.com/mystream"
+   }
+```
 ### Headers
 
 The Abstract Hyperty set the following Event Bus Message Headers (`DeliveryOptions().addHeaders(header-name,header-value)`):
