@@ -33,7 +33,6 @@ class WalletManagerTest {
 	private static String userURL = "user://sharing-cities-dsm/location-identity";
 	private static String reporterFromInvalid = "invalid";
 	private static JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", userURL));
-	private static String dataObjectUrl = "reporter";
 	private static MongoClient mongoClient;
 	private static String walletsCollection = "wallets";
 	private static String walletAddress;
@@ -44,8 +43,7 @@ class WalletManagerTest {
 		walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		walletManagerHypertyIdentity = "school://sharing-cities-dsm/wallet-manager";
 		JsonObject config = new JsonObject().put("url", walletManagerHypertyURL).put("identity", identity)
-				.put("db_name", "test").put("collection", walletsCollection).put("mongoHost", "localhost")
-				.put("dataObjectUrl", dataObjectUrl);
+				.put("db_name", "test").put("collection", walletsCollection).put("mongoHost", "localhost");
 
 		// pass observers
 		JsonArray observers = new JsonArray();
@@ -129,14 +127,14 @@ class WalletManagerTest {
 	 * @param testContext
 	 * @param vertx
 	 */
-	
-	void testReporterSubscription(VertxTestContext testContext, Vertx vertx) {
+	@Test
+	void testReporterSubscriptionValidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
 		msg.put("url", "url");
 		msg.put("from", userURL);
 
-		String reporterSubscriptionAddress = dataObjectUrl + "/subscription";
+		String reporterSubscriptionAddress = walletAddress + "/subscription";
 		System.out.println("sending message to reporter on " + reporterSubscriptionAddress);
 
 		// subscription
@@ -156,10 +154,10 @@ class WalletManagerTest {
 		msg.put("url", "url");
 		msg.put("from", userURL);
 
-		System.out.println("sending message to reporter on " + dataObjectUrl);
+		System.out.println("sending message to reporter on " + walletAddress);
 
 		// subscription
-		vertx.eventBus().send(dataObjectUrl, msg, reply -> {
+		vertx.eventBus().send(walletAddress, msg, reply -> {
 			// check reply 200
 			JsonObject rep = new JsonObject(reply.result().body().toString());
 			int code = rep.getJsonObject("body").getInteger("code");
@@ -176,10 +174,10 @@ class WalletManagerTest {
 		msg.put("url", "url");
 		msg.put("from", reporterFromInvalid);
 
-		System.out.println("sending message to reporter on " + dataObjectUrl);
+		System.out.println("sending message to reporter on " + walletAddress);
 
 		// subscription
-		vertx.eventBus().send(dataObjectUrl, msg, reply -> {
+		vertx.eventBus().send(walletAddress, msg, reply -> {
 			// check reply 403
 			JsonObject rep = new JsonObject(reply.result().body().toString());
 			int code = rep.getJsonObject("body").getInteger("code");
@@ -189,6 +187,7 @@ class WalletManagerTest {
 		});
 	}
 
+	
 	@Test
 	void testReporterSubscriptionInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
@@ -196,7 +195,7 @@ class WalletManagerTest {
 		msg.put("url", "url");
 		msg.put("from", reporterFromInvalid);
 
-		String reporterSubscriptionAddress = dataObjectUrl + "/subscription";
+		String reporterSubscriptionAddress = walletAddress + "/subscription";
 		System.out.println("sending message to reporter on " + reporterSubscriptionAddress);
 
 		// subscription
@@ -252,7 +251,7 @@ class WalletManagerTest {
 		transaction.put("from", "");
 		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
 		msg.put("body", body);
-		msg.put("from", "");
+		msg.put("from", userURL);
 
 		vertx.eventBus().publish(walletManagerHypertyURL, msg);
 

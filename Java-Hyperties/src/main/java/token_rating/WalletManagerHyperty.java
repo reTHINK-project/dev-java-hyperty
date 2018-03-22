@@ -16,7 +16,6 @@ import util.DateUtils;
 public class WalletManagerHyperty extends AbstractHyperty {
 
 	private String walletsCollection = "wallets";
-	private String dataObjectUrl;
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -27,7 +26,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		// read config
 		observers = config().getJsonArray("observers");
-		dataObjectUrl = config().getString("dataObjectUrl");
 
 		System.out.println("Handling requests");
 		handleRequests();
@@ -150,8 +148,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
 				System.out.println("Transaction added to wallet");
 
+				// send wallet update
+				JsonObject updateMessage = new JsonObject();
+				updateMessage.put("type", "update");
+				updateMessage.put("from", url);
+				updateMessage.put("to", walletAddress + "/changes");
+				JsonObject updateBody = new JsonObject();
+				updateBody.put("value", transaction);
+
 				// publish transaction in the event bus using the wallet address.
-				publish(walletAddress, transaction.toString());
+				publish(walletAddress + "/changes", transaction.toString());
 			});
 		});
 
@@ -255,7 +261,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * Create a new wallet.
 	 * 
 	 * @param msg
-	 * @param message 
+	 * @param message
 	 */
 	private void walletCreationRequest(JsonObject msg, Message<JsonObject> message) {
 		System.out.println("Creating wallet: " + msg);
@@ -283,11 +289,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				mongoClient.save(walletsCollection, document, id -> {
 					System.out.println("New wallet with ID:" + id);
 
-					inviteObservers();
+					inviteObservers(address, observers, requestsHandler(), readHandler());
 				});
-				
-				// TODO generate and return data object URL
-				
+
 				message.reply(newWallet);
 
 			} else {
@@ -301,7 +305,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				case "deleted":
 					System.out.println("... and was deleted, activating");
 					changeWalletStatus(wallet, "active");
-					inviteObservers();
+					// TODO
+					// inviteObservers();
 					break;
 
 				default:
@@ -313,16 +318,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
-	private void inviteObservers() {
-		// An invitation is sent to config.observers
-		DataObjectReporter reporter = create(dataObjectUrl, observers, new JsonObject());
-		reporter.setMongoClient(mongoClient);
-		// pass handler function that will handle subscription events
-		reporter.setSubscriptionHandler(requestsHandler());
-		reporter.setReadHandler(readHandler());
-
-	}
-
 	/**
 	 * Handler for subscription requests.
 	 * 
@@ -330,9 +325,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private Handler<Message<JsonObject>> requestsHandler() {
 		return msg -> {
+			System.out.println("REQUESTS HANDLER: " + msg.body().toString());
 			String from = msg.body().getString("from");
-			System.out.println("Reporter received a subscription from " + from);
-			// accept ? reject by handler
 			JsonObject response = new JsonObject();
 			response.put("type", "response");
 			response.put("from", "");
@@ -359,8 +353,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private Handler<Message<JsonObject>> readHandler() {
 		return msg -> {
+			System.out.println("READ HANDLER: " + msg.body().toString());
 			String from = msg.body().getString("from");
-			System.out.println("READ HANDLER");
 			JsonObject response = new JsonObject();
 			response.put("type", "response");
 			response.put("from", "");
@@ -394,12 +388,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private boolean validateSource(String from) {
 		// allow wallet creator
-		System.out.println("validating source");
+		System.out.println("validating source ...");
 		if (from.equals(identity.getJsonObject("userProfile").getString("userURL"))
 				|| observers.getList().contains(from)) {
+			System.out.println("VALID");
 			return true;
 		}
-
+		System.out.println("INVALID");
 		return false;
 	}
 
