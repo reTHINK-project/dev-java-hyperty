@@ -43,6 +43,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 
 		if (mongoHost != null) {
+			System.out.println("Setting up Mongo to:" + this.url);
 			final String uri = "mongodb://" + mongoHost + ":27017";
 
 			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", this.database);
