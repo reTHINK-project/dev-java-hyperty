@@ -63,7 +63,10 @@ public class AbstractHyperty extends AbstractVerticle {
 	}
 
 	private Handler<Message<JsonObject>> onMessage() {
+		
 		return message -> {
+			
+			System.out.println("New message -> " +  message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 
 				System.out.println(
