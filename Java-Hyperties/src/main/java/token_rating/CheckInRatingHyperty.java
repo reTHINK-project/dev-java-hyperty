@@ -13,6 +13,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import util.InitialData;
 
 /**
  * The Check-in Rating Hyperty observes user's check-in location and reward with
@@ -81,11 +82,17 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	 */
 	private Handler<Message<JsonObject>> readHandler() {
 		return msg -> {
-			mongoClient.find(shopsCollection, new JsonObject(), res -> {
-				JsonArray shops = new JsonArray(res.result());
-				// reply with shops info
-				msg.reply(shops);
-			});
+			JsonObject response = new JsonObject();
+			if (msg.body().getJsonObject("resource") != null) {
+
+			} else {
+				mongoClient.find(shopsCollection, new JsonObject(), res -> {
+					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
+
+					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject()).put("identity", this.identity);
+					msg.reply(response);
+				});
+			}
 		};
 
 	}

@@ -2,15 +2,16 @@ package util;
 
 import java.util.Random;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class InitialData {
 	
 	private String id;
-	private JsonObject values;
+	private JsonArray values;
 	
 	
-	public InitialData(JsonObject values) {
+	public InitialData(JsonArray values) {
 		this.values = values;
 		this.id = newID(7);
 	}
@@ -21,10 +22,10 @@ public class InitialData {
 	public void setId(String id) {
 		this.id = id;
 	}
-	public JsonObject getValues() {
+	public JsonArray getValues() {
 		return values;
 	}
-	public void setValues(JsonObject values) {
+	public void setValues(JsonArray values) {
 		this.values = values;
 	}
 
