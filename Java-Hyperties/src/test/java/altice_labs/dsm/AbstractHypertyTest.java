@@ -48,12 +48,21 @@ class AbstractHypertyTest {
 		
 		vertx.deployVerticle(TestHyperty.class.getName(), optionsLocation, context.succeeding());
 		
+		// wait for Mongo connection to take place
+		try {
+			Thread.sleep(4000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
 		checkpoint.flag();
 	}
 
 	@Test
 	public void getInitialDataIdentity(VertxTestContext context, Vertx vertx) {
 		JsonObject config = new JsonObject().put("type", "read").put("from", "hyperty://hypertyurlfrom").put("identity", identity);
+		
+		
 		vertx.eventBus().send(testHypertyURL, config, message -> {
 			
 			System.out.println("DATA returned" + message.result().body().toString());
