@@ -110,7 +110,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		
 	
 		// wallet manager hyperty deploy
-		/*
+		
 		JsonObject identityWalletManager  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/wallet-manager"));
 
 		JsonObject configWalletManager  = new JsonObject();
@@ -125,7 +125,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager).setWorker(true);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
-		});*/
+		});
 
 		
 		//Configure HttpServer and set it UP
