@@ -208,10 +208,10 @@ class CheckInTest {
 	@Test
 	void getStoreLocations(VertxTestContext testContext, Vertx vertx) {
 
-		JsonObject config = new JsonObject().put("type", "other");
+		JsonObject config = new JsonObject().put("type", "read");
 		vertx.eventBus().send(shopsInfoStreamAddress, config, message -> {
 			// assert reply not null
-			JsonArray locations = (JsonArray) message.result().body();
+			JsonObject locations = (JsonObject) message.result().body();
 			testContext.completeNow();
 		});
 	}
