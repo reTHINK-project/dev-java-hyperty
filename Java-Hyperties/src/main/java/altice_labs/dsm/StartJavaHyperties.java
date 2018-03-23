@@ -29,7 +29,6 @@ import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import token_rating.CheckInRatingHyperty;
 import token_rating.WalletManagerHyperty;
 import token_rating.WalletManagerMessage;
-import unused.LocationHyperty;
 
 public class StartJavaHyperties extends AbstractVerticle {
 

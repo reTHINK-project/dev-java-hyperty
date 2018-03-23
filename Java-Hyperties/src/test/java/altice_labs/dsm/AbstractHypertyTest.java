@@ -21,7 +21,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import unused.LocationHyperty;
 
 /*
  * Example of an asynchronous JUnit test for a Verticle.
@@ -31,15 +30,15 @@ class AbstractHypertyTest {
 
 
 
-	private static String locationHypertyURL;
+	private static String testHypertyURL;
 	private static JsonObject identity;
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 		
-		identity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/location-identity"));
-		locationHypertyURL = "school://sharing-cities-dsm/location-url";
-		JsonObject config = new JsonObject().put("url", locationHypertyURL).put("identity", identity)
+		identity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/test"));
+		testHypertyURL = "hyperty://sharing-cities-dsm/test";
+		JsonObject config = new JsonObject().put("url", testHypertyURL).put("identity", identity)
 											.put("collection", "location_data").put("db_name", "test").put("mongoHost", "localhost")
 											.put("schemaURL", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
 		config.put("streams", new JsonArray());
@@ -47,7 +46,7 @@ class AbstractHypertyTest {
 
 		Checkpoint checkpoint = context.checkpoint();
 		
-		vertx.deployVerticle(LocationHyperty.class.getName(), optionsLocation, context.succeeding());
+		vertx.deployVerticle(TestHyperty.class.getName(), optionsLocation, context.succeeding());
 		
 		checkpoint.flag();
 	}
@@ -55,7 +54,7 @@ class AbstractHypertyTest {
 	@Test
 	public void getInitialDataIdentity(VertxTestContext context, Vertx vertx) {
 		JsonObject config = new JsonObject().put("type", "read").put("from", "hyperty://hypertyurlfrom").put("identity", identity);
-		vertx.eventBus().send(locationHypertyURL, config, message -> {
+		vertx.eventBus().send(testHypertyURL, config, message -> {
 			
 			System.out.println("DATA returned" + message.result().body().toString());
 			
