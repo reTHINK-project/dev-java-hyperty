@@ -27,7 +27,6 @@ import util.DateUtils;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
-@Disabled
 class WalletManagerTest {
 
 	private static String walletManagerHypertyURL;
