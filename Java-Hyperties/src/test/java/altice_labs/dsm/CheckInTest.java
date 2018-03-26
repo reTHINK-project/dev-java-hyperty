@@ -7,6 +7,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -53,6 +54,7 @@ class CheckInTest {
 		config.put("stream", "token-rating");
 		config.put("identity", identity);
 		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
+		config.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops"));
 		// mongo
 		config.put("collection", ratesCollection);
 		config.put("db_name", db_name);
@@ -146,7 +148,6 @@ class CheckInTest {
 
 	@Test
 	void userCloseToShop(VertxTestContext testContext, Vertx vertx) {
-		System.out.println("-------------------------------------------------");
 		System.out.println("TEST - User close to shop");
 		JsonObject checkInMessage = new JsonObject().put("latitude", 40.0001).put("longitude", 50);
 		checkInMessage.put("userID", userID);
@@ -169,12 +170,10 @@ class CheckInTest {
 			testContext.completeNow();
 		});
 
-		System.out.println("-------------------------------------------------");
 	}
 
 	@Test
 	void userFarFromShop(VertxTestContext testContext, Vertx vertx) {
-		System.out.println("-------------------------------------------------");
 		System.out.println("TEST - User far from shop");
 		JsonObject checkInMessage = new JsonObject().put("latitude", 40.1).put("longitude", 50);
 		checkInMessage.put("userID", userID);
@@ -197,7 +196,6 @@ class CheckInTest {
 			testContext.completeNow();
 		});
 
-		System.out.println("-------------------------------------------------");
 	}
 
 	void tearDownStream(VertxTestContext testContext, Vertx vertx) {
@@ -210,10 +208,10 @@ class CheckInTest {
 	@Test
 	void getStoreLocations(VertxTestContext testContext, Vertx vertx) {
 
-		JsonObject config = new JsonObject().put("type", "other");
+		JsonObject config = new JsonObject().put("type", "read");
 		vertx.eventBus().send(shopsInfoStreamAddress, config, message -> {
 			// assert reply not null
-			JsonArray locations = (JsonArray) message.result().body();
+			JsonObject locations = (JsonObject) message.result().body();
 			testContext.completeNow();
 		});
 	}

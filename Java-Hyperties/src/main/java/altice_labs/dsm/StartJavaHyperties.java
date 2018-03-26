@@ -25,11 +25,11 @@ import io.vertx.ext.web.handler.sockjs.BridgeEventType;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import token_rating.CheckInRatingHyperty;
 import token_rating.WalletManagerHyperty;
 import token_rating.WalletManagerMessage;
-import unused.LocationHyperty;
 
 public class StartJavaHyperties extends AbstractVerticle {
 
@@ -82,32 +82,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
 
 		
-		/*
-		String testHypertyURL = "hyperty://sharing-cities-dsm/test";
-		JsonObject identityTest  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/test-identity"));
-		JsonObject configTest = new JsonObject().put("url", testHypertyURL).put("identity", identityTest);
-
-		configTest.put("collection", "location_data");
-		configTest.put("db_name", "test");
-		configTest.put("mongoHost", "localhost");
-		configTest.put("streams", new JsonArray());
-		configTest.put("schemaURL", "schemaurl");
-
-		
-		//									.put("collection", "location_data").put("database", "test").put("mongoHost", "localhost")
-		//									.put("schemaURL", "hyperty-catalogue://catalogue.localhost/.well-known/dataschema/Context");
-		DeploymentOptions optionsTest= new DeploymentOptions().setConfig(configTest).setWorker(true);
-
-		vertx.deployVerticle(LocationHyperty.class.getName(), optionsTest, res -> {
-			System.out.println("LocationHyperty Result->" + res.result());
-		});
-		*/
 		
 		// deploy check-in rating hyperty
 		JsonObject identityCheckIN  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/checkin-identity"));
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
 		configCheckIN.put("identity", identityCheckIN);
+		// mongo
 		configCheckIN.put("db_name", "test");
 		configCheckIN.put("collection", "rates");
 		configCheckIN.put("mongoHost", "localhost");
@@ -118,6 +99,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCheckIN.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");		
 		configCheckIN.put("hyperty", "123");
 		configCheckIN.put("stream", "token-rating");
+			
+		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops"));
 		
 		
 		DeploymentOptions optionsCheckIN= new DeploymentOptions().setConfig(configCheckIN).setWorker(true);
@@ -146,6 +129,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		
 		//Configure HttpServer and set it UP
+		System.out.println("Setting up httpserver");
 		int BUFF_SIZE = 32 * 1024;
 		final JksOptions jksOptions = new JksOptions()
 				.setPath("server-keystore.jks")
@@ -158,6 +142,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 															.setReceiveBufferSize(BUFF_SIZE)
 															.setAcceptBacklog(10000)
 															.setSendBufferSize(BUFF_SIZE);
+		
 		final HttpServer server = vertx.createHttpServer(httpOptions).requestHandler(router::accept).websocketHandler(new Handler<ServerWebSocket>() {
 	        public void handle(final ServerWebSocket ws) {
 	        	

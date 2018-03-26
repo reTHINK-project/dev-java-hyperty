@@ -15,7 +15,7 @@ import io.vertx.ext.mongo.MongoClient;
 public class AbstractHyperty extends AbstractVerticle {
 
 	protected JsonObject identity;
-	protected JsonArray streams;
+//	protected JsonArray streams;
 	protected String url;
 	protected String collection;
 	protected String database;
@@ -35,7 +35,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.collection = config().getString("collection");
 		this.database = config().getString("db_name");
 		this.mongoHost = config().getString("mongoHost");
-		this.streams = config().getJsonArray("streams");
+//		this.streams = config().getJsonArray("streams");
 		this.schemaURL = config().getString("schemaURL");
 		this.observers = config().getJsonArray("observers");
 
@@ -43,20 +43,14 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 
 		if (mongoHost != null) {
+			System.out.println("Setting up Mongo to:" + this.url);
 			final String uri = "mongodb://" + mongoHost + ":27017";
 
 			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", this.database);
 
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
 		}
-		setUpDataObjects();
 
-	}
-
-	private void setUpDataObjects() {
-		for (int i = 0; i < this.streams.size(); i++) {
-			create(this.streams.getString(i), new JsonObject(), false);
-		}
 	}
 
 	public void send(String address, String message, Handler replyHandler) {
@@ -70,7 +64,10 @@ public class AbstractHyperty extends AbstractVerticle {
 	}
 
 	private Handler<Message<JsonObject>> onMessage() {
+		
 		return message -> {
+			
+			System.out.println("New message -> " +  message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 
 				System.out.println(
@@ -163,7 +160,8 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * 
 	 * @return
 	 */
-	public DataObjectReporter create(String dataObjectUrl, JsonObject initialData, boolean toInvite) {
+	public DataObjectReporter create(String dataObjectUrl, JsonObject initialData, boolean toInvite,
+			Handler<Message<JsonObject>> subscriptionHandler, Handler<Message<JsonObject>> readHandler) {
 		/**
 		 * type: "create", from: "dataObjectUrl/subscription", body: { source:
 		 * <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
@@ -182,13 +180,13 @@ public class AbstractHyperty extends AbstractVerticle {
 			while (it.hasNext()) {
 				String observer = (String) it.next();
 				send(observer, toSend.toString(), reply -> {
-					System.out.println(
-							"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + reply.toString());
+					System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+							+ reply.toString());
 				});
 			}
 		}
 		// create Reporter
-		return new DataObjectReporter(dataObjectUrl, vertx, identity);
+		return new DataObjectReporter(dataObjectUrl, vertx, identity, subscriptionHandler, readHandler);
 
 	}
 
@@ -199,16 +197,6 @@ public class AbstractHyperty extends AbstractVerticle {
 				.addHeader("type", type);
 	}
 
-	public void inviteObservers(String dataObjectUrl, Handler<Message<JsonObject>> requestsHandler,
-			Handler<Message<JsonObject>> readHandler) {
-		// An invitation is sent to config.observers
-		DataObjectReporter reporter = create(dataObjectUrl, new JsonObject(), true);
-		reporter.setMongoClient(mongoClient);
-		// pass handler function that will handle subscription events
-		reporter.setSubscriptionHandler(requestsHandler);
-		reporter.setReadHandler(readHandler);
-	}
-	
 	/**
 	 * Validate the source (from) of a request.
 	 * 

@@ -16,7 +16,6 @@ import util.DateUtils;
 public class WalletManagerHyperty extends AbstractHyperty {
 
 	private String walletsCollection = "wallets";
-	
 
 	@Override
 	public void start() {
@@ -83,15 +82,12 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private void walletDelete(JsonObject msg) {
 		System.out.println("Deleting wallet");
-		/**
-		 * type: delete, identity: <compliant with reTHINK identity model>, from:
-		 * <wallet observer hyperty address>
-		 */
 
-		// get wallet
-		mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getString("identity")), res -> {
-			JsonObject wallet = res.result().get(0);
-			changeWalletStatus(wallet, "deleted");
+		JsonObject query = new JsonObject();
+		query.put("identity", msg.getJsonObject("identity"));
+
+		mongoClient.removeDocument(walletsCollection, query, res -> {
+			System.out.println("Wallet removed from DB");
 		});
 
 	}
@@ -120,6 +116,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		validateTransaction(transaction, walletAddress);
 
+	}
+
+	public void inviteObservers(String dataObjectUrl, Handler<Message<JsonObject>> subscriptionHandler,
+			Handler<Message<JsonObject>> readHandler) {
+		// An invitation is sent to config.observers
+		DataObjectReporter reporter = create(dataObjectUrl, new JsonObject(), true, subscriptionHandler, readHandler);
+		reporter.setMongoClient(mongoClient);
+		// pass handler function that will handle subscription events
+		// reporter.setSubscriptionHandler(requestsHandler);
+		// reporter.setReadHandler(readHandler);
 	}
 
 	private void performTransaction(String walletAddress, JsonObject transaction) {
@@ -299,8 +305,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				case "deleted":
 					System.out.println("... and was deleted, activating");
 					changeWalletStatus(wallet, "active");
-					// TODO
-					// inviteObservers();
+					// TODO send error back
 					break;
 
 				default:
