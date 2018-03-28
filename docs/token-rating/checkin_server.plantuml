@@ -1,10 +1,10 @@
 @startuml
 
-node "Local Shop App Server" as dsmServer {
+node "Check-in Server" as dsmServer {
 
 node "Citizen Wallet" as wallet
 
-node "Local Shop Rating" as citzRate
+node "Check-in Rating" as citzRate
 
 }
 
@@ -12,7 +12,7 @@ node "Local Shop Rating" as citzRate
 node "Smart Citizen" as citz {
 interface "Citizen Wallet" as citzWallet
 
-node "check-in" as checkin
+node "Location Reporter" as checkin
 
 interface "Location" as location
 }
