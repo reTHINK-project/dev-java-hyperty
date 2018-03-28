@@ -331,7 +331,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			response.put("from", "");
 			response.put("to", msg.body().getString("from"));
 			JsonObject sendMsgBody = new JsonObject();
-			if (validateSource(from)) {
+			if (validateSource(from, msg.body().getString("address"), msg.body().getJsonObject("identity"), walletsCollection)) {
 				sendMsgBody.put("code", 200);
 				response.put("body", sendMsgBody);
 				msg.reply(response);
@@ -360,7 +360,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			response.put("to", msg.body().getString("from"));
 
 			JsonObject sendMsgBody = new JsonObject();
-			if (!validateSource(from)) {
+			if (!validateSource(from, msg.body().getString("address"), msg.body().getJsonObject("identity"), walletsCollection)) {
 				sendMsgBody.put("code", 403);
 				response.put("body", sendMsgBody);
 				msg.reply(response);

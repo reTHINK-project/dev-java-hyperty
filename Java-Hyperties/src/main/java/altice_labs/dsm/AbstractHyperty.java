@@ -1,6 +1,8 @@
 package altice_labs.dsm;
 
 import java.util.Iterator;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
@@ -11,6 +13,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+
 
 public class AbstractHyperty extends AbstractVerticle {
 
@@ -23,6 +26,8 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String schemaURL;
 	protected EventBus eb;
 	protected MongoClient mongoClient = null;
+	private CountDownLatch findWallet;
+	protected boolean acceptSubscription;
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -203,16 +208,69 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * @param from
 	 * @return
 	 */
-	public boolean validateSource(String from) {
+	public boolean validateSource(String from, String address, JsonObject identity, String collection) {
 		// allow wallet creator
-		System.out.println("validating source ...");
-		if (from.equals(identity.getJsonObject("userProfile").getString("userURL"))
-				|| observers.getList().contains(from)) {
+		System.out.println("validating source ... from:" + from +  "\nobservers:" + observers.getList().toString() + "\nourUserURL:" 
+								+ this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:" + collection);
+		
+		if (observers.getList().contains(from)) {
 			System.out.println("VALID");
 			return true;
+		} else {
+			JsonObject toFind = new JsonObject().put("identity", identity);
+			System.out.println("toFIND" + toFind.toString());
+			
+			acceptSubscription = false;
+			findWallet = new CountDownLatch(1);
+			
+			
+			new Thread(() -> {
+				mongoClient.find(collection, toFind, res -> {
+					if (res.result().size() != 0) {
+						JsonObject wallet = res.result().get(0);
+						System.out.println("to subscribe add:" + address + " wallet to compare" + wallet);
+						
+						if(address.equals(wallet.getString("address")) ) {
+							System.out.println("RIGHT WALLET");
+							if(wallet.getJsonObject("identity").equals(identity)) {
+								System.out.println("RIGHT IDENTITY");
+								acceptSubscription = true;
+								findWallet.countDown();
+								return;
+							}
+							findWallet.countDown();
+							return;
+							
+						} else {
+							System.out.println("OTHER WALLET");
+							findWallet.countDown();
+							return;
+						
+						}
+					}
+					
+				});
+			}).start();
+			
+			
+
+			try {
+				findWallet.await(5L, TimeUnit.SECONDS);
+					return acceptSubscription;
+			} catch (InterruptedException e) {
+				System.out.println("3 - interrupted exception");
+			}
+			System.out.println("3 - return other");
+			return acceptSubscription;
+			
 		}
-		System.out.println("INVALID");
-		return false;
+		
+		
+		
+		
+		
+		
+		//return false;
 	}
 
 	/**
