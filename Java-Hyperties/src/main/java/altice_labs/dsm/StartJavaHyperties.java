@@ -75,6 +75,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		
+		
 		// Create Router object
 	    Router router = Router.router(vertx);
 	    

@@ -62,7 +62,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	private void mine(int numTokens, Message<JsonObject> message) {
 		System.out.println("Mining " + numTokens + " tokens...");
 		JsonObject msgOriginal = message.body();
-		String userId = msgOriginal.getString("user");
+		String userId = msgOriginal.getString("userID");
 		System.out.println("MINING: " + msgOriginal);
 
 		// create transaction
@@ -74,8 +74,10 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		// store transaction by sending it to wallet through wallet manager
 		String walletAddress = getWalletAddress(userId);
 
-		WalletManagerMessage msg = new WalletManagerMessage();
-		msg.setType(WalletManagerMessage.TYPE_CREATE);
+		System.out.println("WAlletADDRESS " + walletAddress + "\nFROM " + userId);
+		JsonObject msgToWallet = new JsonObject();
+		msgToWallet.put("type", WalletManagerMessage.TYPE_CREATE);
+		msgToWallet.put("identity", this.identity);
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();
@@ -85,10 +87,13 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
-		String body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction).toString();
-		msg.setBody(body);
+		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
+		
+		msgToWallet.put("body", body);
+		
+		
 
-		transfer(msg);
+		transfer(msgToWallet);
 	}
 
 	/**
@@ -96,11 +101,11 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * 
 	 * @param transaction
 	 */
-	private void transfer(WalletManagerMessage msg) {
-		System.out.println("Sending transaction to Wallet Manager...");
+	private void transfer(JsonObject msg) {
+		System.out.println("Sending transaction to Wallet Manager..." + msg.toString());
 
-		Gson gson = new Gson();
-		vertx.eventBus().publish(walletManagerAddress, gson.toJson(msg));
+
+		vertx.eventBus().publish(walletManagerAddress, msg);
 	}
 
 	/**
@@ -111,6 +116,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * @return
 	 */
 	String getWalletAddress(String userId) {
+		System.out.println("Getting WalletAddress to:" + userId);
 		// send message to Wallet Manager address
 		/*
 		 * type: read, from: <rating address>, body: { resource: 'user/<userId>'}
@@ -119,14 +125,16 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
 		msg.put("from", hyperty);
-		msg.put("body", new JsonObject().put("resource", "user/" + userId));
+		msg.put("body", new JsonObject().put("resource", "user").put("value",userId));
 		msg.put("identity", new JsonObject());
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
 
 		new Thread(() -> {
-			send(walletManagerAddress, msg.toString(), reply -> {
-				walletAddress = reply.toString();
+			send(walletManagerAddress, msg, reply -> {
+
+				System.out.println("sending reply from getwalletAddress" + reply.result().body().toString());
+				walletAddress = reply.result().body().getString("address");
 				setupLatch.countDown();
 			});
 		}).start();
@@ -136,7 +144,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-
+		System.out.println("WALLET ADDRESS returning" + walletAddress);
 		return walletAddress;
 
 	}

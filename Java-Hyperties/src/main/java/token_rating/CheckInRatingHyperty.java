@@ -109,6 +109,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// data contains shopID, users's location
 		JsonObject checkInMessage = (JsonObject) data;
+		System.out.println("CHECK IN MESSAGE " + checkInMessage.toString());
 		String user = checkInMessage.getString("userID");
 		String shopID = checkInMessage.getString("shopID");
 		Double userLatitude = checkInMessage.getDouble("latitude");

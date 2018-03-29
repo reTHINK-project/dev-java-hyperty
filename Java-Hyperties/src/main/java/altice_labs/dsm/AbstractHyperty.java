@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -58,12 +59,12 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 
-	public void send(String address, String message, Handler replyHandler) {
+	public void send(String address, JsonObject message, Handler<AsyncResult<Message<JsonObject>>> replyHandler) {
 
 		this.eb.send(address, message, getDeliveryOptions(message), replyHandler);
 	}
 
-	public void publish(String address, String message) {
+	public void publish(String address, JsonObject message) {
 
 		this.eb.publish(address, message, getDeliveryOptions(message));
 	}
@@ -90,7 +91,28 @@ public class AbstractHyperty extends AbstractVerticle {
 					 * resource field, all persisted data is returned.
 					 */
 
-					if (body.getJsonObject("resource") != null) {
+					if (body.getString("resource") != null) {
+						System.out.println("Abstract");
+						System.out.println("Getting wallet address  msg:" + body.toString());
+
+						JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", body.getString("value")));
+						
+						JsonObject toSearch = new JsonObject().put("identity", identity);
+						
+					
+						System.out.println("Search on " + this.collection + "  with data" + toSearch.toString());
+						
+							
+						mongoClient.find(this.collection, toSearch, res -> {
+							if (res.result().size() != 0) {
+								JsonObject walletInfo = res.result().get(0);
+								// reply with address
+								System.out.println("Returned wallet: " + walletInfo.toString());
+								message.reply(walletInfo);
+							}
+						});
+						
+						
 
 					} else {
 						mongoClient.find(this.collection, new JsonObject(), res -> {
@@ -148,7 +170,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		JsonObject toSend = new JsonObject();
 		toSend.put("type", "subscribe");
 
-		send(address, toSend.toString(), reply -> {
+		send(address, toSend, reply -> {
 			// after reply wait for changes
 
 			final String address_changes = address + "/changes";
@@ -184,7 +206,7 @@ public class AbstractHyperty extends AbstractVerticle {
 			Iterator it = observers.getList().iterator();
 			while (it.hasNext()) {
 				String observer = (String) it.next();
-				send(observer, toSend.toString(), reply -> {
+				send(observer, toSend, reply -> {
 					System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
 							+ reply.toString());
 				});
@@ -195,8 +217,8 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 
-	public DeliveryOptions getDeliveryOptions(String message) {
-		final String type = new JsonObject(message).getString("type");
+	public DeliveryOptions getDeliveryOptions(JsonObject message) {
+		final String type = message.getString("type");
 		final JsonObject userProfile = this.identity.getJsonObject("userProfile");
 		return new DeliveryOptions().addHeader("from", this.url).addHeader("identity", userProfile.getString("userURL"))
 				.addHeader("type", type);
