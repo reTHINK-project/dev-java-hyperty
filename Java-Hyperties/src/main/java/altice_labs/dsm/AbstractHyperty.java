@@ -105,7 +105,7 @@ public class AbstractHyperty extends AbstractVerticle {
 				case "create":
 
 					if (from.contains("/subscription")) {
-						response.put("code", 200);
+						response.put("body",new JsonObject().put("code", 200));
 						message.reply(response);
 
 						onNotification(newmsg -> {

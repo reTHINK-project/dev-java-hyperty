@@ -284,6 +284,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				newWallet.put("balance", 0);
 				newWallet.put("transactions", new JsonArray());
 				newWallet.put("status", "active");
+				
 				JsonObject document = new JsonObject(newWallet.toString());
 
 				mongoClient.save(walletsCollection, document, id -> {
@@ -291,8 +292,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					inviteObservers(address, requestsHandler(), readHandler());
 				});
-
-				message.reply(newWallet);
+				JsonObject body = new JsonObject().put("code", 200).put("newWallet",newWallet);
+				JsonObject response = new JsonObject().put("body", body);
+				message.reply(response);
 
 			} else {
 				System.out.println("wallet already exists...");

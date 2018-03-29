@@ -25,6 +25,7 @@ import token_rating.CheckInRatingHyperty;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
+@Disabled
 class CheckInTest {
 
 	private static String locationHypertyURL;

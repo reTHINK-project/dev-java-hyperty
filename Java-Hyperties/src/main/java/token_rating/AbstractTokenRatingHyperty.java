@@ -1,6 +1,7 @@
 package token_rating;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.google.gson.Gson;
 
@@ -29,6 +30,9 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	
 	private String walletAddress;
 
+	private CountDownLatch checkUser;
+	boolean addHandler = false;
+	
 	@Override
 	public void start() {
 		super.start();
@@ -145,30 +149,81 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	private void addMyHandler() {
 		System.out.println("..." + streamAddress);
 		vertx.eventBus().<JsonObject>consumer(streamAddress, message -> {
-			System.out.println("Abstract REC");
+			System.out.println("Abstract REC" + message.body().toString());
 			mandatoryFieldsValidator(message);
-
-			Gson gson = new Gson();
-			WalletManagerMessage msg = gson.fromJson(message.body().toString(), WalletManagerMessage.class);
-
+			
+			JsonObject body = new JsonObject(message.body().toString());
+			String type = body.getString("type");
+			String handleCheckInUserURL = body.getJsonObject("identity").getJsonObject("userProfile").getString("userURL");
+			
+			JsonObject response = new JsonObject();
 			// check message type
-			switch (msg.getType()) {
+			switch (type) {
 			case "create":
 				// valid received invitations (create messages)
 				System.out.println("Abstract ADD STREAM");
-				addStreamHandler(msg.getFrom());
+				if(canAddStreamHandler(handleCheckInUserURL)) {
+					addStreamHandler(handleCheckInUserURL);
+					response.put("body",new JsonObject().put("code", 200));
+					message.reply(response);
+				} else {
+					response.put("body",new JsonObject().put("code", 406));
+					message.reply(response);
+				}
 				break;
 			case "delete":
-				removeStreamHandler(msg.getFrom());
+				removeStreamHandler(handleCheckInUserURL);
 				break;
 
 			default:
-				System.out.println("Incorrect message type: " + msg.getType());
+				System.out.println("Incorrect message type: " + type);
 				break;
 			}
 		});
 	}
 
+
+	private boolean canAddStreamHandler(String from) {
+		System.out.println("CHECK IF CAN BE ADDED:" + from);
+		addHandler = false;
+		
+		checkUser = new CountDownLatch(1);
+		
+		JsonObject toFind = new JsonObject().put("user", from);
+		
+		new Thread(() -> {
+			mongoClient.find(collection, toFind, res -> {
+				if (res.result().size() != 0) {
+					addHandler = true;
+					checkUser.countDown();
+				} else {
+					JsonObject document = new JsonObject();
+					document.put("user", from);
+					document.put("checkin", new JsonArray());
+					mongoClient.insert(collection, document, res2 -> {
+						System.out.println("Setup complete - rates");
+						addHandler = true;
+						checkUser.countDown();
+					});
+				}
+				
+			});
+		}).start();
+		
+
+		try {
+			checkUser.await(5L, TimeUnit.SECONDS);
+				return addHandler;
+		} catch (InterruptedException e) {
+			System.out.println("3 - interrupted exception");
+		}
+		System.out.println("3 - return other");
+		return addHandler;		
+		
+		
+	}
+	
+	
 	/**
 	 * Add stream handlers and forwards it to rate() if rate returns a valid uint it
 	 * calls mine() and transfers it to associated address
@@ -176,8 +231,8 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * 
 	 */
 	private void addStreamHandler(String from) {
+	// add a stream handler
 		System.out.println("Adding stream handler from " + from);
-		// add a stream handler
 		vertx.eventBus().<JsonObject>consumer(from, message -> {
 			mandatoryFieldsValidator(message);
 
