@@ -154,11 +154,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				updateMessage.put("from", url);
 				updateMessage.put("to", walletAddress + "/changes");
 				JsonObject updateBody = new JsonObject();
-				updateBody.put("value", transaction);
+				updateBody.put("value", walletInfo.getInteger("balance"));
 				updateMessage.put("body", updateBody);
 
 				// publish transaction in the event bus using the wallet address.
-				publish(walletAddress + "/changes", updateMessage);
+				String toSendChanges = walletAddress + "/changes";
+				System.out.println("PUBLISHING ON " + toSendChanges + "\nData:" + updateMessage.toString());
+				
+				publish(toSendChanges, updateMessage);
 			});
 		});
 
@@ -301,13 +304,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					inviteObservers(address, requestsHandler(), readHandler());
 				});
-				JsonObject body = new JsonObject().put("code", 200).put("newWallet",newWallet);
-				JsonObject response = new JsonObject().put("body", body);
+				JsonObject response = new JsonObject().put("code", 200).put("wallet",newWallet);
+				//JsonObject response = new JsonObject().put("body", body);
 				message.reply(response);
 
 			} else {
 				System.out.println("wallet already exists...");
 				JsonObject wallet = res.result().get(0);
+				JsonObject response = new JsonObject().put("code", 200).put("wallet", wallet);
 				// check its status
 				switch (wallet.getString("status")) {
 				case "active":

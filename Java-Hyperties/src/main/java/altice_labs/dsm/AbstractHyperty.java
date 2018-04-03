@@ -79,9 +79,9 @@ public class AbstractHyperty extends AbstractVerticle {
 				System.out.println(
 						"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + message.body());
 
-				final JsonObject body = new JsonObject(message.body().toString());
-				final String type = body.getString("type");
-				final String from = body.getString("from");
+				final JsonObject body = new JsonObject(message.body().toString()).getJsonObject("body");
+				final String type = new JsonObject(message.body().toString()).getString("type");
+				final String from = new JsonObject(message.body().toString()).getString("from");
 				JsonObject response = new JsonObject();
 				switch (type) {
 				case "read":
@@ -90,8 +90,8 @@ public class AbstractHyperty extends AbstractVerticle {
 					 * return the queried data. If the read message body does not contain any
 					 * resource field, all persisted data is returned.
 					 */
-
-					if (body.getString("resource") != null) {
+					
+					if (body != null && body.getString("resource") != null) {
 						System.out.println("Abstract");
 						System.out.println("Getting wallet address  msg:" + body.toString());
 
