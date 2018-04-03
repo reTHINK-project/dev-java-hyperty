@@ -1,9 +1,12 @@
 package altice_labs.dsm;
 
 import java.util.Iterator;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -11,6 +14,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+
 
 public class AbstractHyperty extends AbstractVerticle {
 
@@ -23,6 +27,8 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String schemaURL;
 	protected EventBus eb;
 	protected MongoClient mongoClient = null;
+	private CountDownLatch findWallet;
+	protected boolean acceptSubscription;
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -53,12 +59,12 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 
-	public void send(String address, String message, Handler replyHandler) {
+	public void send(String address, JsonObject message, Handler<AsyncResult<Message<JsonObject>>> replyHandler) {
 
 		this.eb.send(address, message, getDeliveryOptions(message), replyHandler);
 	}
 
-	public void publish(String address, String message) {
+	public void publish(String address, JsonObject message) {
 
 		this.eb.publish(address, message, getDeliveryOptions(message));
 	}
@@ -73,9 +79,9 @@ public class AbstractHyperty extends AbstractVerticle {
 				System.out.println(
 						"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + message.body());
 
-				final JsonObject body = new JsonObject(message.body().toString());
-				final String type = body.getString("type");
-				final String from = body.getString("from");
+				final JsonObject body = new JsonObject(message.body().toString()).getJsonObject("body");
+				final String type = new JsonObject(message.body().toString()).getString("type");
+				final String from = new JsonObject(message.body().toString()).getString("from");
 				JsonObject response = new JsonObject();
 				switch (type) {
 				case "read":
@@ -84,8 +90,29 @@ public class AbstractHyperty extends AbstractVerticle {
 					 * return the queried data. If the read message body does not contain any
 					 * resource field, all persisted data is returned.
 					 */
+					
+					if (body != null && body.getString("resource") != null) {
+						System.out.println("Abstract");
+						System.out.println("Getting wallet address  msg:" + body.toString());
 
-					if (body.getJsonObject("resource") != null) {
+						JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", body.getString("value")));
+						
+						JsonObject toSearch = new JsonObject().put("identity", identity);
+						
+					
+						System.out.println("Search on " + this.collection + "  with data" + toSearch.toString());
+						
+							
+						mongoClient.find(this.collection, toSearch, res -> {
+							if (res.result().size() != 0) {
+								JsonObject walletInfo = res.result().get(0);
+								// reply with address
+								System.out.println("Returned wallet: " + walletInfo.toString());
+								message.reply(walletInfo);
+							}
+						});
+						
+						
 
 					} else {
 						mongoClient.find(this.collection, new JsonObject(), res -> {
@@ -100,7 +127,7 @@ public class AbstractHyperty extends AbstractVerticle {
 				case "create":
 
 					if (from.contains("/subscription")) {
-						response.put("code", 200);
+						response.put("body",new JsonObject().put("code", 200));
 						message.reply(response);
 
 						onNotification(newmsg -> {
@@ -143,7 +170,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		JsonObject toSend = new JsonObject();
 		toSend.put("type", "subscribe");
 
-		send(address, toSend.toString(), reply -> {
+		send(address, toSend, reply -> {
 			// after reply wait for changes
 
 			final String address_changes = address + "/changes";
@@ -179,7 +206,7 @@ public class AbstractHyperty extends AbstractVerticle {
 			Iterator it = observers.getList().iterator();
 			while (it.hasNext()) {
 				String observer = (String) it.next();
-				send(observer, toSend.toString(), reply -> {
+				send(observer, toSend, reply -> {
 					System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
 							+ reply.toString());
 				});
@@ -190,8 +217,8 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 
-	public DeliveryOptions getDeliveryOptions(String message) {
-		final String type = new JsonObject(message).getString("type");
+	public DeliveryOptions getDeliveryOptions(JsonObject message) {
+		final String type = message.getString("type");
 		final JsonObject userProfile = this.identity.getJsonObject("userProfile");
 		return new DeliveryOptions().addHeader("from", this.url).addHeader("identity", userProfile.getString("userURL"))
 				.addHeader("type", type);
@@ -203,16 +230,69 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * @param from
 	 * @return
 	 */
-	public boolean validateSource(String from) {
+	public boolean validateSource(String from, String address, JsonObject identity, String collection) {
 		// allow wallet creator
-		System.out.println("validating source ...");
-		if (from.equals(identity.getJsonObject("userProfile").getString("userURL"))
-				|| observers.getList().contains(from)) {
+		System.out.println("validating source ... from:" + from +  "\nobservers:" + observers.getList().toString() + "\nourUserURL:" 
+								+ this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:" + collection);
+		
+		if (observers.getList().contains(from)) {
 			System.out.println("VALID");
 			return true;
+		} else {
+			JsonObject toFind = new JsonObject().put("identity", identity);
+			System.out.println("toFIND" + toFind.toString());
+			
+			acceptSubscription = false;
+			findWallet = new CountDownLatch(1);
+			
+			
+			new Thread(() -> {
+				mongoClient.find(collection, toFind, res -> {
+					if (res.result().size() != 0) {
+						JsonObject wallet = res.result().get(0);
+						System.out.println("to subscribe add:" + address + " wallet to compare" + wallet);
+						
+						if(address.equals(wallet.getString("address")) ) {
+							System.out.println("RIGHT WALLET");
+							if(wallet.getJsonObject("identity").equals(identity)) {
+								System.out.println("RIGHT IDENTITY");
+								acceptSubscription = true;
+								findWallet.countDown();
+								return;
+							}
+							findWallet.countDown();
+							return;
+							
+						} else {
+							System.out.println("OTHER WALLET");
+							findWallet.countDown();
+							return;
+						
+						}
+					}
+					
+				});
+			}).start();
+			
+			
+
+			try {
+				findWallet.await(5L, TimeUnit.SECONDS);
+					return acceptSubscription;
+			} catch (InterruptedException e) {
+				System.out.println("3 - interrupted exception");
+			}
+			System.out.println("3 - return other");
+			return acceptSubscription;
+			
 		}
-		System.out.println("INVALID");
-		return false;
+		
+		
+		
+		
+		
+		
+		//return false;
 	}
 
 	/**

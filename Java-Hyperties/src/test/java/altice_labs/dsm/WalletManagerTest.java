@@ -27,6 +27,7 @@ import util.DateUtils;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
+@Disabled
 class WalletManagerTest {
 
 	private static String walletManagerHypertyURL;
@@ -127,6 +128,8 @@ class WalletManagerTest {
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
 		msg.put("url", "url");
 		msg.put("from", userURL);
+		msg.put("address", walletAddress);
+		msg.put("identity", identity);
 
 		String reporterSubscriptionAddress = walletAddress + "/subscription";
 		System.out.println("sending message to reporter on " + reporterSubscriptionAddress);
@@ -147,6 +150,9 @@ class WalletManagerTest {
 		msg.put("type", WalletManagerMessage.TYPE_CREATE);
 		msg.put("url", "url");
 		msg.put("from", userURL);
+		msg.put("address", walletAddress);
+		msg.put("identity", identity);
+		
 
 		System.out.println("sending message to reporter on " + walletAddress);
 

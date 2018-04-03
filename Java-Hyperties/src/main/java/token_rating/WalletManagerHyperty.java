@@ -129,7 +129,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	}
 
 	private void performTransaction(String walletAddress, JsonObject transaction) {
-		System.out.println("Transaction valid");
+		System.out.println("Transaction valid" + "to" +  walletAddress);
 		// get wallet document
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject walletInfo = res.result().get(0);
@@ -154,10 +154,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				updateMessage.put("from", url);
 				updateMessage.put("to", walletAddress + "/changes");
 				JsonObject updateBody = new JsonObject();
-				updateBody.put("value", transaction);
+				updateBody.put("value", walletInfo.getInteger("balance"));
+				updateMessage.put("body", updateBody);
 
 				// publish transaction in the event bus using the wallet address.
-				publish(walletAddress + "/changes", transaction.toString());
+				String toSendChanges = walletAddress + "/changes";
+				System.out.println("PUBLISHING ON " + toSendChanges + "\nData:" + updateMessage.toString());
+				
+				publish(toSendChanges, updateMessage);
 			});
 		});
 
@@ -224,15 +228,23 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @param message
 	 */
 	private void walletAddressRequest(JsonObject msg, Message<JsonObject> message) {
-		System.out.println("Getting wallet address");
+		System.out.println("Getting wallet address  msg:" + msg.toString());
 		JsonObject body = msg.getJsonObject("body");
-		JsonObject identity = body.getJsonObject("value");
-
-		mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
-			JsonObject walletInfo = res.result().get(0);
-			// reply with address
-			System.out.println("Returned wallet: " + walletInfo.toString());
-			message.reply(walletInfo.getString("address"));
+		JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", body.getString("value")));
+		
+		JsonObject toSearch = new JsonObject().put("identity", identity);
+		
+	
+		System.out.println("Search on " + this.collection + "  with data" + toSearch.toString());
+		
+			
+		mongoClient.find(this.collection, toSearch, res -> {
+			if (res.result().size() != 0) {
+				JsonObject walletInfo = res.result().get(0);
+				// reply with address
+				System.out.println("Returned wallet: " + walletInfo.toString());
+				message.reply(walletInfo);
+			}
 		});
 
 	}
@@ -284,6 +296,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				newWallet.put("balance", 0);
 				newWallet.put("transactions", new JsonArray());
 				newWallet.put("status", "active");
+				
 				JsonObject document = new JsonObject(newWallet.toString());
 
 				mongoClient.save(walletsCollection, document, id -> {
@@ -291,12 +304,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					inviteObservers(address, requestsHandler(), readHandler());
 				});
-
-				message.reply(newWallet);
+				JsonObject response = new JsonObject().put("code", 200).put("wallet",newWallet);
+				//JsonObject response = new JsonObject().put("body", body);
+				message.reply(response);
 
 			} else {
 				System.out.println("wallet already exists...");
 				JsonObject wallet = res.result().get(0);
+				JsonObject response = new JsonObject().put("code", 200).put("wallet", wallet);
 				// check its status
 				switch (wallet.getString("status")) {
 				case "active":
@@ -331,7 +346,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			response.put("from", "");
 			response.put("to", msg.body().getString("from"));
 			JsonObject sendMsgBody = new JsonObject();
-			if (validateSource(from)) {
+			if (validateSource(from, msg.body().getString("address"), msg.body().getJsonObject("identity"), walletsCollection)) {
 				sendMsgBody.put("code", 200);
 				response.put("body", sendMsgBody);
 				msg.reply(response);
@@ -360,7 +375,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			response.put("to", msg.body().getString("from"));
 
 			JsonObject sendMsgBody = new JsonObject();
-			if (!validateSource(from)) {
+			if (!validateSource(from, msg.body().getString("address"), msg.body().getJsonObject("identity"), walletsCollection)) {
 				sendMsgBody.put("code", 403);
 				response.put("body", sendMsgBody);
 				msg.reply(response);

@@ -1,6 +1,7 @@
 package token_rating;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.google.gson.Gson;
 
@@ -29,6 +30,9 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	
 	private String walletAddress;
 
+	private CountDownLatch checkUser;
+	boolean addHandler = false;
+	
 	@Override
 	public void start() {
 		super.start();
@@ -58,7 +62,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	private void mine(int numTokens, Message<JsonObject> message) {
 		System.out.println("Mining " + numTokens + " tokens...");
 		JsonObject msgOriginal = message.body();
-		String userId = msgOriginal.getString("user");
+		String userId = msgOriginal.getString("userID");
 		System.out.println("MINING: " + msgOriginal);
 
 		// create transaction
@@ -70,8 +74,10 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		// store transaction by sending it to wallet through wallet manager
 		String walletAddress = getWalletAddress(userId);
 
-		WalletManagerMessage msg = new WalletManagerMessage();
-		msg.setType(WalletManagerMessage.TYPE_CREATE);
+		System.out.println("WAlletADDRESS " + walletAddress + "\nFROM " + userId);
+		JsonObject msgToWallet = new JsonObject();
+		msgToWallet.put("type", WalletManagerMessage.TYPE_CREATE);
+		msgToWallet.put("identity", this.identity);
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();
@@ -81,10 +87,13 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
-		String body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction).toString();
-		msg.setBody(body);
+		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
+		
+		msgToWallet.put("body", body);
+		
+		
 
-		transfer(msg);
+		transfer(msgToWallet);
 	}
 
 	/**
@@ -92,11 +101,11 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * 
 	 * @param transaction
 	 */
-	private void transfer(WalletManagerMessage msg) {
-		System.out.println("Sending transaction to Wallet Manager...");
+	private void transfer(JsonObject msg) {
+		System.out.println("Sending transaction to Wallet Manager..." + msg.toString());
 
-		Gson gson = new Gson();
-		vertx.eventBus().publish(walletManagerAddress, gson.toJson(msg));
+
+		vertx.eventBus().publish(walletManagerAddress, msg);
 	}
 
 	/**
@@ -107,6 +116,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * @return
 	 */
 	String getWalletAddress(String userId) {
+		System.out.println("Getting WalletAddress to:" + userId);
 		// send message to Wallet Manager address
 		/*
 		 * type: read, from: <rating address>, body: { resource: 'user/<userId>'}
@@ -115,14 +125,16 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
 		msg.put("from", hyperty);
-		msg.put("body", new JsonObject().put("resource", "user/" + userId));
+		msg.put("body", new JsonObject().put("resource", "user").put("value",userId));
 		msg.put("identity", new JsonObject());
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
 
 		new Thread(() -> {
-			send(walletManagerAddress, msg.toString(), reply -> {
-				walletAddress = reply.toString();
+			send(walletManagerAddress, msg, reply -> {
+
+				System.out.println("sending reply from getwalletAddress" + reply.result().body().toString());
+				walletAddress = reply.result().body().getString("address");
 				setupLatch.countDown();
 			});
 		}).start();
@@ -132,7 +144,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-
+		System.out.println("WALLET ADDRESS returning" + walletAddress);
 		return walletAddress;
 
 	}
@@ -145,30 +157,81 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	private void addMyHandler() {
 		System.out.println("..." + streamAddress);
 		vertx.eventBus().<JsonObject>consumer(streamAddress, message -> {
-			System.out.println("Abstract REC");
+			System.out.println("Abstract REC" + message.body().toString());
 			mandatoryFieldsValidator(message);
-
-			Gson gson = new Gson();
-			WalletManagerMessage msg = gson.fromJson(message.body().toString(), WalletManagerMessage.class);
-
+			
+			JsonObject body = new JsonObject(message.body().toString());
+			String type = body.getString("type");
+			String handleCheckInUserURL = body.getJsonObject("identity").getJsonObject("userProfile").getString("userURL");
+			
+			JsonObject response = new JsonObject();
 			// check message type
-			switch (msg.getType()) {
+			switch (type) {
 			case "create":
 				// valid received invitations (create messages)
 				System.out.println("Abstract ADD STREAM");
-				addStreamHandler(msg.getFrom());
+				if(canAddStreamHandler(handleCheckInUserURL)) {
+					addStreamHandler(handleCheckInUserURL);
+					response.put("body",new JsonObject().put("code", 200));
+					message.reply(response);
+				} else {
+					response.put("body",new JsonObject().put("code", 406));
+					message.reply(response);
+				}
 				break;
 			case "delete":
-				removeStreamHandler(msg.getFrom());
+				removeStreamHandler(handleCheckInUserURL);
 				break;
 
 			default:
-				System.out.println("Incorrect message type: " + msg.getType());
+				System.out.println("Incorrect message type: " + type);
 				break;
 			}
 		});
 	}
 
+
+	private boolean canAddStreamHandler(String from) {
+		System.out.println("CHECK IF CAN BE ADDED:" + from);
+		addHandler = false;
+		
+		checkUser = new CountDownLatch(1);
+		
+		JsonObject toFind = new JsonObject().put("user", from);
+		
+		new Thread(() -> {
+			mongoClient.find(collection, toFind, res -> {
+				if (res.result().size() != 0) {
+					addHandler = true;
+					checkUser.countDown();
+				} else {
+					JsonObject document = new JsonObject();
+					document.put("user", from);
+					document.put("checkin", new JsonArray());
+					mongoClient.insert(collection, document, res2 -> {
+						System.out.println("Setup complete - rates");
+						addHandler = true;
+						checkUser.countDown();
+					});
+				}
+				
+			});
+		}).start();
+		
+
+		try {
+			checkUser.await(5L, TimeUnit.SECONDS);
+				return addHandler;
+		} catch (InterruptedException e) {
+			System.out.println("3 - interrupted exception");
+		}
+		System.out.println("3 - return other");
+		return addHandler;		
+		
+		
+	}
+	
+	
 	/**
 	 * Add stream handlers and forwards it to rate() if rate returns a valid uint it
 	 * calls mine() and transfers it to associated address
@@ -176,8 +239,8 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * 
 	 */
 	private void addStreamHandler(String from) {
+	// add a stream handler
 		System.out.println("Adding stream handler from " + from);
-		// add a stream handler
 		vertx.eventBus().<JsonObject>consumer(from, message -> {
 			mandatoryFieldsValidator(message);
 
