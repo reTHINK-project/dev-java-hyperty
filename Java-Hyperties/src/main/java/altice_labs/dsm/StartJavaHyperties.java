@@ -99,7 +99,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCheckIN.put("min_frequency", 1);
 		configCheckIN.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");		
 		configCheckIN.put("hyperty", "123");
-		configCheckIN.put("stream", "token-rating-checkin");
+		configCheckIN.put("stream", "vertx://sharing-cities-dsm/token-rating-checkin");
 			
 		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops"));
 		
