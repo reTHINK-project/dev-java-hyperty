@@ -1,0 +1,15 @@
+@startuml
+
+class AbstractHyperty
+
+class AbstractTokenRating
+
+class CheckinRating
+
+AbstractHyperty <|-down- AbstractTokenRating
+
+CheckinRating -up-|> AbstractTokenRating
+
+class WalletManager -up-|> AbstractHyperty
+
+@enduml

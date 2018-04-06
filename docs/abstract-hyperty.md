@@ -62,6 +62,8 @@ Send the following message to all `observers`:
   body: { source: <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
 ```
 
+Some of these observers may be "Subscription Managers" that are running in [P2P Vertx Protostubs](https://github.com/reTHINK-project/dev-protostubs/blob/develop/docs/p2p-vertx/readme.md#subscription_manager), that locally create Data Object Reporters when this message is created.
+
 It returns a Reporter object compliant with [Syncher DataObjectReporter](https://github.com/reTHINK-project/specs/blob/master/service-framework/syncher.md) i.e. it adds a handler to `dataObjectUrl/subscription` that will fire onSubscription events.
 
 ### storage management
