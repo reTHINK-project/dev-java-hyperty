@@ -18,6 +18,8 @@ walletO -> sm : request to create wallet
 
 sm -> man : request to create wallet
 
+man -> man : create()
+
 man -> sm : create wallet
 
 sm -> reporter : create()
@@ -33,12 +35,14 @@ walletO -> walletR: subscribe
 
 walletO <- walletR: 200 ok
 
-wallet -> wallet : new transaction
+...
+
+wallet <- : wallet transfer
 
 wallet -> reporter : update wallet with new transaction
 
 reporter -> walletR : addNewTransaction()
 
-walletR -> walletO : update 
+walletR -> walletO : update
 
 @enduml
