@@ -40,6 +40,9 @@ Config file with:
 }
 ```
 
+### start
+
+Verticle `start()` function that adds an handler in the Rating Hyperty address specified in the config file and calls `addStreamHandler()` for valid received invitations (create messages) or `removeStreamHandler` for valid received delete messages.
 
 ### private addStreamHandler()
 
@@ -82,11 +85,7 @@ body: { resource: 'user/<userId>'}
 
 with callback to return the value returned in case it is found.
 
-
 ### getSource()
 
-### addMyHandler()
-
-Add an handler in the Rating Hyperty address specified in the config file and calls `addStreamHandler()` for valid received invitations (create messages) or `removeStreamHandler` for valid received delete messages.
 
 ### private removeStreamHandler()
