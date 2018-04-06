@@ -127,13 +127,10 @@ public class AbstractHyperty extends AbstractVerticle {
 				case "create":
 
 					if (from.contains("/subscription")) {
-						response.put("body",new JsonObject().put("code", 200));
-						message.reply(response);
-
-						onNotification(newmsg -> {
-							System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-									+ newmsg.body().toString());
-						});
+						/*response.put("body",new JsonObject().put("code", 200));
+						message.reply(response);*/
+						
+						onNotification(new JsonObject(message.body().toString()));
 					} else {
 						message.reply(response);
 					}
@@ -153,8 +150,15 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * some existing DataObjectObserver was deleted.
 	 * 
 	 */
-	private void onNotification(Handler<Message<JsonObject>> handler) {
-		this.eb.consumer(this.url, handler);
+	private void onNotification(JsonObject body) {
+		System.out.println("HANDLING" + body.toString());
+		String from = body.getString("from");
+		
+		
+
+		
+		subscribe(from);
+		
 	}
 
 	/**
@@ -167,12 +171,23 @@ public class AbstractHyperty extends AbstractVerticle {
 	 *            ..)).
 	 */
 	private void subscribe(String address) {
-		JsonObject toSend = new JsonObject();
-		toSend.put("type", "subscribe");
-
-		send(address, toSend, reply -> {
+	
+		String ObjURL= address.split("/subscription")[0];
+		JsonObject subscribeMessage = new JsonObject();
+		subscribeMessage.put("from", this.url);
+		subscribeMessage.put("to", address);
+		subscribeMessage.put("type", "subscribe");
+		JsonObject subscribeMessageBody = new JsonObject();
+		subscribeMessageBody.put("identity", this.identity);
+		subscribeMessage.put("body", subscribeMessageBody);
+		
+		System.out.println("SUBSCRIBE Message Sent" +  subscribeMessage.toString());
+		send(address, subscribeMessage, reply -> {
 			// after reply wait for changes
-
+			
+			
+			System.out.println("NEW MESSAGE - > subscribe reply" + reply.result().body().toString());
+			
 			final String address_changes = address + "/changes";
 
 			eb.consumer(address_changes, message -> {
