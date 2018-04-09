@@ -87,7 +87,11 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// deploy check-in rating hyperty
 		
 		
-		JsonObject userProfile = new JsonObject();
+				
+		JsonObject identityCheckIN  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/checkin-identity"));
+		
+		
+		/*JsonObject userProfile = new JsonObject();
 		userProfile.put("sub", "103980270434194733076");
 		userProfile.put("name", "openid test");
 		userProfile.put("given_name", "openid");
@@ -113,22 +117,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		
 		
 		identityCheckIN.put("userURL", "user://google.com/openidtest30@gmail.com");
-		identityCheckIN.put("status", "created");
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+		identityCheckIN.put("status", "created");*/
 		
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
