@@ -249,5 +249,19 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	private double degreesToRadians(double degrees) {
 		return degrees * Math.PI / 180;
 	}
+	
+	@Override
+	public void processChanges(String address) {
+		
+		final String address_changes = address + "/changes";
+		System.out.println("waiting for changes on ->" + address_changes);
+		eb.consumer(address_changes, message -> {
+			System.out.println(" ON CheckIN New Change ->" + message.body().toString());
+			
+			
+			
+		});
+		
+	}
 
 }

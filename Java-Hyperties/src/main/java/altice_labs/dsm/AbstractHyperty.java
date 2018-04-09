@@ -187,14 +187,30 @@ public class AbstractHyperty extends AbstractVerticle {
 			
 			
 			System.out.println("NEW MESSAGE - > subscribe reply" + reply.result().body().toString());
-			
-			final String address_changes = address + "/changes";
-
-			eb.consumer(address_changes, message -> {
-				System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-						+ message.body().toString());
-			});
+			System.out.println("ADDRESS TO PROCESS CHANGES" + ObjURL);
+			processChanges(ObjURL);
 		});
+	}
+	
+	
+	/**
+	 * 
+	 * @param address
+	 * @param handler
+	 * 
+	 *            Send a subscription message towards address with a callback that
+	 *            sets the handler at <address>/changes (ie eventBus.sendMessage(
+	 *            ..)).
+	 */
+	public void processChanges(String address) {
+	
+		final String address_changes = address + "/changes";
+
+		eb.consumer(address_changes, message -> {
+			System.out.println("New Change Received ->"
+					+ message.body().toString());
+		});
+		
 	}
 
 	/**
