@@ -1,0 +1,48 @@
+@startuml
+
+participant "Javascript Wallet Hyperty" as walletO
+
+box "Vertx P2P Stub"
+  participant "Subscription Manager" as sm
+  participant "Wallet Reporter" as walletR
+  participant reporter
+end box
+
+box "Vertx Wallet Manager"
+  participant "Manager" as man
+  participant "Wallet" as wallet
+end box
+
+
+walletO -> sm : request to create wallet
+
+sm -> man : request to create wallet
+
+man -> man : create()
+
+man -> sm : create wallet
+
+sm -> reporter : create()
+
+reporter -> walletR : create()
+
+man -> wallet : new
+
+man -> walletO : 200 ok response with wallet address
+
+walletO -> walletR: subscribe
+
+
+walletO <- walletR: 200 ok
+
+...
+
+wallet <- : wallet transfer
+
+wallet -> reporter : update wallet with new transaction
+
+reporter -> walletR : addNewTransaction()
+
+walletR -> walletO : update
+
+@enduml
