@@ -15,25 +15,36 @@ end box
 
 
 walletO -> sm : request to create wallet
+activate sm
 
 sm -> man : request to create wallet
+activate man
 
 man -> man : create()
 
 man -> sm : create wallet
+activate sm
 
 sm -> reporter : create()
 
 reporter -> walletR : create()
 
+man <-- sm : 200 ok
+
+deactivate sm
 man -> wallet : new
 
-man -> walletO : 200 ok response with wallet address
+sm <-- man : 200 ok response with wallet address
+deactivate man
+
+sm -> walletO : 200 ok response with wallet address
+deactivate sm
 
 walletO -> walletR: subscribe
-
+activate walletR
 
 walletO <- walletR: 200 ok
+deactivate walletR
 
 ...
 
