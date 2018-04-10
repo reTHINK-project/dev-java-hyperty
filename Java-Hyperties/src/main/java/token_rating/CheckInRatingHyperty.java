@@ -308,7 +308,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 						System.out.println("User is not inside any shop or already checkIn");
 					} else {
 						System.out.println("User is close");
-						mine(numTokens, changes);
+						mine(numTokens, changes, "checkin");
 					}
 					
 				}

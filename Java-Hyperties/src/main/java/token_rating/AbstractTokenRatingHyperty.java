@@ -59,7 +59,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * associated transaction that is stored in a DB (or the transaction is only
 	 * stored in the recipient wallet ?) (future in a blockchain?):
 	 */
-	void mine(int numTokens, JsonObject msgOriginal) {
+	void mine(int numTokens, JsonObject msgOriginal, String source) {
 		System.out.println("Mining " + numTokens + " tokens...");
 		String userId = msgOriginal.getString("userID");
 		System.out.println("MINING: " + msgOriginal);
@@ -82,7 +82,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		JsonObject transaction = new JsonObject();
 		transaction.put("address", walletAddress);
 		transaction.put("recipient", walletAddress);
-		transaction.put("source", "source");
+		transaction.put("source", source);
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
@@ -249,7 +249,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			if (numTokens == -1) {
 				System.out.println("ABSTRACT TOKEN: User is not inside any shop");
 			} else {
-				mine(numTokens, message.body());
+				mine(numTokens, message.body(), "source");
 			}
 		});
 	}
