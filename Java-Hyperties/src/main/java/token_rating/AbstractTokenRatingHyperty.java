@@ -169,7 +169,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			case "create":
 				// valid received invitations (create messages)
 				System.out.println("Abstract ADD STREAM");
-				if(canAddStreamHandler(handleCheckInUserURL)) {
+				if(checkIfCanHandleData(handleCheckInUserURL)) {
 					addStreamHandler(handleCheckInUserURL);
 					response.put("body",new JsonObject().put("code", 200));
 					message.reply(response);
@@ -190,13 +190,13 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	}
 
 
-	private boolean canAddStreamHandler(String from) {
-		System.out.println("CHECK IF CAN BE ADDED:" + from);
+	public boolean checkIfCanHandleData(String userURL) {
+		System.out.println("CHECK IF CAN BE ADDED:" + userURL);
 		addHandler = false;
 		
 		checkUser = new CountDownLatch(1);
 		
-		JsonObject toFind = new JsonObject().put("user", from);
+		JsonObject toFind = new JsonObject().put("user", userURL);
 		
 		new Thread(() -> {
 			mongoClient.find(collection, toFind, res -> {
@@ -205,7 +205,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 					checkUser.countDown();
 				} else {
 					JsonObject document = new JsonObject();
-					document.put("user", from);
+					document.put("user", userURL);
 					document.put("checkin", new JsonArray());
 					mongoClient.insert(collection, document, res2 -> {
 						System.out.println("Setup complete - rates");
@@ -269,10 +269,15 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 *            shopID
 	 */
 	void persistData(String dataSource, String user, long timestamp, String shopID, JsonObject userRates) {
+		JsonArray entryArray = null;
 
+		if (userRates != null) {
+			entryArray = userRates.getJsonArray(dataSource);
+		} else {
+			entryArray = new JsonArray();
+		}
 		// add a new entry to the data source
-		JsonArray entryArray = userRates.getJsonArray(dataSource);
-
+		
 		// build JSON to send to Mongo
 		JsonObject checkinInfo = new JsonObject();
 		checkinInfo.put("user", user);

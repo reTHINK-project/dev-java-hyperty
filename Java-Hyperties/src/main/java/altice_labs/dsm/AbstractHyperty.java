@@ -195,7 +195,8 @@ public class AbstractHyperty extends AbstractVerticle {
 				
 				//TODO: associate DataObjectURL to an identity of invite
 				
-				if (persistDataObjUserURL(ObjURL, userURL, "observer")) {
+
+				if (checkIfCanHandleData(userURL) && persistDataObjUserURL(ObjURL, userURL, "observer")) {
 					onChanges(ObjURL);
 				}
 							
@@ -208,6 +209,11 @@ public class AbstractHyperty extends AbstractVerticle {
 	}
 	
 	
+	public boolean checkIfCanHandleData(String objURL) {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
 	/**
 	 * 
 	 * @param address

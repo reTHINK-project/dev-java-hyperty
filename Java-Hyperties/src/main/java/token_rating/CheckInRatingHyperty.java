@@ -39,6 +39,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	private CountDownLatch checkinLatch;
 	private CountDownLatch findUserID;
+	private CountDownLatch findRates;
 	private String userIDToReturn = null;
 
 	@Override
@@ -148,44 +149,63 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	private void validateCheckinTimestamps(String user, String shopID, long currentTimestamp) {
 
-		// get previous checkin from that user for that rating source
-		mongoClient.find(collection, new JsonObject().put("user", user), result -> {
-
-			// access checkins data source
-			JsonObject userRates = result.result().get(0);
-			JsonArray checkInRates = userRates.getJsonArray(dataSource);
-			// check ins for that store
-			ArrayList<JsonObject> a = (ArrayList<JsonObject>) checkInRates.getList();
-			List<JsonObject> rrr = (List<JsonObject>) a.stream() // convert list to stream
-					.filter(element -> shopID.equals(element.getString("id"))).collect(Collectors.toList());
-			if (rrr.size() == 0) {
-				System.out.println("User never went to this shop");
-				persistData(dataSource, user, currentTimestamp, shopID, userRates);
-			} else {
-				// order by timestamp
-				Collections.sort(rrr, new Comparator<JsonObject>() {
-					@Override
-					public int compare(final JsonObject lhs, JsonObject rhs) {
-						if (lhs.getDouble("timestamp") > rhs.getDouble("timestamp")) {
-							return -1;
-						} else {
-							return 1;
-						}
-					}
-				});
+		findRates = new CountDownLatch(1);
+		
+		new Thread(() -> {
+			// get previous checkin from that user for that rating source
+			mongoClient.find(collection, new JsonObject().put("user", user), result -> {
+	
 				
-				double lastVisitTimestamp = rrr.get(0).getDouble("timestamp");
-				System.out.println("LAST VISIT TIMESTAMP->" + lastVisitTimestamp);
-				System.out.println("Current TIMESTAMP->" + currentTimestamp);
-				if (lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp) {
-					System.out.println("continue");
+				// access checkins data source
+				JsonObject userRates = result.result().get(0);
+				JsonArray checkInRates = userRates.getJsonArray(dataSource);
+				// check ins for that store
+				ArrayList<JsonObject> a = (ArrayList<JsonObject>) checkInRates.getList();
+				List<JsonObject> rrr = (List<JsonObject>) a.stream() // convert list to stream
+						.filter(element -> shopID.equals(element.getString("id"))).collect(Collectors.toList());
+				if (rrr.size() == 0) {
+					System.out.println("User never went to this shop");
 					persistData(dataSource, user, currentTimestamp, shopID, userRates);
 				} else {
-					System.out.println("invalid");
+					// order by timestamp
+					Collections.sort(rrr, new Comparator<JsonObject>() {
+						@Override
+						public int compare(final JsonObject lhs, JsonObject rhs) {
+							if (lhs.getDouble("timestamp") > rhs.getDouble("timestamp")) {
+								return -1;
+							} else {
+								return 1;
+							}
+						}
+					});
+					
+					double lastVisitTimestamp = rrr.get(0).getDouble("timestamp");
+					System.out.println("LAST VISIT TIMESTAMP->" + lastVisitTimestamp);
+					System.out.println("Current TIMESTAMP->" + currentTimestamp);
+					if (lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp) {
+						System.out.println("continue");
+						persistData(dataSource, user, currentTimestamp, shopID, userRates);
+						
+					} else {
+						System.out.println("invalid");
+						tokenAmount = -1;
+					}
 				}
-			}
-
-		});
+				findRates.countDown();
+	
+			});
+		}).start();
+		
+		try {
+			findRates.await(5L, TimeUnit.SECONDS);
+			System.out.println("3 - return from latch");
+			return;
+		} catch (InterruptedException e) {
+			System.out.println("3 - interrupted exception");
+		}
+		System.out.println("3 - return other");
+		return;
+		
 
 	}
 
@@ -285,7 +305,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					
 					int numTokens = rate(changes);
 					if (numTokens == -1) {
-						System.out.println("User is not inside any shop");
+						System.out.println("User is not inside any shop or already checkIn");
 					} else {
 						System.out.println("User is close");
 						mine(numTokens, changes);
