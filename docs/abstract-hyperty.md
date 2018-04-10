@@ -14,6 +14,23 @@ Use [Verticle Configuration](http://vertx.io/docs/vertx-core/java/#_passing_conf
      "url": "stream://mydomain.com/mystream"
    }
 ```
+
+### Persistence
+
+
+**DataObjects**
+
+Collection of Data Objects handled by the Hyperty:
+
+```
+{
+  <objectURL>: {
+    userUrl: <URL>,
+    type: <reporter|observer>
+  }
+}
+```
+
 ### Headers
 
 The Abstract Hyperty set the following Event Bus Message Headers (`DeliveryOptions().addHeaders(header-name,header-value)`):
@@ -47,6 +64,8 @@ If a different logic is needed this function must be overwritten.
 ### subscribe( address ) function
 
 Send a subscription message towards `address` with a callback that sets the `onChanges()` as an handler at `<address>/changes` (ie `eventBus.sendMessage( ..)`).
+
+A co
 
 ### onChanges( changesMsg )
 

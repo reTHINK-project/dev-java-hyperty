@@ -29,6 +29,8 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected MongoClient mongoClient = null;
 	private CountDownLatch findWallet;
 	protected boolean acceptSubscription;
+	private CountDownLatch dataPersisted;
+	private boolean dataPersistedFlag;
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -153,11 +155,11 @@ public class AbstractHyperty extends AbstractVerticle {
 	private void onNotification(JsonObject body) {
 		System.out.println("HANDLING" + body.toString());
 		String from = body.getString("from");
-		
+		String userURL = body.getJsonObject("identity").getJsonObject("userProfile").getString("userURL");
 		
 
 		
-		subscribe(from);
+		subscribe(from, userURL);
 		
 	}
 
@@ -170,7 +172,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	 *            sets the handler at <address>/changes (ie eventBus.sendMessage(
 	 *            ..)).
 	 */
-	private void subscribe(String address) {
+	private void subscribe(String address, String userURL) {
 	
 		String ObjURL= address.split("/subscription")[0];
 		JsonObject subscribeMessage = new JsonObject();
@@ -184,17 +186,88 @@ public class AbstractHyperty extends AbstractVerticle {
 		System.out.println("SUBSCRIBE Message Sent" +  subscribeMessage.toString());
 		send(address, subscribeMessage, reply -> {
 			// after reply wait for changes
+			System.out.println("subscribe reply ->" + reply.result().body().toString());
 			
 			
-			System.out.println("NEW MESSAGE - > subscribe reply" + reply.result().body().toString());
-			
-			final String address_changes = address + "/changes";
+			JsonObject resultBody = new JsonObject(reply.result().body().toString());
+			int code = resultBody.getJsonObject("body").getInteger("code");
+			if (code == 200) {
+				
+				//TODO: associate DataObjectURL to an identity of invite
+				
 
-			eb.consumer(address_changes, message -> {
-				System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-						+ message.body().toString());
-			});
+				if (checkIfCanHandleData(userURL) && persistDataObjUserURL(ObjURL, userURL, "observer")) {
+					onChanges(ObjURL);
+				}
+							
+				
+			}
+
+			
+			
 		});
+	}
+	
+	
+	public boolean checkIfCanHandleData(String objURL) {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
+	/**
+	 * 
+	 * @param address
+	 * @param handler
+	 * 
+	 *            Send a subscription message towards address with a callback that
+	 *            sets the handler at <address>/changes (ie eventBus.sendMessage(
+	 *            ..)).
+	 */
+	public void onChanges(String address) {
+		System.out.println("ADDRESS TO PROCESS CHANGES" + address);
+		final String address_changes = address + "/changes";
+
+		eb.consumer(address_changes, message -> {
+			System.out.println("New Change Received ->"
+					+ message.body().toString());
+		});
+		
+	}
+	
+	
+	public boolean persistDataObjUserURL(String address, String userURL, String type) {
+		
+		
+		dataPersistedFlag = false;
+		
+		dataPersisted = new CountDownLatch(1);
+		
+		JsonObject document = new JsonObject();
+		document.put("userURL", userURL);
+		document.put("type", type);
+		
+		JsonObject toInsert = new JsonObject().put(address, document);
+		new Thread(() -> {
+
+			
+			mongoClient.insert("dataobjects", toInsert, res2 -> {
+				System.out.println("Setup complete - dataobjects");
+				dataPersistedFlag = true;
+				dataPersisted.countDown();
+			});
+				
+		}).start();
+		
+
+		try {
+			dataPersisted.await(5L, TimeUnit.SECONDS);
+				return dataPersistedFlag;
+		} catch (InterruptedException e) {
+			System.out.println("3 - interrupted exception");
+		}
+		System.out.println("3 - return other");
+		return dataPersistedFlag;	
+		
 	}
 
 	/**
