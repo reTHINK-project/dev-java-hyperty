@@ -26,6 +26,7 @@ import io.vertx.junit5.VertxTestContext;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
+@Disabled
 class AbstractHypertyTest {
 
 

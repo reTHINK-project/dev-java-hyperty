@@ -44,10 +44,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			case "create":
 				if (msg.getJsonObject("body") == null) {
 					// Wallet creation requests
-					walletCreationRequest(msg, message);
+					handleCreationRequest(msg, message);
 				} else {
 					// Wallet transfer
-					walletTransfer(msg);
+					handleTransfer(msg);
 				}
 				break;
 			case "read":
@@ -107,7 +107,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * 
 	 * @param msg
 	 */
-	private void walletTransfer(JsonObject msg) {
+	@Override
+	public void handleTransfer(JsonObject msg) {
 
 		System.out.println("Transfer op");
 		JsonObject body = msg.getJsonObject("body");
@@ -274,7 +275,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 * @param message
 	 */
-	private void walletCreationRequest(JsonObject msg, Message<JsonObject> message) {
+	@Override
+	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
 		System.out.println("Creating wallet: " + msg);
 		/*
 		 * Before the wallet is created, it checks there is no wallet yet for the
@@ -284,14 +286,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// send message to Vertx P2P stub and wait for reply
 		
 		// TODO change msg
-		message.reply(msg, reply -> {
+		message.reply(msg, reply2 -> {
 			
-			System.out.println("Reply from P2P stub " + reply);
+			System.out.println("Reply from P2P stub " + reply2.result().body().toString());
 
-			JsonObject rep = (JsonObject) reply.result().body();
+			JsonObject rep = new JsonObject(reply2.result().body().toString());
 
+			System.out.println("rep " + rep.toString());
 			// check if 200
-			int code = rep.getInteger("code");
+			int code = rep.getJsonObject("body").getInteger("code");
 			if (code == 200) {
 				mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getJsonObject("identity")),
 						res -> {
@@ -306,7 +309,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								newWallet.put("address", address);
 								newWallet.put("identity", msg.getJsonObject("identity"));
 								newWallet.put("created", new Date().getTime());
-								newWallet.put("balance", 0);
+								newWallet.put("balance", rep.getJsonObject("body").getJsonObject("value").getInteger("balance"));
 								newWallet.put("transactions", new JsonArray());
 								newWallet.put("status", "active");
 
@@ -319,7 +322,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								});
 								JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
 								// JsonObject response = new JsonObject().put("body", body);
-								message.reply(response);
+								System.out.println("wallet created, reply" + response.toString());
+								reply2.result().reply(response);
 
 							} else {
 								System.out.println("wallet already exists...");
@@ -339,6 +343,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								default:
 									break;
 								}
+								reply2.result().reply(response);
 
 							}
 						});

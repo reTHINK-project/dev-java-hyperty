@@ -134,7 +134,17 @@ public class AbstractHyperty extends AbstractVerticle {
 						
 						onNotification(new JsonObject(message.body().toString()));
 					} else {
-						message.reply(response);
+						JsonObject msg = new JsonObject(message.body().toString());
+						
+						if (body == null) {
+							
+							// Wallet creation requests
+							handleCreationRequest(msg, message);
+						} else {
+							// Wallet transfer
+							handleTransfer(msg);
+						}
+						
 					}
 
 					break;
@@ -144,6 +154,16 @@ public class AbstractHyperty extends AbstractVerticle {
 
 			}
 		};
+	}
+
+	public void handleTransfer(JsonObject msg) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	/**
