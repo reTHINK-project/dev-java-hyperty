@@ -155,7 +155,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				updateMessage.put("from", url);
 				updateMessage.put("to", walletAddress + "/changes");
 				JsonObject updateBody = new JsonObject();
-				updateBody.put("value", walletInfo.getInteger("balance"));
+				updateBody.put("balance", walletInfo.getInteger("balance"));
+				updateBody.put("transactions", walletInfo.getJsonArray("transactions"));
 				updateMessage.put("body", updateBody);
 
 				// publish transaction in the event bus using the wallet address.
