@@ -55,35 +55,18 @@ An empty rating engine function (separate class?) when the data evaluation in to
 
 ### private mine(int numTokens, data)
 
-A Token miner function that generates numTokens as uint type as well as an associated transaction that is stored in a DB (or the transaction is only stored in the recipient wallet ?) (future in a blockchain?):
+A Token miner function that generates numTokens as uint type as well as an associated transaction as specificied [here](https://github.com/reTHINK-project/specs/tree/master/datamodel/data-objects/wallet).
 
-```
-{
-  recipient: <wallet address of the recipient>,
-  source: <data stream address>,
-  date: <ISO 8601 compliant>,
-  value: <amount of tokens in the transaction>
-  nonce: < the count of the number of performed mining transactions, starting with 0>
-}
-```
 
 *reference:* https://medium.com/@codetractio/inside-an-ethereum-transaction-fa94ffca912f
 
 ### transfer(transaction)
 
-Performs the transaction to Wallet Address.
+Performs the transaction to Wallet Address as specified [here](https://github.com/reTHINK-project/specs/blob/master/messages/wallet-messages.md#wallet-transfer).
 
 ### getWalletAddress(userId)
 
-Send message to Wallet Manager address:
-
-```
-type: read,
-from: <rating address>,
-body: { resource: 'user/<userId>'}
-```
-
-with callback to return the value returned in case it is found.
+Requests the wallet address for a certain user as specified [here](https://github.com/reTHINK-project/specs/blob/master/messages/wallet-messages.md#wallet-address-request) with callback to return the value returned in case it is found.
 
 ### getSource()
 
