@@ -182,7 +182,9 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					double lastVisitTimestamp = rrr.get(0).getDouble("timestamp");
 					System.out.println("LAST VISIT TIMESTAMP->" + lastVisitTimestamp);
 					System.out.println("Current TIMESTAMP->" + currentTimestamp);
-					if (lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp) {
+					//TODO: THIS SHOULD BE *1000 to wait 1hour to a new checkin
+					//(lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp)
+					if (lastVisitTimestamp + (min_frequency * 60 * 60) <= currentTimestamp) {
 						System.out.println("continue");
 						persistData(dataSource, user, currentTimestamp, shopID, userRates);
 						
