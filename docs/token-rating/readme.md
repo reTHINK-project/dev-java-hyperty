@@ -32,7 +32,7 @@ Config file with:
 
 ```
 {
-  user: "user:\\google.com\",
+  user: "user-guid:\\gsfdhaf-hghajd-8479485\",
   <rating-source>:  [{
       timestamp: "",
       id: 5465
