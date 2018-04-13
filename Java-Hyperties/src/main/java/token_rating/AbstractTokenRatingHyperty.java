@@ -64,11 +64,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		String userId = msgOriginal.getString("userID");
 		System.out.println("MINING: " + msgOriginal);
 
-		// create transaction
-		Transaction tr = new Transaction();
-		tr.setValue(numTokens);
-		tr.setRecipient(walletManagerAddress);
-		tr.setSource(streamAddress);
 
 		// store transaction by sending it to wallet through wallet manager
 		String walletAddress = getWalletAddress(userId);
@@ -80,11 +75,21 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();
-		transaction.put("address", walletAddress);
+		//transaction.put("address", walletAddress);
 		transaction.put("recipient", walletAddress);
 		transaction.put("source", source);
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
-		transaction.put("value", 15);
+		
+		if (numTokens == -1)  {
+			transaction.put("description", "invalid-timestamp");
+		} else if (numTokens == -2) {
+			transaction.put("description", "invalid-location");
+		} else {
+			transaction.put("description", "valid");
+		}
+		
+		
+		transaction.put("value", numTokens);
 		transaction.put("nonce", 1);
 		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
 		

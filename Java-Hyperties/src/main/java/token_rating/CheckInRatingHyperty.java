@@ -128,6 +128,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 				boolean validPosition = validateUserPosition(user, userLatitude, userLongitude, shopInfo);
 				if (!validPosition) {
 					checkinLatch.countDown();
+					tokenAmount = -2;
 					return;
 				}
 				validateCheckinTimestamps(user, shopID, currentTimestamp);
@@ -184,7 +185,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					System.out.println("Current TIMESTAMP->" + currentTimestamp);
 					//TODO: THIS SHOULD BE *1000 to wait 1hour to a new checkin
 					//(lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp)
-					if (lastVisitTimestamp + (min_frequency * 60 * 60) <= currentTimestamp) {
+					if (lastVisitTimestamp + (min_frequency * 60 * 1 * 1000) <= currentTimestamp) {
 						System.out.println("continue");
 						persistData(dataSource, user, currentTimestamp, shopID, userRates);
 						
@@ -306,16 +307,22 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					System.out.println("CHANGES" + changes.toString());
 					
 					int numTokens = rate(changes);
-					if (numTokens == -1) {
+					
+					/*if (numTokens == -1) {
 						System.out.println("User is not inside any shop or already checkIn");
 					} else {
 						System.out.println("User is close");
 						mine(numTokens, changes, "checkin");
+					}*/
+					if (numTokens < 0) {
+						System.out.println("User is not inside any shop or already checkIn");
+					} else {
+						System.out.println("User is close");
 					}
 					
+					mine(numTokens, changes, "checkin");
+					
 				}
-				
-				
 				
 			} catch (Exception e) {
 				e.printStackTrace();
