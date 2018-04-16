@@ -20,7 +20,6 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import token_rating.WalletManagerHyperty;
-import token_rating.WalletManagerMessage;
 import util.DateUtils;
 
 /*
@@ -69,7 +68,7 @@ class WalletManagerTest {
 
 		new Thread(() -> {
 			JsonObject msg = new JsonObject();
-			msg.put("type", WalletManagerMessage.TYPE_CREATE);
+			msg.put("type", "create");
 			msg.put("identity", identity);
 			msg.put("url", "url");
 			msg.put("from", userURL);
@@ -97,7 +96,7 @@ class WalletManagerTest {
 	static void deleteWallet(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("DELETING");
 		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_DELETE);
+		msg.put("type", "delete");
 		msg.put("identity", identity);
 		msg.put("from", userURL);
 
@@ -125,7 +124,7 @@ class WalletManagerTest {
 	@Test
 	void testReporterSubscriptionValidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_CREATE);
+		msg.put("type", "create");
 		msg.put("url", "url");
 		msg.put("from", userURL);
 		msg.put("address", walletAddress);
@@ -147,7 +146,7 @@ class WalletManagerTest {
 	@Test
 	void testReporterOnReadValidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_CREATE);
+		msg.put("type", "create");
 		msg.put("url", "url");
 		msg.put("from", userURL);
 		msg.put("address", walletAddress);
@@ -169,7 +168,7 @@ class WalletManagerTest {
 
 	void testReporterOnReadInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_CREATE);
+		msg.put("type", "create");
 		msg.put("url", "url");
 		msg.put("from", reporterFromInvalid);
 
@@ -189,7 +188,7 @@ class WalletManagerTest {
 	@Test
 	void testReporterSubscriptionInvalidOrigin(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_CREATE);
+		msg.put("type", "create");
 		msg.put("url", "url");
 		msg.put("from", reporterFromInvalid);
 
@@ -210,7 +209,7 @@ class WalletManagerTest {
 	@Test
 	void getWalletAddress(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_READ);
+		msg.put("type", "read");
 		JsonObject body = new JsonObject().put("resource", "user").put("value", identity);
 		msg.put("body", body);
 
@@ -222,7 +221,7 @@ class WalletManagerTest {
 	@Test
 	void getWallet(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_READ);
+		msg.put("type", "read");
 		JsonObject body = new JsonObject().put("resource", "wallet").put("value", walletAddress);
 		msg.put("body", body);
 
@@ -234,7 +233,7 @@ class WalletManagerTest {
 	@Test
 	void transferToWallet(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		msg.put("type", WalletManagerMessage.TYPE_CREATE);
+		msg.put("type", "create");
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();

@@ -70,7 +70,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		System.out.println("WAlletADDRESS " + walletAddress + "\nFROM " + userId);
 		JsonObject msgToWallet = new JsonObject();
-		msgToWallet.put("type", WalletManagerMessage.TYPE_CREATE);
+		msgToWallet.put("type", "create");
 		msgToWallet.put("identity", this.identity);
 
 		// create transaction object
