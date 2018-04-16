@@ -16,7 +16,7 @@ before_install:
     - sudo mkdir data
     - cd data
     - sudo mkdir db
-    - cd /home/travis/build/reTHINK-project/dev-java-hyperty/Java-Hyperties
+    - cd /home/travis/build/reTHINK-project/dev-java-hyperty
     - sudo mongo 127.0.0.1/test  --eval 'db.createCollection("location_data")'
     - sudo mongo 127.0.0.1/test  --eval 'db.createCollection("wallets")'
     - sudo mongo 127.0.0.1/test  --eval 'db.createCollection("shops")'
