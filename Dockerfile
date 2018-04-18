@@ -34,7 +34,6 @@ WORKDIR /build
 
 # Dependencies
 ADD pom.xml /build/pom.xml
-ADD package.json /build/package.json
 RUN ["mvn", "dependency:resolve"]
 RUN ["mvn", "verify"]
 RUN ["npm", "install"]
