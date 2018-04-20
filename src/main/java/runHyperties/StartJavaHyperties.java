@@ -31,6 +31,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
+	private String mongoHost = "172.18.0.64";
 	
 	public static void main(String[] args) {
 	
@@ -121,7 +122,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// mongo
 		configCheckIN.put("db_name", "test");
 		configCheckIN.put("collection", "rates");
-		configCheckIN.put("mongoHost", "localhost");
+		configCheckIN.put("mongoHost", mongoHost);
 		
 		configCheckIN.put("tokens_per_checkin", 10);
 		configCheckIN.put("checkin_radius", 500);
@@ -148,7 +149,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("identity", identityWalletManager);
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
-		configWalletManager.put("mongoHost", "localhost");
+		configWalletManager.put("mongoHost", mongoHost);
 		
 		configWalletManager.put("observers", new JsonArray().add(""));
 		
@@ -195,72 +196,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 				
 		server.listen(9091);    
 
-	    
-	    /*toTest = 0;
-	    vertx.setPeriodic(5000, _id -> {
-		    try {
-		    	
-					toTest++;
-					vertx.eventBus().publish(locationHypertyURL, "" + toTest);
-				
-		    } catch(Exception e) {
-		    	System.out.println("Error->");
-		    	e.printStackTrace();
-		    	
-		    }
-	    });*/	
-		
-		
-		
-		
-		
 		
 		
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-/*	public  void sendCreateMessage() {
-		WalletManagerMessage msg = new WalletManagerMessage();
-		msg.setType("create");
-		msg.setFrom(from);
-		Gson gson = new Gson();
-		vertx.eventBus().publish("token-rating", gson.toJson(msg));
-	}
-
-	static int msgID;
-
-	public void sendToStream() {
-		String message = "12";
-
-		msgID = 0;
-
-		vertx.setPeriodic(2000, _id -> {
-			msgID++;
-			vertx.eventBus().publish(from, message);
-
-			if (msgID >= 5) {
-				tearDownStream();
-				vertx.cancelTimer(_id);
-			}
-		});
-
-	}
-
-	public void tearDownStream() {
-		WalletManagerMessage msg = new WalletManagerMessage();
-		msg.setType("delete");
-		msg.setFrom(from);
-		Gson gson = new Gson();
-		vertx.eventBus().publish("token-rating", gson.toJson(msg));
-	}*/
-
 	
 }

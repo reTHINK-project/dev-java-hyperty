@@ -19,7 +19,7 @@ import io.vertx.ext.mongo.MongoClient;
 public class AbstractHyperty extends AbstractVerticle {
 
 	protected JsonObject identity;
-//	protected JsonArray streams;
+
 	protected String url;
 	protected String collection;
 	protected String database;
@@ -43,7 +43,6 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.collection = config().getString("collection");
 		this.database = config().getString("db_name");
 		this.mongoHost = config().getString("mongoHost");
-//		this.streams = config().getJsonArray("streams");
 		this.schemaURL = config().getString("schemaURL");
 		this.observers = config().getJsonArray("observers");
 
@@ -129,8 +128,6 @@ public class AbstractHyperty extends AbstractVerticle {
 				case "create":
 
 					if (from.contains("/subscription")) {
-						/*response.put("body",new JsonObject().put("code", 200));
-						message.reply(response);*/
 						
 						onNotification(new JsonObject(message.body().toString()));
 					} else {
@@ -138,10 +135,10 @@ public class AbstractHyperty extends AbstractVerticle {
 						
 						if (body == null) {
 							
-							// Wallet creation requests
+							// handle creation requests, like wallet
 							handleCreationRequest(msg, message);
 						} else {
-							// Wallet transfer
+							//  handle transfer, from wallet for example
 							handleTransfer(msg);
 						}
 						
