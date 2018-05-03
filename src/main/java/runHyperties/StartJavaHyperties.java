@@ -23,6 +23,7 @@ import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import tokenRating.CheckInRatingHyperty;
+import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
 
@@ -69,6 +70,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	public void start() throws Exception { 
 		
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
+		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		
 		
@@ -137,6 +139,35 @@ public class StartJavaHyperties extends AbstractVerticle {
 		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), optionsCheckIN, res -> {
 			System.out.println("CheckInRatingHyperty Result->" + res.result());
 		});
+		
+		/*
+		// deploy user activity rating hyperty
+		JsonObject identityUserActivity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/checkin-identity"));
+		JsonObject configUserActivity = new JsonObject();
+		configUserActivity.put("url", userActivityHypertyURL);
+		configUserActivity.put("identity", identityUserActivity);
+		// mongo
+		configUserActivity.put("db_name", "test");
+		configUserActivity.put("collection", "rates");
+		configUserActivity.put("mongoHost", "localhost");
+		
+		configUserActivity.put("tokens_per_checkin", 10);
+		configUserActivity.put("checkin_radius", 500);
+		configUserActivity.put("min_frequency", 1);
+		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");		
+		configUserActivity.put("hyperty", "123");
+		configUserActivity.put("stream", "vertx://sharing-cities-dsm/user-activity");
+			
+		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops"));
+		
+		
+		DeploymentOptions optionsUserActivity= new DeploymentOptions().setConfig(configUserActivity).setWorker(true);
+		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, res -> {
+			System.out.println("UserActivityRatingHyperty Result->" + res.result());
+		});
+		
+		*/
+		
 		
 	
 		// wallet manager hyperty deploy

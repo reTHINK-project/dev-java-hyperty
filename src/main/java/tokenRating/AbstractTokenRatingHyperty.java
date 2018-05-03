@@ -93,8 +93,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		
 		msgToWallet.put("body", body);
 		
-		
-
 		transfer(msgToWallet);
 	}
 
@@ -176,6 +174,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 					addStreamHandler(handleCheckInUserURL);
 					response.put("body",new JsonObject().put("code", 200));
 					message.reply(response);
+					System.out.println("Replied with" + response.toString());
 				} else {
 					response.put("body",new JsonObject().put("code", 406));
 					message.reply(response);
