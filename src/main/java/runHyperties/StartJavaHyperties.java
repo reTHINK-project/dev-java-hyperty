@@ -32,6 +32,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	int toTest;
 	private static String from = "tester";
 	private String mongoHost = "172.18.0.64";
+	private String mongoHost = "localhost";
 	
 	public static void main(String[] args) {
 	
@@ -85,7 +86,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		
 		
 				
-		JsonObject identityCheckIN  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/checkin-identity"));
+		JsonObject identity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/identity"));
 		
 		
 		/*JsonObject userProfile = new JsonObject();
@@ -118,7 +119,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
-		configCheckIN.put("identity", identityCheckIN);
+		configCheckIN.put("identity", identity);
 		// mongo
 		configCheckIN.put("db_name", "test");
 		configCheckIN.put("collection", "rates");
@@ -142,11 +143,10 @@ public class StartJavaHyperties extends AbstractVerticle {
 	
 		// wallet manager hyperty deploy
 		
-		JsonObject identityWalletManager  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/wallet-manager"));
 
 		JsonObject configWalletManager  = new JsonObject();
 		configWalletManager.put("url", walletManagerHypertyURL);
-		configWalletManager.put("identity", identityWalletManager);
+		configWalletManager.put("identity", identity);
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
