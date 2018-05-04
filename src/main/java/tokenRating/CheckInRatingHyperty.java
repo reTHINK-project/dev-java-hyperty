@@ -336,8 +336,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		userIDToReturn = null;		
 		findUserID = new CountDownLatch(1);
 		new Thread(() -> {
-			mongoClient.find("dataobjects", new JsonObject().put(address, new JsonObject().put("$exists", true)), userURLforAddress -> {		
-				System.out.println("2 - Received shop info");
+			mongoClient.find(dataObjectsCollection, new JsonObject().put(address, new JsonObject().put("$exists", true)), userURLforAddress -> {		
+				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
 				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject(address);
 				userIDToReturn = dataObjectInfo.getString("userURL");
 				findUserID.countDown();
