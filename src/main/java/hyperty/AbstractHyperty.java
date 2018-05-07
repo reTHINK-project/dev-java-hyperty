@@ -269,7 +269,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		new Thread(() -> {
 
 			
-			mongoClient.insert(dataObjectsCollection, toInsert, res2 -> {
+			mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
 				System.out.println("Setup complete - dataobjects + Insert" + res2.result().toString());
 				dataPersistedFlag = true;
 				dataPersisted.countDown();
