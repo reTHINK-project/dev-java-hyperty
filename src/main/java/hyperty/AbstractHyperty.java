@@ -264,7 +264,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		document.put("userURL", userURL);
 		document.put("type", type);
 		
-		JsonObject toInsert = new JsonObject().put(address, document);
+		JsonObject toInsert = new JsonObject().put("url", address).put("metadata", document);
 		System.out.println("Creating DO entry -> " + toInsert.toString());
 		new Thread(() -> {
 
