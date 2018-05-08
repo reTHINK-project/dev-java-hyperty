@@ -1,0 +1,36 @@
+@startuml
+
+node "User Activity Rating Server" as dsmServer {
+
+node "Citizen Wallet" as wallet
+
+node "User Activity Rating" as citzRate
+}
+
+node "Smart Citizen" as citz {
+
+interface "Citizen Wallet" as citzWallet
+
+node "Google Fit IW Stub" as gfitStub {
+    node "User Activity Reporter" as userActR
+
+    interface "User Activity" as userAct
+    }
+}
+
+interface "Google Fit API" as gfit
+
+userActR -> gfit : 1: get Google Fit Data
+
+userActR -> userAct : 2: report
+
+citzRate --> userAct : 5:observe
+
+citzRate -> citzRate : 6:calculate rating
+
+citzRate --> wallet : 7:transfer(citzUrl, tokens)
+
+wallet --> citzWallet : 8:tokens transaction
+
+
+@enduml
