@@ -31,6 +31,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected boolean acceptSubscription;
 	private CountDownLatch dataPersisted;
 	private boolean dataPersistedFlag;
+	protected String dataObjectsCollection = "dataobjects";
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -174,6 +175,8 @@ public class AbstractHyperty extends AbstractVerticle {
 		String from = body.getString("from");
 		String userURL = body.getJsonObject("identity").getJsonObject("userProfile").getString("userURL");
 		
+
+		
 		subscribe(from, userURL);
 		
 	}
@@ -261,12 +264,13 @@ public class AbstractHyperty extends AbstractVerticle {
 		document.put("userURL", userURL);
 		document.put("type", type);
 		
-		JsonObject toInsert = new JsonObject().put(address, document);
+		JsonObject toInsert = new JsonObject().put("url", address).put("metadata", document);
+		System.out.println("Creating DO entry -> " + toInsert.toString());
 		new Thread(() -> {
 
 			
-			mongoClient.insert("dataobjects", toInsert, res2 -> {
-				System.out.println("Setup complete - dataobjects");
+			mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
+				System.out.println("Setup complete - dataobjects + Insert" + res2.result().toString());
 				dataPersistedFlag = true;
 				dataPersisted.countDown();
 			});
