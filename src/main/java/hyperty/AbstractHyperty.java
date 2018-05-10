@@ -174,8 +174,6 @@ public class AbstractHyperty extends AbstractVerticle {
 		String from = body.getString("from");
 		String userURL = body.getJsonObject("identity").getJsonObject("userProfile").getString("userURL");
 		
-
-		
 		subscribe(from, userURL);
 		
 	}

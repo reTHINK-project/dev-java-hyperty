@@ -165,7 +165,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				// publish transaction in the event bus using the wallet address.
 				String toSendChanges = walletAddress + "/changes";
-				System.out.println("PUBLISHING ON " + toSendChanges + "\nData:" + updateMessage.toString());
+				System.out.println("PUBLISHING ON " + toSendChanges);
 
 				publish(toSendChanges, updateMessage);
 			});

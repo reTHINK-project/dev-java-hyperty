@@ -25,12 +25,12 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * Wallet Manager Hyperty address.
 	 */
 	private String walletManagerAddress;
-	
+
 	private String walletAddress;
 
 	private CountDownLatch checkUser;
 	boolean addHandler = false;
-	
+
 	@Override
 	public void start() {
 		super.start();
@@ -40,7 +40,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		hyperty = config().getString("hyperty");
 		streamAddress = config().getString("stream");
 		walletManagerAddress = config().getString("wallet");
-		
+
 		addMyHandler();
 	}
 
@@ -62,7 +62,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		String userId = msgOriginal.getString("userID");
 		System.out.println("MINING: " + msgOriginal);
 
-
 		// store transaction by sending it to wallet through wallet manager
 		String walletAddress = getWalletAddress(userId);
 
@@ -73,26 +72,28 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();
-		//transaction.put("address", walletAddress);
+		// transaction.put("address", walletAddress);
 		transaction.put("recipient", walletAddress);
 		transaction.put("source", source);
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
-		
-		if (numTokens == -1)  {
+
+		if (numTokens == -1) {
 			transaction.put("description", "invalid-timestamp");
 		} else if (numTokens == -2) {
 			transaction.put("description", "invalid-location");
+		} else if (numTokens == -3) {
+			transaction.put("description", "invalid-short-distance");
 		} else {
 			transaction.put("description", "valid");
 		}
-		
-		
+
 		transaction.put("value", numTokens);
 		transaction.put("nonce", 1);
+		// TODO - add data
 		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
-		
+
 		msgToWallet.put("body", body);
-		
+
 		transfer(msgToWallet);
 	}
 
@@ -103,7 +104,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 */
 	private void transfer(JsonObject msg) {
 		System.out.println("Sending transaction to Wallet Manager..." + msg.toString());
-
 
 		vertx.eventBus().publish(walletManagerAddress, msg);
 	}
@@ -125,7 +125,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
 		msg.put("from", hyperty);
-		msg.put("body", new JsonObject().put("resource", "user").put("value",userId));
+		msg.put("body", new JsonObject().put("resource", "user").put("value", userId));
 		msg.put("identity", new JsonObject());
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
@@ -138,7 +138,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 				setupLatch.countDown();
 			});
 		}).start();
-		
+
 		try {
 			setupLatch.await();
 		} catch (InterruptedException e) {
@@ -159,24 +159,25 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		vertx.eventBus().<JsonObject>consumer(streamAddress, message -> {
 			System.out.println("Abstract REC" + message.body().toString());
 			mandatoryFieldsValidator(message);
-			
+
 			JsonObject body = new JsonObject(message.body().toString());
 			String type = body.getString("type");
-			String handleCheckInUserURL = body.getJsonObject("identity").getJsonObject("userProfile").getString("userURL");
-			
+			String handleCheckInUserURL = body.getJsonObject("identity").getJsonObject("userProfile")
+					.getString("userURL");
+
 			JsonObject response = new JsonObject();
 			// check message type
 			switch (type) {
 			case "create":
 				// valid received invitations (create messages)
 				System.out.println("Abstract ADD STREAM");
-				if(checkIfCanHandleData(handleCheckInUserURL)) {
+				if (checkIfCanHandleData(handleCheckInUserURL)) {
 					addStreamHandler(handleCheckInUserURL);
-					response.put("body",new JsonObject().put("code", 200));
+					response.put("body", new JsonObject().put("code", 200));
 					message.reply(response);
 					System.out.println("Replied with" + response.toString());
 				} else {
-					response.put("body",new JsonObject().put("code", 406));
+					response.put("body", new JsonObject().put("code", 406));
 					message.reply(response);
 				}
 				break;
@@ -191,48 +192,48 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		});
 	}
 
-
 	public boolean checkIfCanHandleData(String userURL) {
 		System.out.println("CHECK IF CAN BE ADDED:" + userURL);
 		addHandler = false;
-		
+
 		checkUser = new CountDownLatch(1);
-		
+
 		JsonObject toFind = new JsonObject().put("user", userURL);
-		
+
 		new Thread(() -> {
 			mongoClient.find(collection, toFind, res -> {
 				if (res.result().size() != 0) {
 					addHandler = true;
 					checkUser.countDown();
+					System.out.println("User exists");
 				} else {
 					JsonObject document = new JsonObject();
 					document.put("user", userURL);
+					// setup rating sources
 					document.put("checkin", new JsonArray());
+					document.put("user-activity", new JsonArray());
+					System.out.println("User exists false");
 					mongoClient.insert(collection, document, res2 -> {
 						System.out.println("Setup complete - rates");
 						addHandler = true;
 						checkUser.countDown();
 					});
 				}
-				
+
 			});
 		}).start();
-		
 
 		try {
 			checkUser.await(5L, TimeUnit.SECONDS);
-				return addHandler;
+			return addHandler;
 		} catch (InterruptedException e) {
 			System.out.println("3 - interrupted exception");
 		}
 		System.out.println("3 - return other");
-		return addHandler;		
-		
-		
+		return addHandler;
+
 	}
-	
-	
+
 	/**
 	 * Add stream handlers and forwards it to rate() if rate returns a valid uint it
 	 * calls mine() and transfers it to associated address
@@ -240,25 +241,23 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * 
 	 */
 	private void addStreamHandler(String from) {
-	// add a stream handler
+		// add a stream handler
 		System.out.println("Adding stream handler from " + from);
 		vertx.eventBus().<JsonObject>consumer(from, message -> {
 			mandatoryFieldsValidator(message);
 
 			System.out.println("Received message " + message.body() + " from " + from);
-
 			int numTokens = rate(message.body());
-			if (numTokens == -1) {
-				System.out.println("ABSTRACT TOKEN: User is not inside any shop");
-			} else {
-				mine(numTokens, message.body(), "source");
-			}
+			mine(numTokens, message.body(), message.body().getString("source"));
+
 		});
 	}
 
 	private void removeStreamHandler(String from) {
 		System.out.println("Removing stream handler from " + from);
 	}
+
+	JsonArray entryArray = null;
 
 	/**
 	 * Save data to MongoDB.
@@ -267,35 +266,51 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 *            user ID
 	 * @param timestamp
 	 *            time in millis since epoch
-	 * @param shopID
-	 *            shopID
+	 * @param entryID
+	 *            entryID
 	 */
-	void persistData(String dataSource, String user, long timestamp, String shopID, JsonObject userRates) {
-		JsonArray entryArray = null;
+	void persistData(String dataSource, String user, long timestamp, String entryID, JsonObject userRates,
+			JsonObject data) {
 
-		if (userRates != null) {
-			entryArray = userRates.getJsonArray(dataSource);
-		} else {
-			entryArray = new JsonArray();
+		CountDownLatch setupLatch = new CountDownLatch(1);
+
+		new Thread(() -> {
+			if (userRates != null) {
+				entryArray = userRates.getJsonArray(dataSource);
+			} else {
+				entryArray = new JsonArray();
+			}
+
+			JsonObject query = new JsonObject().put("user", user);
+			mongoClient.find(collection, query, result -> {
+				JsonObject currentDocument = result.result().get(0);
+				entryArray = currentDocument.getJsonArray(dataSource);
+				if (data != null) {
+					data.put("timestamp", timestamp);
+					data.put("id", entryID);
+					entryArray.add(data);
+				} else {
+					JsonObject entry = new JsonObject();
+					entry.put("timestamp", timestamp);
+					entry.put("id", entryID);
+					entryArray.add(entry);
+				}
+				currentDocument.put(dataSource, entryArray);
+
+				// update only corresponding data source
+				mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
+					System.out.println("Document " + id + " was updated");
+					setupLatch.countDown();
+				});
+			});
+		}).start();
+
+		try {
+			setupLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
-		// add a new entry to the data source
-		
-		// build JSON to send to Mongo
-		JsonObject checkinInfo = new JsonObject();
-		checkinInfo.put("user", user);
 
-		JsonObject entry = new JsonObject();
-		entry.put("timestamp", timestamp);
-		entry.put("id", shopID);
-		entryArray.add(entry);
-		checkinInfo.put(dataSource, entryArray);
-
-		JsonObject document = new JsonObject(checkinInfo.toString());
-
-		JsonObject query = new JsonObject().put("user", user);
-		mongoClient.findOneAndReplace(collection, query, document, id -> {
-			System.out.println("Document with ID:" + id + " was updated");
-		});
 	}
 
 }

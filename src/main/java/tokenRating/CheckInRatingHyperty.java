@@ -166,7 +166,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 						.filter(element -> shopID.equals(element.getString("id"))).collect(Collectors.toList());
 				if (rrr.size() == 0) {
 					System.out.println("User never went to this shop");
-					persistData(dataSource, user, currentTimestamp, shopID, userRates);
+					persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
 				} else {
 					// order by timestamp
 					Collections.sort(rrr, new Comparator<JsonObject>() {
@@ -187,7 +187,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					//(lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp)
 					if (lastVisitTimestamp + (min_frequency * 60 * 1 * 1000) <= currentTimestamp) {
 						System.out.println("continue");
-						persistData(dataSource, user, currentTimestamp, shopID, userRates);
+						persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
 						
 					} else {
 						System.out.println("invalid");
