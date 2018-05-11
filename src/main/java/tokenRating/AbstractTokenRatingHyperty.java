@@ -76,6 +76,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		transaction.put("recipient", walletAddress);
 		transaction.put("source", source);
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
+		transaction.put("value", numTokens);
 
 		if (numTokens == -1) {
 			transaction.put("description", "invalid-timestamp");
@@ -83,13 +84,20 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			transaction.put("description", "invalid-location");
 		} else if (numTokens == -3) {
 			transaction.put("description", "invalid-short-distance");
+			transaction.put("value", 0);
 		} else {
 			transaction.put("description", "valid");
 		}
 
-		transaction.put("value", numTokens);
 		transaction.put("nonce", 1);
-		// TODO - add data
+		if (source.equals("user_activity")) {
+			// add data
+			JsonObject data = new JsonObject();
+			data.put("distance", msgOriginal.getInteger("distance"));
+			data.put("activity", msgOriginal.getString("activity"));
+			transaction.put("data", data);
+		}
+		transaction.put("nonce", 1);
 		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
 
 		msgToWallet.put("body", body);

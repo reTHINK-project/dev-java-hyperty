@@ -165,7 +165,6 @@ class UserActivityTest {
 		activityMessage.put("type", "user_walking_context");
 		activityMessage.put("value", 200);
 		activityMessage.put("source", source);
-		// TODO send JSON array
 		JsonArray toSend = new JsonArray();
 		toSend.add(activityMessage);
 		vertx.eventBus().send(changesAddress, toSend, reply -> {
@@ -191,19 +190,19 @@ class UserActivityTest {
 	}
 
 	@Test
-	@Disabled
 	void sessionWithTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session with tokens");
 		JsonObject activityMessage = new JsonObject();
 
-		activityMessage.put("type", " create");
-		activityMessage.put("from", " create");
+
 		activityMessage.put("identity", new JsonObject());
 		activityMessage.put("userID", userID);
-		activityMessage.put("activity", "user_walking_context");
-		activityMessage.put("distance", 600);
+		activityMessage.put("type", "user_walking_context");
+		activityMessage.put("value", 600);
 		activityMessage.put("source", source);
-		vertx.eventBus().send(changesAddress, activityMessage, reply -> {
+		JsonArray toSend = new JsonArray();
+		toSend.add(activityMessage);
+		vertx.eventBus().send(changesAddress, toSend, reply -> {
 			System.out.println("REP: " + reply.toString());
 		});
 
