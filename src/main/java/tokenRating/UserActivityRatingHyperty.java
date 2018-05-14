@@ -232,17 +232,16 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	}
 
 	public String getUserURL(String address) {
-
-		userIDToReturn = null;
+		
+		userIDToReturn = null;		
 		findUserID = new CountDownLatch(1);
 		new Thread(() -> {
-			mongoClient.find("dataobjects", new JsonObject().put(address, new JsonObject().put("$exists", true)),
-					userURLforAddress -> {
-						System.out.println("2 - Received shop info");
-						JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject(address);
-						userIDToReturn = dataObjectInfo.getString("userURL");
-						findUserID.countDown();
-					});
+			mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {		
+				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
+				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
+				userIDToReturn = dataObjectInfo.getString("userURL");
+				findUserID.countDown();
+			});
 		}).start();
 
 		try {
