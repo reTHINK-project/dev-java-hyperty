@@ -32,8 +32,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	private String mongoHost = "172.18.0.64";
-	//private String mongoHost = "localhost";
+	//private String mongoHost = "172.18.0.64";
+	private String mongoHost = "localhost";
 	
 	public static void main(String[] args) {
 	
