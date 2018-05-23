@@ -26,6 +26,7 @@ import walletManager.WalletManagerHyperty;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
+@Disabled
 class UserActivityTest {
 
 	private static String userID = "test-userID";

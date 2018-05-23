@@ -237,7 +237,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		System.out.println("Getting wallet address  msg:" + msg.toString());
 		JsonObject body = msg.getJsonObject("body");
 		JsonObject identity = new JsonObject().put("userProfile",
-				new JsonObject().put("userURL", body.getString("value")));
+				new JsonObject().put("guid", body.getString("value")));
 
 		JsonObject toSearch = new JsonObject().put("identity", identity);
 
@@ -301,7 +301,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// check if 200
 			int code = rep.getJsonObject("body").getInteger("code");
 			if (code == 200) {
-				mongoClient.find(walletsCollection, new JsonObject().put("identity", msg.getJsonObject("identity")),
+				JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid", msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid")));
+				
+				mongoClient.find(walletsCollection, new JsonObject().put("identity", identity),
 						res -> {
 
 							if (res.result().size() == 0) {
@@ -312,7 +314,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 								String address = generateWalletAddress(msg.getJsonObject("identity"));
 								newWallet.put("address", address);
-								newWallet.put("identity", msg.getJsonObject("identity"));
+								newWallet.put("identity", identity);
 								newWallet.put("created", new Date().getTime());
 								newWallet.put("balance", rep.getJsonObject("body").getJsonObject("value").getInteger("balance"));
 								newWallet.put("transactions", new JsonArray());

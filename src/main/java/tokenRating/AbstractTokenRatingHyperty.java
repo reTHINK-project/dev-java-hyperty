@@ -59,7 +59,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 */
 	void mine(int numTokens, JsonObject msgOriginal, String source) {
 		System.out.println("Mining " + numTokens + " tokens...");
-		String userId = msgOriginal.getString("userID");
+		String userId = msgOriginal.getString("guid");
 		System.out.println("MINING: " + msgOriginal);
 
 		// store transaction by sending it to wallet through wallet manager

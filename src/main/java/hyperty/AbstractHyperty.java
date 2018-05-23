@@ -97,7 +97,7 @@ public class AbstractHyperty extends AbstractVerticle {
 						System.out.println("Abstract");
 						System.out.println("Getting wallet address  msg:" + body.toString());
 
-						JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", body.getString("value")));
+						JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid", body.getString("value")));
 						
 						JsonObject toSearch = new JsonObject().put("identity", identity);
 						
@@ -173,11 +173,11 @@ public class AbstractHyperty extends AbstractVerticle {
 	private void onNotification(JsonObject body) {
 		System.out.println("HANDLING" + body.toString());
 		String from = body.getString("from");
-		String userURL = body.getJsonObject("identity").getJsonObject("userProfile").getString("userURL");
+		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 		
 
 		
-		subscribe(from, userURL);
+		subscribe(from, guid);
 		
 	}
 
@@ -190,7 +190,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	 *            sets the handler at <address>/changes (ie eventBus.sendMessage(
 	 *            ..)).
 	 */
-	private void subscribe(String address, String userURL) {
+	private void subscribe(String address, String guid) {
 	
 		String ObjURL= address.split("/subscription")[0];
 		JsonObject subscribeMessage = new JsonObject();
@@ -214,7 +214,7 @@ public class AbstractHyperty extends AbstractVerticle {
 				//TODO: associate DataObjectURL to an identity of invite
 				
 
-				if (checkIfCanHandleData(userURL) && persistDataObjUserURL(ObjURL, userURL, "observer")) {
+				if (checkIfCanHandleData(guid) && persistDataObjUserURL(ObjURL, guid, "observer")) {
 					onChanges(ObjURL);
 				}
 							
@@ -253,7 +253,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	}
 	
 	
-	public boolean persistDataObjUserURL(String address, String userURL, String type) {
+	public boolean persistDataObjUserURL(String address, String guid, String type) {
 		
 		
 		dataPersistedFlag = false;
@@ -261,7 +261,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		dataPersisted = new CountDownLatch(1);
 		
 		JsonObject document = new JsonObject();
-		document.put("userURL", userURL);
+		document.put("guid", guid);
 		document.put("type", type);
 		
 		JsonObject toInsert = new JsonObject().put("url", address).put("metadata", document);

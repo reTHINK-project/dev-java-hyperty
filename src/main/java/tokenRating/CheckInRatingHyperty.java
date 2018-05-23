@@ -113,7 +113,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		// data contains shopID, users's location
 		JsonObject checkInMessage = (JsonObject) data;
 		System.out.println("CHECK IN MESSAGE " + checkInMessage.toString());
-		String user = checkInMessage.getString("userID");
+		String user = checkInMessage.getString("guid");
 		String shopID = checkInMessage.getString("shopID");
 		Double userLatitude = checkInMessage.getDouble("latitude");
 		Double userLongitude = checkInMessage.getDouble("longitude");
@@ -303,7 +303,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 								break;
 						}
 					}
-					changes.put("userID", getUserURL(address));
+					changes.put("guid", getUserURL(address));
 					System.out.println("CHANGES" + changes.toString());
 					
 					int numTokens = rate(changes);
@@ -339,7 +339,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {		
 				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
 				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
-				userIDToReturn = dataObjectInfo.getString("userURL");
+				userIDToReturn = dataObjectInfo.getString("guid");
 				findUserID.countDown();
 			});
 		}).start();
