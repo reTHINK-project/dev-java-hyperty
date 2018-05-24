@@ -1,0 +1,35 @@
+@startuml
+
+node "Elearning Server" as dsmServer {
+
+node "Citizen Wallet" as wallet
+
+node "Elearning Rating" as citzRate
+
+interface "Elearning" as data
+}
+
+
+node "Smart Citizen" as citz {
+interface "Citizen Wallet" as citzWallet
+
+node "Elearning Player" as player
+
+interface "Answer" as answer
+}
+
+citzRate -up-> data : 1: report
+
+player -> data : 2: read
+
+player -> answer : 3: report
+
+citzRate --> answer : 4:observe
+
+citzRate -> citzRate : 5:calculate rating
+
+citzRate --> wallet : 6:transfer(citzUrl, tokens)
+
+wallet --> citzWallet : 7:tokens transaction
+
+@enduml

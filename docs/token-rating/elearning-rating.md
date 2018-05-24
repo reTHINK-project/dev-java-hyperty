@@ -1,11 +1,33 @@
 ## eLearning Rating
 
-The eLearning Rating Hyperty observes eLearning credits produced by the eLearning Hyperty to reward with tokens the individual wallet.
+**Address:** `hyperty://sharing-cities-dsm/checkin-rating`
 
-![Citizen eLearning Server](citizen_elearning_app_server.png)
+Additional configuration data:
 
-*todo:* eLearning player should also observe learning credits to provide feedback to citizen.
+```
+{
+  tokens_per_checkin: <integer>,
+  checkin_radius: <meters>,
+  min_frequency: <hours>
+}
+```
 
-**Observed Streams**
+The eLearning Rating Hyperty observes eLearning answers produced by user's eLearning Player Hyperty to reward with tokens the individual wallet in case the answers are correct.
 
-* Citizen Learning Credits
+
+![Elearning Server](elearning_server.png)
+
+### Persisted Data Model
+
+This Hyperty handles the storage of Elearning contents compliant with the [Elearning Data Object Model](https://github.com/reTHINK-project/specs/tree/master/datamodel/data-objects/elearning).
+
+### Observed Streams
+
+* Citizen Elearning answers:
+
+- data://<domain>/<identifier>
+
+### Produced Stream
+
+* elearning content data: `data://sharing-cities-dsm/elearning`
+
