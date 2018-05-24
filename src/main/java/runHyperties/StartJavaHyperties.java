@@ -142,7 +142,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 			System.out.println("CheckInRatingHyperty Result->" + res.result());
 		});
 		
-		/*
+		
 		// deploy user activity rating hyperty
 		JsonObject identityUserActivity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/checkin-identity"));
 		JsonObject configUserActivity = new JsonObject();
@@ -151,16 +151,14 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// mongo
 		configUserActivity.put("db_name", "test");
 		configUserActivity.put("collection", "rates");
-		configUserActivity.put("mongoHost", "localhost");
+		configUserActivity.put("mongoHost", mongoHost);
 		
-		configUserActivity.put("tokens_per_checkin", 10);
-		configUserActivity.put("checkin_radius", 500);
-		configUserActivity.put("min_frequency", 1);
+		configUserActivity.put("tokens_per_walking_km", 10);
+		configUserActivity.put("tokens_per_biking_km", 10);
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");		
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", "vertx://sharing-cities-dsm/user-activity");
 			
-		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops"));
 		
 		
 		DeploymentOptions optionsUserActivity= new DeploymentOptions().setConfig(configUserActivity).setWorker(true);
@@ -168,7 +166,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 			System.out.println("UserActivityRatingHyperty Result->" + res.result());
 		});
 		
-		*/
+		
 		
 		
 	

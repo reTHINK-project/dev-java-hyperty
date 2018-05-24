@@ -113,7 +113,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		// data contains shopID, users's location
 		JsonObject checkInMessage = (JsonObject) data;
 		System.out.println("CHECK IN MESSAGE " + checkInMessage.toString());
-		String user = checkInMessage.getString("userID");
+		String user = checkInMessage.getString("guid");
 		String shopID = checkInMessage.getString("shopID");
 		Double userLatitude = checkInMessage.getDouble("latitude");
 		Double userLongitude = checkInMessage.getDouble("longitude");
@@ -166,7 +166,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 						.filter(element -> shopID.equals(element.getString("id"))).collect(Collectors.toList());
 				if (rrr.size() == 0) {
 					System.out.println("User never went to this shop");
-					persistData(dataSource, user, currentTimestamp, shopID, userRates);
+					persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
 				} else {
 					// order by timestamp
 					Collections.sort(rrr, new Comparator<JsonObject>() {
@@ -187,7 +187,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					//(lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp)
 					if (lastVisitTimestamp + (min_frequency * 60 * 1 * 1000) <= currentTimestamp) {
 						System.out.println("continue");
-						persistData(dataSource, user, currentTimestamp, shopID, userRates);
+						persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
 						
 					} else {
 						System.out.println("invalid");
@@ -303,7 +303,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 								break;
 						}
 					}
-					changes.put("userID", getUserURL(address));
+					changes.put("guid", getUserURL(address));
 					System.out.println("CHANGES" + changes.toString());
 					
 					int numTokens = rate(changes);
@@ -339,7 +339,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {		
 				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
 				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
-				userIDToReturn = dataObjectInfo.getString("userURL");
+				userIDToReturn = dataObjectInfo.getString("guid");
 				findUserID.countDown();
 			});
 		}).start();
