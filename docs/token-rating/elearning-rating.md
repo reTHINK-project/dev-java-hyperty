@@ -6,9 +6,8 @@ Additional configuration data:
 
 ```
 {
-  tokens_per_checkin: <integer>,
-  checkin_radius: <meters>,
-  min_frequency: <hours>
+  tokens_per_answer: <integer>
+  tokens_per_correct_answer: <integer>
 }
 ```
 
