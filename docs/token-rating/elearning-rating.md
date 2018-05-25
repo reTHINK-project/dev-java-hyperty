@@ -1,6 +1,6 @@
 ## eLearning Rating
 
-**Address:** `hyperty://sharing-cities-dsm/checkin-rating`
+**Address:** `hyperty://sharing-cities-dsm/elearning-rating`
 
 Additional configuration data:
 
