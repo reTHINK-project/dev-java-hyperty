@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -34,10 +34,13 @@ class ElearningTest {
 	private static String changesAddress = userID + "/changes";
 	// mongo config
 	private static MongoClient mongoClient;
+	// collections
 	private static String ratesCollection = "rates";
+	private static String walletsCollection = "wallets";
+	private static String dataobjectsCollection = "dataobjects";
 	private static String db_name = "test";
 	private static String mongoHost = "localhost";
-	private static String userActivityHypertyURL = "hyperty://sharing-cities-dsm/elearning";
+	private static String elearningHypertyURL = "hyperty://sharing-cities-dsm/elearning";
 	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 	private static String quizzesInfoAddress = "data://sharing-cities-dsm/elearning";
 
@@ -45,14 +48,15 @@ class ElearningTest {
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 
 		String streamAddress = "vertx://sharing-cities-dsm/elearning";
-		JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", userID));
+		JsonObject identity = new JsonObject().put("userProfile",
+				new JsonObject().put("userURL", userID).put("guid", userID));
 		JsonObject configElearning = new JsonObject();
-		configElearning.put("url", userActivityHypertyURL);
+		configElearning.put("url", elearningHypertyURL);
 		configElearning.put("identity", identity);
 
 		// mongo
 		configElearning.put("db_name", "test");
-		configElearning.put("collection", "rates");
+		configElearning.put("collection", ratesCollection);
 		configElearning.put("mongoHost", mongoHost);
 
 		configElearning.put("tokens_per_completed_quiz", 10);
@@ -100,9 +104,9 @@ class ElearningTest {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		msg.put("from", subscriptionsAddress);
-		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("userURL", userID)));
+		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 
-		vertx.eventBus().send(userActivityHypertyURL, msg, reply -> {
+		vertx.eventBus().send(elearningHypertyURL, msg, reply -> {
 			System.out.println("REP: " + reply.toString());
 		});
 
@@ -115,14 +119,24 @@ class ElearningTest {
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
 
-		new Thread(() -> { // insert entry in "rates"
-			JsonObject document = new JsonObject();
-			document.put("user", userID);
-			document.put("checkin", new JsonArray());
-			document.put("user-activity", new JsonArray());
-			document.put("elearning", new JsonArray());
-			mongoClient.insert(ratesCollection, document, res -> {
-				System.out.println("Setup complete - rates");
+		new Thread(() -> { // create wallet
+			System.out.println("no wallet yet, creating");
+
+			// build wallet document
+			JsonObject newWallet = new JsonObject();
+
+			String address = "walletAddress";
+			newWallet.put("address", address);
+			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+			newWallet.put("created", new Date().getTime());
+			newWallet.put("balance", 0);
+			newWallet.put("transactions", new JsonArray());
+			newWallet.put("status", "active");
+
+			JsonObject document = new JsonObject(newWallet.toString());
+
+			mongoClient.save(walletsCollection, document, id -> {
+				System.out.println("New wallet with ID:" + id);
 				setupLatch.countDown();
 			});
 		}).start();
@@ -151,13 +165,38 @@ class ElearningTest {
 	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
+		CountDownLatch setupLatch = new CountDownLatch(3);
+
 		// remove from rates
 		JsonObject query = new JsonObject();
 		query.put("user", userID);
 		mongoClient.removeDocument(ratesCollection, query, res -> {
 			System.out.println("Rates removed from DB");
-			testContext.completeNow();
+			setupLatch.countDown();
 		});
+
+		// remove from wallets
+		query = new JsonObject();
+		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+		mongoClient.removeDocument(walletsCollection, query, res -> {
+			System.out.println("Wallet removed from DB");
+			setupLatch.countDown();
+		});
+
+		// remove from dataobjects
+		query = new JsonObject();
+		query.put("url", userID);
+		mongoClient.removeDocument(dataobjectsCollection, query, res -> {
+			System.out.println("Dataobject removed from DB");
+			setupLatch.countDown();
+		});
+
+		try {
+			setupLatch.await();
+			testContext.completeNow();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 	}
 

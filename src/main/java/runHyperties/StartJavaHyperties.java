@@ -75,6 +75,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
+		String elearningHypertyURL = "hyperty://sharing-cities-dsm/elearning";
 		
 		
 		// Create Router object
@@ -168,7 +169,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		
 		String streamAddress = "vertx://sharing-cities-dsm/elearning";
 		JsonObject configElearning = new JsonObject();
-		configElearning.put("url", userActivityHypertyURL);
+		configElearning.put("url", elearningHypertyURL);
 		configElearning.put("identity", identity);
 
 		// mongo

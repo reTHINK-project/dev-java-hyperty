@@ -109,7 +109,8 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		JsonObject message = (JsonObject) data;
 		System.out.println("ELEARNING MESSAGE " + message.toString());
-		String user = message.getString("userID");
+		
+		String user = message.getString("guid");
 
 		// persist in MongoDB
 		message.remove("identity");
@@ -231,11 +232,12 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
 					System.out.println("CHANGES" + data.toString());
+					JsonObject messageToRate = data.getJsonObject(0);
+					messageToRate.put("guid", getUserURL(address));
 
-					int numTokens = rate(data.getJsonObject(0));
+					int numTokens = rate(messageToRate);
 					System.out.println("rate tokens: " + numTokens);
-
-					// mine(numTokens, data, "user_activity");
+					mine(numTokens, messageToRate, "elearning");
 
 				}
 
@@ -253,8 +255,9 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		new Thread(() -> {
 			mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {
 				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
+				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().get(0));
 				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
-				userIDToReturn = dataObjectInfo.getString("userURL");
+				userIDToReturn = dataObjectInfo.getString("guid");
 				findUserID.countDown();
 			});
 		}).start();

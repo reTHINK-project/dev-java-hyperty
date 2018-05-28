@@ -220,6 +220,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 					// setup rating sources
 					document.put("checkin", new JsonArray());
 					document.put("user-activity", new JsonArray());
+					document.put("elearning", new JsonArray());
 					System.out.println("User exists false");
 					mongoClient.insert(collection, document, res2 -> {
 						System.out.println("Setup complete - rates");
