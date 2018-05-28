@@ -1,6 +1,7 @@
 package hyperty;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -38,6 +39,7 @@ class ElearningTest {
 	private static String mongoHost = "localhost";
 	private static String userActivityHypertyURL = "hyperty://sharing-cities-dsm/elearning";
 	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
+	private static String quizzesInfoAddress = "data://sharing-cities-dsm/elearning";
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
@@ -56,7 +58,7 @@ class ElearningTest {
 		configElearning.put("tokens_per_completed_quiz", 10);
 		configElearning.put("tokens_per_correct_answer", 10);
 		configElearning.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
-		configElearning.put("streams", new JsonObject().put("elearning", "data://sharing-cities-dsm/elearning"));
+		configElearning.put("streams", new JsonObject().put("elearning", quizzesInfoAddress));
 		configElearning.put("hyperty", "123");
 		configElearning.put("stream", streamAddress);
 		DeploymentOptions optionsElearning = new DeploymentOptions().setConfig(configElearning).setWorker(true);
@@ -193,8 +195,20 @@ class ElearningTest {
 			// assertEquals(false, quizzes.getJsonObject(0).getBoolean("processed"));
 			testContext.completeNow();
 		});
-		
+
 		// TODO - validate tokens ?
+	}
+
+	@Test
+	void getQuizzesInfo(VertxTestContext testContext, Vertx vertx) {
+
+		JsonObject config = new JsonObject().put("type", "read");
+		vertx.eventBus().send(quizzesInfoAddress, config, message -> {
+			// assert reply not null
+			JsonObject quizzes = (JsonObject) message.result().body();
+			assertNotNull(quizzes);
+			testContext.completeNow();
+		});
 	}
 
 	void tearDownStream(VertxTestContext testContext, Vertx vertx) {
