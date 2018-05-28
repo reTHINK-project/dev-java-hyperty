@@ -291,6 +291,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 			JsonObject query = new JsonObject().put("user", user);
 			mongoClient.find(collection, query, result -> {
+				System.out.println("collection " + result.result());
 				JsonObject currentDocument = result.result().get(0);
 				entryArray = currentDocument.getJsonArray(dataSource);
 				if (data != null) {
