@@ -97,6 +97,12 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			data.put("activity", msgOriginal.getString("activity"));
 			transaction.put("data", data);
 		}
+		if (source.equals("elearning")) {
+			// add data
+			JsonObject data = new JsonObject();
+			data.put("quiz", msgOriginal.getString("id"));
+			transaction.put("data", data);
+		}
 		transaction.put("nonce", 1);
 		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
 
@@ -220,6 +226,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 					// setup rating sources
 					document.put("checkin", new JsonArray());
 					document.put("user-activity", new JsonArray());
+					document.put("elearning", new JsonArray());
 					System.out.println("User exists false");
 					mongoClient.insert(collection, document, res2 -> {
 						System.out.println("Setup complete - rates");
@@ -291,6 +298,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 			JsonObject query = new JsonObject().put("user", user);
 			mongoClient.find(collection, query, result -> {
+				System.out.println("collection " + result.result());
 				JsonObject currentDocument = result.result().get(0);
 				entryArray = currentDocument.getJsonArray(dataSource);
 				if (data != null) {
