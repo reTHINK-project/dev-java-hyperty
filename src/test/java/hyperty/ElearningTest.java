@@ -182,6 +182,7 @@ class ElearningTest {
 			System.out.println("Wallet removed from DB");
 			setupLatch.countDown();
 		});
+		
 
 		// remove from dataobjects
 		query = new JsonObject();

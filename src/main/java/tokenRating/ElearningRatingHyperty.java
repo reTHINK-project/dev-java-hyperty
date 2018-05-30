@@ -25,7 +25,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	 */
 	private int tokensPerCorrectAnswer;
 
-	private CountDownLatch checkinLatch;
+	private CountDownLatch getQuizLatch;
 	private CountDownLatch findUserID;
 	private String userIDToReturn = null;
 
@@ -37,10 +37,10 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		// read config
 		tokensPerCompletedQuiz = config().getInteger("tokens_per_completed_quiz");
 		tokensPerCorrectAnswer = config().getInteger("tokens_per_correct_answer");
-		
+
 		createStreams();
 	}
-	
+
 	private void createStreams() {
 		JsonObject streams = config().getJsonObject("streams");
 
@@ -48,7 +48,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		String elearningStreamAddress = streams.getString("elearning");
 		create(elearningStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
 	}
-	
+
 	/**
 	 * Handler for read requests.
 	 * 
@@ -61,15 +61,14 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 			} else {
 				mongoClient.find(elearningsCollection, new JsonObject(), res -> {
-					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
-
-					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject()).put("identity", this.identity);
+					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
+							.put("identity", this.identity);
 					msg.reply(response);
 				});
 			}
 		};
 	}
-	
+
 	/**
 	 * Handler for subscription requests.
 	 * 
@@ -85,7 +84,6 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		};
 
 	}
-	
 
 	int tokenAmount;
 
@@ -109,51 +107,15 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		JsonObject message = (JsonObject) data;
 		System.out.println("ELEARNING MESSAGE " + message.toString());
-		
+
 		String user = message.getString("guid");
 
 		// persist in MongoDB
 		message.remove("identity");
 		persistData(dataSource, user, currentTimestamp, message.getString("id"), null, message);
 
-		checkinLatch = new CountDownLatch(1);
-		new Thread(() -> {
-			tokenAmount = getTokensForAnswer(message);
-
-			checkinLatch.countDown();
-		}).start();
-
-		try {
-			checkinLatch.await(5L, TimeUnit.SECONDS);
-			return tokenAmount;
-		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
-		}
+		tokenAmount = getTokensForAnswer(message);
 		return tokenAmount;
-	}
-
-	private void processSessions(JsonArray sessionsToProcess, String user) {
-		JsonObject query = new JsonObject().put("user", user);
-		mongoClient.find(collection, query, result -> {
-			JsonObject currentDocument = result.result().get(0);
-			// get sessions
-			JsonArray sessions = currentDocument.getJsonArray(dataSource);
-
-			// filter unprocessed sessions
-			for (int i = 0; i < sessions.size(); i++) {
-				JsonObject currentSession = sessions.getJsonObject(i);
-				if (!currentSession.getBoolean("processed") && sessionsToProcess.contains(currentSession)) {
-					currentSession.put("processed", true);
-				}
-			}
-
-			// update only corresponding data source
-
-			mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
-				System.out.println("Document with ID:" + id + " was updated");
-			});
-
-		});
 	}
 
 	private String elearningsCollection = "elearnings";
@@ -176,8 +138,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		System.out.println("Quiz id: " + quizID);
 
 		// query mongo for quiz info
-
-		checkinLatch = new CountDownLatch(1);
+		getQuizLatch = new CountDownLatch(1);
 		new Thread(() -> {
 			// get shop with that ID
 			mongoClient.find(elearningsCollection, new JsonObject().put("name", quizID), elearningForIdResult -> {
@@ -185,16 +146,15 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 				System.out.println("1 - Received elearning info: " + quizInfo.toString());
 				// quiz questions
 				JsonArray questions = quizInfo.getJsonArray("questions");
-
 				tokenAmount = validateUserAnswers(userAnswers, questions);
-				checkinLatch.countDown();
+				getQuizLatch.countDown();
 				return;
 			});
 		}).start();
 
 		try {
-			checkinLatch.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
+			getQuizLatch.await(5L, TimeUnit.SECONDS);
+			System.out.println("3 - return from latch quiz info");
 			return tokenAmount;
 		} catch (InterruptedException e) {
 			System.out.println("3 - interrupted exception");
@@ -264,7 +224,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		try {
 			findUserID.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
+			System.out.println("3 - return from latch user url");
 			return userIDToReturn;
 		} catch (InterruptedException e) {
 			System.out.println("3 - interrupted exception");
