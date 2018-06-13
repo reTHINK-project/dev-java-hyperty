@@ -35,6 +35,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	private int min_frequency;
 
 	private String shopsCollection = "shops";
+	private String bonusCollection = "bonus";
 	private String dataSource = "checkin";
 
 	private CountDownLatch checkinLatch;
@@ -60,6 +61,25 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		// shops stream
 		String shopsStreamAddress = streams.getString("shops");
 		create(shopsStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
+		
+		// bonus stream
+		String bonusStreamAddress = streams.getString("bonus");
+		create(bonusStreamAddress, new JsonObject(), false, subscriptionHandlerBonus(), readHandlerBonus());
+	}
+	
+	/**
+	 * Handler for subscription requests (bonus).
+	 * 
+	 * @return
+	 */
+	private Handler<Message<JsonObject>> subscriptionHandlerBonus() {
+		return msg -> {
+			mongoClient.find(bonusCollection, new JsonObject(), res -> {
+				JsonArray bonus = new JsonArray(res.result());
+				msg.reply(bonus);
+			});
+		};
+
 	}
 
 	/**
@@ -74,6 +94,28 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 				// reply with shops info
 				msg.reply(shops);
 			});
+		};
+
+	}
+	
+	/**
+	 * Handler for read requests (bonus).
+	 * 
+	 * @return
+	 */
+	private Handler<Message<JsonObject>> readHandlerBonus() {
+		return msg -> {
+			JsonObject response = new JsonObject();
+			if (msg.body().getJsonObject("resource") != null) {
+
+			} else {
+				mongoClient.find(bonusCollection, new JsonObject(), res -> {
+					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
+
+					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject()).put("identity", this.identity);
+					msg.reply(response);
+				});
+			}
 		};
 
 	}
@@ -283,6 +325,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		final String address_changes = address + "/changes";
 		System.out.println("waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
+			
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 3) {
