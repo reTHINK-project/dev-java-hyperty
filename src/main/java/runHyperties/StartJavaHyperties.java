@@ -136,7 +136,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCheckIN.put("hyperty", "123");
 		configCheckIN.put("stream", "vertx://sharing-cities-dsm/token-rating-checkin");
 			
-		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops"));
+		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops").put("bonus", "data://sharing-cities-dsm/bonus"));
 		
 		
 		DeploymentOptions optionsCheckIN= new DeploymentOptions().setConfig(configCheckIN).setWorker(true);
