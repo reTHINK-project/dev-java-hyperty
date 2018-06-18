@@ -208,29 +208,4 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 	}
 
-	public String getUserURL(String address) {
-
-		userIDToReturn = null;
-		findUserID = new CountDownLatch(1);
-		new Thread(() -> {
-			mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {
-				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
-				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().get(0));
-				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
-				userIDToReturn = dataObjectInfo.getString("guid");
-				findUserID.countDown();
-			});
-		}).start();
-
-		try {
-			findUserID.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch user url");
-			return userIDToReturn;
-		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
-		}
-		System.out.println("3 - return other");
-		return userIDToReturn;
-	}
-
 }

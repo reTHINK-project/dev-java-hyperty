@@ -3,11 +3,11 @@ package hyperty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -26,29 +26,34 @@ import walletManager.WalletManagerHyperty;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
-@Disabled
 class UserActivityTest {
 
 	private static String userID = "test-userID";
 	private static String subscriptionsAddress = userID + "/subscription";
 	private static String changesAddress = userID + "/changes";
+	private static String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
+	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 	// mongo config
 	private static MongoClient mongoClient;
+	// collections
 	private static String ratesCollection = "rates";
+	private static String walletsCollection = "wallets";
+	private static String dataobjectsCollection = "dataobjects";
+	
 	private static String db_name = "test";
 	private static String source = "user-activity";
 	private static String mongoHost = "localhost";
-	private static String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
-	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
+	
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 
 		String streamAddress = "vertx://sharing-cities-dsm/user-activity";
-		JsonObject identityUserActivity = new JsonObject().put("userProfile", new JsonObject().put("userURL", userID));
+		JsonObject identity = new JsonObject().put("userProfile",
+				new JsonObject().put("userURL", userID).put("guid", userID));
 		JsonObject configUserActivity = new JsonObject();
 		configUserActivity.put("url", userActivityHypertyURL);
-		configUserActivity.put("identity", identityUserActivity);
+		configUserActivity.put("identity", identity);
 		// mongo
 		configUserActivity.put("db_name", "test");
 		configUserActivity.put("collection", "rates");
@@ -64,11 +69,10 @@ class UserActivityTest {
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, context.succeeding());
 
-		// TODO - use another strategy
 
 		JsonObject configWalletManager = new JsonObject();
 		configWalletManager.put("url", walletManagerHypertyURL);
-		configWalletManager.put("identity", identityUserActivity);
+		configWalletManager.put("identity", identity);
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
@@ -100,7 +104,7 @@ class UserActivityTest {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		msg.put("from", subscriptionsAddress);
-		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("userURL", userID)));
+		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 
 		vertx.eventBus().send(userActivityHypertyURL, msg, reply -> {
 			System.out.println("REP: " + reply.toString());
@@ -113,20 +117,37 @@ class UserActivityTest {
 			e.printStackTrace();
 		}
 
-		/*
-		 * CountDownLatch setupLatch = new CountDownLatch(1);
-		 * 
-		 * new Thread(() -> { // insert entry in "rates" JsonObject document = new
-		 * JsonObject(); document.put("user", userID); document.put("checkin", new
-		 * JsonArray()); document.put("user-activity", new JsonArray());
-		 * mongoClient.insert(ratesCollection, document, res -> {
-		 * System.out.println("Setup complete - rates"); setupLatch.countDown(); });
-		 * }).start();
-		 * 
-		 * try { setupLatch.await(); } catch (InterruptedException e) {
-		 * e.printStackTrace(); }
-		 * 
-		 */
+		CountDownLatch setupLatch = new CountDownLatch(1);
+
+		new Thread(() -> { // create wallet
+			System.out.println("no wallet yet, creating");
+
+			// build wallet document
+			JsonObject newWallet = new JsonObject();
+
+			String address = "walletAddress";
+			newWallet.put("address", address);
+			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+			newWallet.put("created", new Date().getTime());
+			newWallet.put("balance", 0);
+			newWallet.put("transactions", new JsonArray());
+			newWallet.put("status", "active");
+
+			JsonObject document = new JsonObject(newWallet.toString());
+
+			mongoClient.save(walletsCollection, document, id -> {
+				System.out.println("New wallet with ID:" + id);
+				setupLatch.countDown();
+			});
+		}).start();
+
+	
+
+		try {
+			setupLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 		checkpoint.flag();
 	}
@@ -146,13 +167,38 @@ class UserActivityTest {
 	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
+		CountDownLatch setupLatch = new CountDownLatch(3);
+
 		// remove from rates
 		JsonObject query = new JsonObject();
 		query.put("user", userID);
 		mongoClient.removeDocument(ratesCollection, query, res -> {
 			System.out.println("Rates removed from DB");
-			testContext.completeNow();
+			setupLatch.countDown();
 		});
+
+		// remove from wallets
+		query = new JsonObject();
+		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+		mongoClient.removeDocument(walletsCollection, query, res -> {
+			System.out.println("Wallet removed from DB");
+			setupLatch.countDown();
+		});
+
+		// remove from dataobjects
+		query = new JsonObject();
+		query.put("url", userID);
+		mongoClient.removeDocument(dataobjectsCollection, query, res -> {
+			System.out.println("Dataobject removed from DB");
+			setupLatch.countDown();
+		});
+
+		try {
+			setupLatch.await();
+			testContext.completeNow();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 	}
 

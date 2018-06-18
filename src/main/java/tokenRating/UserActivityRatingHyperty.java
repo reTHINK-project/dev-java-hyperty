@@ -23,8 +23,6 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	private int tokensBikingKm;
 
 	private CountDownLatch checkinLatch;
-	private CountDownLatch findUserID;
-	private String userIDToReturn = null;
 
 	private String dataSource = "user-activity";
 
@@ -55,7 +53,9 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		new Thread(() -> {
 			// TODO - latch
 			JsonObject query = new JsonObject().put("user", user);
+			System.out.println("SEARCHING in " + collection + " for " + query);
 			mongoClient.find(collection, query, result -> {
+				System.out.println("SEARCHING result " + result.result());
 				JsonObject currentDocument = result.result().get(0);
 				// get sessions
 				JsonArray sessions = currentDocument.getJsonArray(dataSource);
@@ -102,7 +102,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 		JsonObject activityMessage = (JsonObject) data;
 		System.out.println("USER ACTIVITY MESSAGE " + activityMessage.toString());
-		String user = activityMessage.getString("userID");
+		String user = activityMessage.getString("guid");
 		String activity = activityMessage.getString("activity");
 		int distance = activityMessage.getInteger("distance");
 		// String sessionID = activityMessage.getString("session");
@@ -216,7 +216,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 							break;
 						}
 					}
-					changes.put("userID", getUserURL(address));
+					changes.put("guid", getUserURL(address));
 					System.out.println("CHANGES" + changes.toString());
 
 					int numTokens = rate(changes);
@@ -229,30 +229,6 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 			}
 		});
 
-	}
-
-	public String getUserURL(String address) {
-		
-		userIDToReturn = null;		
-		findUserID = new CountDownLatch(1);
-		new Thread(() -> {
-			mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {		
-				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
-				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
-				userIDToReturn = dataObjectInfo.getString("userURL");
-				findUserID.countDown();
-			});
-		}).start();
-
-		try {
-			findUserID.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
-			return userIDToReturn;
-		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
-		}
-		System.out.println("3 - return other");
-		return userIDToReturn;
 	}
 
 }

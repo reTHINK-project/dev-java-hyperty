@@ -61,7 +61,6 @@ class CheckInTest {
 		config.put("min_frequency", 1);
 		config.put("hyperty", "123");
 		config.put("stream", "token-rating");
-		config.put("identity", identity);
 		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		config.put("streams",
 				new JsonObject().put("shops", shopsInfoStreamAddress).put("bonus", bonusInfoStreamAddress));
