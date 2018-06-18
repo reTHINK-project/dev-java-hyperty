@@ -6,7 +6,7 @@ Additional configuration data:
 
 ```
 {
-  tokens_per_answer: <integer>
+  tokens_per_completed_quiz: <integer>
   tokens_per_correct_answer: <integer>
 }
 ```

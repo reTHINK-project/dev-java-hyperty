@@ -316,7 +316,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								newWallet.put("address", address);
 								newWallet.put("identity", identity);
 								newWallet.put("created", new Date().getTime());
-								newWallet.put("balance", rep.getJsonObject("body").getJsonObject("value").getInteger("balance"));
+								newWallet.put("balance", 0);
 								newWallet.put("transactions", new JsonArray());
 								newWallet.put("status", "active");
 

@@ -23,6 +23,7 @@ import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import tokenRating.CheckInRatingHyperty;
+import tokenRating.ElearningRatingHyperty;
 import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
@@ -74,6 +75,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
+		String elearningHypertyURL = "hyperty://sharing-cities-dsm/elearning";
 		
 		
 		// Create Router object
@@ -134,7 +136,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCheckIN.put("hyperty", "123");
 		configCheckIN.put("stream", "vertx://sharing-cities-dsm/token-rating-checkin");
 			
-		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops"));
+		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops").put("bonus", "data://sharing-cities-dsm/bonus"));
 		
 		
 		DeploymentOptions optionsCheckIN= new DeploymentOptions().setConfig(configCheckIN).setWorker(true);
@@ -144,10 +146,9 @@ public class StartJavaHyperties extends AbstractVerticle {
 		
 		
 		// deploy user activity rating hyperty
-		JsonObject identityUserActivity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/checkin-identity"));
 		JsonObject configUserActivity = new JsonObject();
 		configUserActivity.put("url", userActivityHypertyURL);
-		configUserActivity.put("identity", identityUserActivity);
+		configUserActivity.put("identity", identity);
 		// mongo
 		configUserActivity.put("db_name", "test");
 		configUserActivity.put("collection", "rates");
@@ -166,6 +167,26 @@ public class StartJavaHyperties extends AbstractVerticle {
 			System.out.println("UserActivityRatingHyperty Result->" + res.result());
 		});
 		
+		String streamAddress = "vertx://sharing-cities-dsm/elearning";
+		JsonObject configElearning = new JsonObject();
+		configElearning.put("url", elearningHypertyURL);
+		configElearning.put("identity", identity);
+
+		// mongo
+		configElearning.put("db_name", "test");
+		configElearning.put("collection", "rates");
+		configElearning.put("mongoHost", mongoHost);
+
+		configElearning.put("tokens_per_completed_quiz", 10);
+		configElearning.put("tokens_per_correct_answer", 10);
+		configElearning.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
+		configElearning.put("streams", new JsonObject().put("elearning", "data://sharing-cities-dsm/elearning"));
+		configElearning.put("hyperty", "123");
+		configElearning.put("stream", streamAddress);
+		DeploymentOptions optionsElearning = new DeploymentOptions().setConfig(configElearning).setWorker(true);
+		vertx.deployVerticle(ElearningRatingHyperty.class.getName(), optionsElearning, res -> {
+			System.out.println("ElearningRatingHyperty Result->" + res.result());
+		});
 		
 		
 		
