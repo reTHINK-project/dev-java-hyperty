@@ -160,7 +160,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		}).start();
 
 		try {
-			setupLatch.await();
+			setupLatch.await(10L, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
