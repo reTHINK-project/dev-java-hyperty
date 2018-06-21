@@ -39,7 +39,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private static String from = "tester";
 	//private String mongoHost = "172.18.0.64";
 	private String mongoHost = "localhost";
-	private String SIOTurl = "http://10.112.77.148/api";
+	private String SIOTurl = "https://iot.alticelabs.com/api";
+	//private String SIOTurl = "http://10.112.77.148/api";
 	private String pointOfContact = "https://url_contact";
 
 	public static void main(String[] args) {
@@ -249,12 +250,12 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configSmartIotStub.put("smart_iot_url", SIOTurl);
 		configSmartIotStub.put("point_of_contact", pointOfContact);
 
-/*
+
 		DeploymentOptions optionsconfigSmartIotStub = new DeploymentOptions().setConfig(configSmartIotStub)
 				.setWorker(true);
 		vertx.deployVerticle(SmartIotProtostub.class.getName(), optionsconfigSmartIotStub, res -> {
 			System.out.println("SmartIOTProtustub Result->" + res.result());
-		});*/
+		});
 
 		// Configure HttpServer and set it UP
 		System.out.println("Setting up httpserver");

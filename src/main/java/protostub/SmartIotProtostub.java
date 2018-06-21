@@ -163,8 +163,11 @@ public class SmartIotProtostub extends AbstractVerticle {
 		String newToken = null;
 		
 		try {
-			String user = "5b1e2f6a-81e6-475b-b494-64a30908f4c7";
-			String password = "johnll3p7pd2m9e4mcsqhst4eqnnnk34s65397npb8e59tjuqku6";
+			String user = "luis";
+			String password = "vr6hamqs1tgb2fe0dfmj7r4l1fv4bf2v1rrjcbi3uv7ve5imv506";
+			
+			//String user = "5b1e2f6a-81e6-475b-b494-64a30908f4c7";
+			//String password = "johnll3p7pd2m9e4mcsqhst4eqnnnk34s65397npb8e59tjuqku6";
 			String toEncode = user + ":" + password;
 			byte[] encodedUserPassword = Base64.encodeBase64(toEncode.getBytes());
 
