@@ -49,6 +49,14 @@ class ElearningTest {
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 
+		
+		
+		
+		
+		
+		
+		
+		
 		String streamAddress = "vertx://sharing-cities-dsm/elearning";
 		JsonObject identity = new JsonObject().put("userProfile",
 				new JsonObject().put("userURL", userID).put("guid", userID));

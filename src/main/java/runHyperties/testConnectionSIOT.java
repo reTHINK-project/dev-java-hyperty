@@ -17,7 +17,7 @@ public class testConnectionSIOT {
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		String name = "newDeviceName1";
+		/*String name = "newDeviceName1";
 		String description = "newDeviceDescription1";
 		currentToken = getNewToken();
 		JsonObject newDevice = registerNewDevice(name, description);
@@ -29,7 +29,12 @@ public class testConnectionSIOT {
 		registerNewStream(newDevice.getString("id"), streamName);
 
 		JsonObject subscription = createSubscription("suscriptionName", "subscriptionDescription", appID, newDevice.getString("id"), streamName, pointOfContact);
-		System.out.println("subscription result" + subscription.toString());
+		System.out.println("subscription result" + subscription.toString());*/
+		
+		
+		String a = "5f9bc362-0b2d-4145-87f5-4943cb3d9634";
+		System.out.println(a.length());
+				
 	}
 
 	private static String getNewToken() {

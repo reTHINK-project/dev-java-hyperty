@@ -6,11 +6,16 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Date;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.codec.binary.Base64;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 
@@ -27,6 +32,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 	private String appID;
 	private String appSecret;
 	private String pointOfContact;
+	private CountDownLatch createDevice;
 
 	@Override
 	public void start() {
@@ -97,9 +103,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 						+ message.body());
 
 				final JsonObject body = new JsonObject(message.body().toString()).getJsonObject("body");
-				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
-				final String type = new JsonObject(message.body().toString()).getString("type");
-				JsonObject response = new JsonObject();
+				final String type = message.body().getString("type");
+		
 				switch (type) {
 				case "read":
 
@@ -109,9 +114,12 @@ public class SmartIotProtostub extends AbstractVerticle {
 					break;
 				case "create":
 					System.out.println("{{SmartIOTProtostub}} create message ");
+					//message.reply(new JsonObject());
 
+					
+					
 					if (body.getString("resource").equals("device")) {
-						System.out.println("new device->" + registerNewDevice(body.getString("name"), body.getString("description")));
+						handleDeviceCreationRequest(message);							
 					}
 					break;
 				default:
@@ -120,6 +128,90 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 			}
 		};
+	}
+
+	private void handleDeviceCreationRequest(Message<JsonObject> message) {
+		// TODO Auto-generated method stub
+		final JsonObject messageToCreate = new JsonObject(message.body().toString());
+		
+		final JsonObject userProfile = messageToCreate.getJsonObject("identity").getJsonObject("userProfile");
+		
+		final String guid = userProfile.containsKey("guid") ? userProfile.getString("guid") : null; 
+		JsonObject responseDenied = new JsonObject().put("body", new JsonObject().put("code", 406));
+		JsonObject responseOK = new JsonObject().put("body", new JsonObject().put("code", 200));
+		
+		if (guid != null) {
+			
+			final JsonObject body = messageToCreate.getJsonObject("body");
+			final String description = body.containsKey("description") ? userProfile.getString("description") : null; 
+			final String name = guid.split("//")[1];
+			
+			createDevice = new CountDownLatch(2);
+			
+			new Thread(() -> {
+				mongoClient.find(this.collection, new JsonObject().put("guid", guid),
+						res -> {
+							createDevice.countDown();
+							if (res.result().size() == 0) {
+								
+								System.out.println("{{SmartIOTProtostub}} no device yet, creating");
+								
+								JsonObject newDevice = registerNewDevice(name, description);
+								
+								if (newDevice != null) {
+									System.out.println("{{SmartIOTProtostub}} Device for " + name + "  -> |||  create with id->" + newDevice.getString("id") );
+
+									JsonObject document = new JsonObject().put("guid", guid).put("device", newDevice);
+									mongoClient.save(this.collection, document, id -> {
+										createDevice.countDown();
+										System.out.println("{{SmartIOTProtostub}} New device added to mongo" + id);
+										message.reply(responseOK);
+									});
+								} else {
+									System.out.println("{{SmartIOTProtostub}} Creation request failed");
+									createDevice.countDown();
+									message.reply(responseDenied);
+								}								
+							} else {
+								System.out.println("{{SmartIOTProtostub}} Device already created for this user");
+								createDevice.countDown();
+								message.reply(responseDenied);
+							}
+						});
+				
+			}).start();
+			
+			try {
+				createDevice.await(5L, TimeUnit.SECONDS);
+
+				return;
+			} catch (InterruptedException e) {
+				System.out.println(e);
+			}
+			return;	
+		}
+		
+		/*
+		 * 
+		 * {
+				"type": "create",
+				"to": "runtime://sharing-cities-dsm/protostub/smart-iot",
+				"from": "hyperty://localhost/15b36f88-51d1-4137-9f29-92651558bcbc",
+				"identity": {
+					"userProfile": {
+						"userURL": "user://google.com/lduarte.suil@gmail.com",
+						"guid": "user-guid://825bf1a190fea8a9ebe2a5a26aa8ae05961012dfd4abd3b8dcecf5cab63d8450"
+					}
+				},
+				"body": {
+					"resource": "device",
+					"description": "device description"
+				}
+		 * 	}
+		 * 
+		 * 
+		 * */
+		
 	}
 
 	/**
@@ -186,7 +278,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 			conn.disconnect();
 
-			System.out.println("[newToken](" + conn.getResponseCode() + ")" + received.toString());
+			System.out.println("{{SmartIOTProtostub}} [newToken](" + conn.getResponseCode() + ")" + received.toString());
 			if (conn.getResponseCode() == 200) {
 				newToken = received.toString();
 			}
@@ -204,7 +296,10 @@ public class SmartIotProtostub extends AbstractVerticle {
 			StringBuilder received = new StringBuilder();
 			JsonObject toCreateDevice = new JsonObject();
 			toCreateDevice.put("name", name);
-			toCreateDevice.put("description", description);
+			if (description != null) {
+				toCreateDevice.put("description", description);
+			}
+			
 
 			URL url = new URL(smartIotUrl + "/devices");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -297,7 +392,7 @@ public class SmartIotProtostub extends AbstractVerticle {
   
 	        conn.disconnect();
 
-	        System.out.println("[newSubscription]("+conn.getResponseCode()+")" + received.toString());
+	        System.out.println("{{SmartIOTProtostub}} [newSubscription]("+conn.getResponseCode()+")" + received.toString());
 	        return new JsonObject(received.toString());
 
 		} catch (Exception e) {
