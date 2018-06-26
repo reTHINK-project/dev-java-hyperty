@@ -29,7 +29,20 @@ Each wallet is store as a JSON object:
   balance: <amount of token>,
   transactions: <JSON OBject. see below>,
   status: <active,deleted>,
-  wallet2bGranted: <public wallet address to be granted everytime there is a new transaction>
+  wallet2bGranted: <public wallet address to be granted everytime there is a new transaction>,
+  profile: <JSON object with personal data about the user>
+}
+```
+
+Sample wallet profile:
+
+```
+{
+  cause: 0,
+  gender: 'm',
+  ageRange: "18-25",
+  livesInLisbon: false,
+  worksInLisbon: true
 }
 ```
 
