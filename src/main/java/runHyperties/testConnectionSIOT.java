@@ -6,16 +6,25 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import org.apache.commons.codec.binary.Base64;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 
 public class testConnectionSIOT {
 	
-	static String smartIotUrl = "http://10.112.77.148/api";
+	static String smartIotUrl = "https://iot.alticelabs.com/api";
 	static String currentToken;
+	private static Vertx vertx;
+	protected static MongoClient mongoClient = null;
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws ParseException {
 		// TODO Auto-generated method stub
 		/*String name = "newDeviceName1";
 		String description = "newDeviceDescription1";
@@ -27,20 +36,19 @@ public class testConnectionSIOT {
 		String streamName = "userguidddd-dddddd-dddasdas-idddd-dddddd-dsdas";
 		String pointOfContact = "https://pointofcontactURL";
 		registerNewStream(newDevice.getString("id"), streamName);
+		getStreamsList(newDevice.getString("id"));
 
 		JsonObject subscription = createSubscription("suscriptionName", "subscriptionDescription", appID, newDevice.getString("id"), streamName, pointOfContact);
-		System.out.println("subscription result" + subscription.toString());*/
-		
-		
-		String a = "5f9bc362-0b2d-4145-87f5-4943cb3d9634";
-		System.out.println(a.length());
-				
+		System.out.println("subscription result" + subscription.toString());
+
+		*/
+
 	}
 
 	private static String getNewToken() {
 		try {
-			String user = "5b1e2f6a-81e6-475b-b494-64a30908f4c7";
-			String password = "johnll3p7pd2m9e4mcsqhst4eqnnnk34s65397npb8e59tjuqku6";
+			String user = "luis";
+			String password = "vr6hamqs1tgb2fe0dfmj7r4l1fv4bf2v1rrjcbi3uv7ve5imv506";
 			String toEncode = user + ":" + password;
 			byte[] encodedBytes = Base64.encodeBase64(toEncode.getBytes());
 
@@ -172,5 +180,29 @@ public class testConnectionSIOT {
 			e.printStackTrace();
 		}
 		return null;		
+	}
+	
+	private static void getStreamsList(String deviceID) {
+		
+		try {
+			StringBuilder received = new StringBuilder();
+			URL url = new URL(smartIotUrl+"/devices/"+ deviceID + "/streams/");
+			HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+	        conn.setRequestMethod("GET");
+
+	        conn.setRequestProperty("authorization","Bearer " + currentToken);
+
+	        Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+
+	        for (int c; (c = in.read()) >= 0;)
+	            received.append(Character.toChars(c));
+
+	        conn.disconnect();
+	        System.out.println("[STREAMSLIST]("+conn.getResponseCode()+")" + received.toString());
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
 }

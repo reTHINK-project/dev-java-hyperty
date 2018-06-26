@@ -25,7 +25,7 @@ import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.ext.web.handler.CorsHandler;
+
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import protostub.SmartIotProtostub;
 import tokenRating.CheckInRatingHyperty;
@@ -33,12 +33,13 @@ import tokenRating.ElearningRatingHyperty;
 import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
+
 public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	//private String mongoHost = "172.18.0.64";
-	private String mongoHost = "localhost";
+	private String mongoHost = "172.18.0.64";
+	//private String mongoHost = "localhost";
 	private String SIOTurl = "https://iot.alticelabs.com/api";
 	//private String SIOTurl = "http://10.112.77.148/api";
 	private String pointOfContact = "https://url_contact";
