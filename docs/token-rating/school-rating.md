@@ -19,3 +19,5 @@ The Citizen Wallet is subscribed when an invitation is received.
 **Observed Streams**
 
 * Citizen Wallets.
+
+*to be confirmed* School Rating and Residencial are the same

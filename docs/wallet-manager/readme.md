@@ -4,6 +4,17 @@ The Wallet Manager hyperty handles Token Wallets on behalf of a user.
 
 ### Configuration:
 
+* `publicWallets`: list of Public Wallets to be initiated with associated Device feeds:
+```
+{
+  address: <public wallet address>,
+  identity: <wallet owner identity e.g. schoold>,
+  externalFeeds: <Id of External Feeds or platforms to be Setup>
+}
+```
+
+For each public wallet, a new device and a new sensor is created at the Smart IoT Stub as specified [here](../smart-iot-protostub)
+
 * `observers`: array with all vertx hyperty observers to be invited for all wallets.
 
 ### Storage
@@ -17,7 +28,8 @@ Each wallet is store as a JSON object:
   created: <timestamp creation>,
   balance: <amount of token>,
   transactions: <JSON OBject. see below>,
-  status: <active,deleted>
+  status: <active,deleted>,
+  wallet2bGranted: <public wallet address to be granted everytime there is a new transaction>
 }
 ```
 
@@ -77,6 +89,8 @@ body: { resource: 'wallet/<wallet-address>', value: <transaction JSON Object>}
 If valid, the transaction is stored and the balance updated.
 
 The transaction is published in the event bus sending a [Wallet update message](https://rethink-project.github.io/specs/messages/wallet-messages/).
+
+If a `wallet2bGranted` exists, a new transfer is performed to it.
 
 ### Wallet read
 
