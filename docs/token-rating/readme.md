@@ -13,8 +13,8 @@ Currently specified Token Rating Hyerties:
 
 * [Check-in Rating Hyperty](checkin-rating.md);
 * [e-Learning Rating Hyperty](elearning-rating.md);
-* [Mobility Rating Hyperty](mobility-rating.md);
-* [School Rating Hyperty](school-rating.md);
+* [User Activity Rating Hyperty](user-activity-rating.md);
+* [Energy Saving Rating Hyperty](energy-saving-rating.md);
 
 ## Abstract Token Rating Hyperty
 

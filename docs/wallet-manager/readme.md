@@ -15,7 +15,7 @@ The Wallet Manager hyperty handles Token Wallets on behalf of a user.
 
 For each public wallet, a new device and a new sensor is created at the Smart IoT Stub as specified [here](../smart-iot-protostub)
 
-* `observers`: array with all vertx hyperty observers to be invited for all wallets.
+* `observers`: array with all vertx hyperty observers to be invited for all wallets incl. energy saving rating.
 
 ### Storage
 
