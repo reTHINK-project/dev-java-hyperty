@@ -13,6 +13,7 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import protostub.SmartIotProtostub;
+import tokenRating.UserActivityRatingHyperty;
 
 
 /*
@@ -54,10 +55,45 @@ class SmartIotStubTest {
 			System.out.println("SmartIOTProtustub Result->" + res.result());
 		});
 		try {
-			Thread.sleep(6000);
+			Thread.sleep(2000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		
+		// deploy user activity rating hyperty
+		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
+		JsonObject configUserActivity = new JsonObject();
+		configUserActivity.put("url", userActivityHypertyURL);
+		configUserActivity.put("identity", identity);
+		// mongo
+		configUserActivity.put("db_name", "test");
+		configUserActivity.put("collection", "rates");
+		configUserActivity.put("mongoHost", mongoHost);
+
+		configUserActivity.put("tokens_per_walking_km", 10);
+		configUserActivity.put("tokens_per_biking_km", 10);
+		configUserActivity.put("tokens_per_bikesharing_km", 10);
+		configUserActivity.put("tokens_per_evehicle_km", 5);
+		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
+		configUserActivity.put("hyperty", "123");
+		configUserActivity.put("stream", "vertx://sharing-cities-dsm/user-activity");
+		
+		
+		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(true);
+		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, res -> {
+			System.out.println("UserActivityRatingHyperty Result->" + res.result());
+		});
+		
+		
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		
+		
+		
 		checkpoint.flag();
 		
 	}

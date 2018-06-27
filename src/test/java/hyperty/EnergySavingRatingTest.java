@@ -21,6 +21,7 @@ import tokenRating.EnergySavingRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
+@Disabled
 class EnergySavingRatingTest {
 
 	private static final String logMessage = "[EnergySavingRatingTest] ";

@@ -168,7 +168,16 @@ public class AbstractHyperty extends AbstractVerticle {
 		String from = body.getString("from");
 		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 
-		subscribe(from, guid);
+		if (body.containsKey("external") && body.getBoolean("external")) {
+			System.out.println("EXTERNAL INVITE");
+			String streamID = body.getString("streamID");
+			String objURL = from.split("/subscription")[0];
+			if (persistDataObjUserURL(streamID, guid, objURL, "reporter")) {
+				onChanges(objURL);
+			}
+		} else {
+			subscribe(from, guid);
+		}
 	}
 
 	/**
@@ -231,6 +240,41 @@ public class AbstractHyperty extends AbstractVerticle {
 		});
 
 	}
+	//streamID, guid, objURL, "reporter" 
+	public boolean persistDataObjUserURL(String streamID, String guid, String objURL, String type) {
+
+		dataPersistedFlag = false;
+
+		dataPersisted = new CountDownLatch(1);
+
+		JsonObject document = new JsonObject();
+		document.put("guid", guid);
+		document.put("type", type);
+		document.put("objURL", objURL);
+
+		JsonObject toInsert = new JsonObject().put("url", streamID).put("metadata", document);
+		System.out.println("Creating DO entry -> " + toInsert.toString());
+		new Thread(() -> {
+
+			mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
+				System.out.println("Setup complete - dataobjects + Insert" + res2.result().toString());
+				dataPersistedFlag = true;
+				dataPersisted.countDown();
+			});
+
+		}).start();
+
+		try {
+			dataPersisted.await(5L, TimeUnit.SECONDS);
+			return dataPersistedFlag;
+		} catch (InterruptedException e) {
+			System.out.println("3 - interrupted exception");
+		}
+		System.out.println("3 - return other");
+		return dataPersistedFlag;
+
+	}
+
 
 	public boolean persistDataObjUserURL(String address, String guid, String type) {
 
