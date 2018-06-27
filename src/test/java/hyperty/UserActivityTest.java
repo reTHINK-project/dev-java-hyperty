@@ -8,7 +8,6 @@ import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -23,11 +22,8 @@ import io.vertx.junit5.VertxTestContext;
 import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
-/*
- * Example of an asynchronous JUnit test for a Verticle.
- */
+
 @ExtendWith(VertxExtension.class)
-@Disabled
 class UserActivityTest {
 
 	private static String userID = "test-userID";
@@ -41,11 +37,10 @@ class UserActivityTest {
 	private static String ratesCollection = "rates";
 	private static String walletsCollection = "wallets";
 	private static String dataobjectsCollection = "dataobjects";
-	
+
 	private static String db_name = "test";
 	private static String source = "user-activity";
 	private static String mongoHost = "localhost";
-	
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
@@ -61,8 +56,11 @@ class UserActivityTest {
 		configUserActivity.put("collection", "rates");
 		configUserActivity.put("mongoHost", mongoHost);
 
+		// tokens per activity
 		configUserActivity.put("tokens_per_walking_km", 10);
 		configUserActivity.put("tokens_per_biking_km", 10);
+		configUserActivity.put("tokens_per_bikesharing_km", 10);
+		configUserActivity.put("tokens_per_evehicle_km", 5);
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", streamAddress);
@@ -70,7 +68,6 @@ class UserActivityTest {
 
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, context.succeeding());
-
 
 		JsonObject configWalletManager = new JsonObject();
 		configWalletManager.put("url", walletManagerHypertyURL);
@@ -143,8 +140,6 @@ class UserActivityTest {
 			});
 		}).start();
 
-	
-
 		try {
 			setupLatch.await();
 		} catch (InterruptedException e) {
@@ -173,24 +168,21 @@ class UserActivityTest {
 
 		// remove from rates
 		JsonObject query = new JsonObject();
-		query.put("user", userID);
-		mongoClient.removeDocument(ratesCollection, query, res -> {
+		mongoClient.removeDocuments(ratesCollection, query, res -> {
 			System.out.println("Rates removed from DB");
 			setupLatch.countDown();
 		});
 
 		// remove from wallets
 		query = new JsonObject();
-		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
-		mongoClient.removeDocument(walletsCollection, query, res -> {
+		mongoClient.removeDocuments(walletsCollection, query, res -> {
 			System.out.println("Wallet removed from DB");
 			setupLatch.countDown();
 		});
 
 		// remove from dataobjects
 		query = new JsonObject();
-		query.put("url", userID);
-		mongoClient.removeDocument(dataobjectsCollection, query, res -> {
+		mongoClient.removeDocuments(dataobjectsCollection, query, res -> {
 			System.out.println("Dataobject removed from DB");
 			setupLatch.countDown();
 		});
@@ -242,7 +234,6 @@ class UserActivityTest {
 	void sessionWithTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session with tokens");
 		JsonObject activityMessage = new JsonObject();
-
 
 		activityMessage.put("identity", new JsonObject());
 		activityMessage.put("userID", userID);

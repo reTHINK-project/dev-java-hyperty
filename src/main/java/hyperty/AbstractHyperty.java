@@ -300,6 +300,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		 * type: "create", from: "dataObjectUrl/subscription", body: { source:
 		 * <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
 		 */
+		System.out.println("[AbstractHyperty] " + observers);
 		JsonObject toSend = new JsonObject();
 		toSend.put("type", "create");
 		toSend.put("from", dataObjectUrl + "/subscription");
@@ -310,6 +311,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		body.put("value", initialData);
 		toSend.put("body", body);
 		if (toInvite) {
+			System.out.print("inviting: " + observers.toString());
 			Iterator it = observers.getList().iterator();
 			while (it.hasNext()) {
 				String observer = (String) it.next();

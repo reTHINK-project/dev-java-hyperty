@@ -18,6 +18,12 @@ import util.InitialData;
 /**
  * The School Rating Hyperty uses the School stub to observe school energy data
  * consumption and calculate the tokens.
+ * 
+ * In addition the School Rating Agent is also observing the Wallets of citizens
+ * supporting the cause and loads the School Wallet every time new tokens are
+ * loaded there.
+ * 
+ * The Citizen Wallet is subscribed when an invitation is received.
  */
 public class SchoolRatingHyperty extends AbstractTokenRatingHyperty {
 
