@@ -5,7 +5,16 @@ node "User Activity Rating Server" as dsmServer {
 node "Citizen Wallet" as wallet
 
 node "User Activity Rating" as citzRate
+
+node "IW Backend Stub" as iwBackStub {
+    node "User Activity Reporter" as backUserActR
+
+    interface "User Activity" as backUserAct
+
+    }
 }
+
+interface "External Source API" as extAPI
 
 node "Smart Citizen" as citz {
 
@@ -20,7 +29,13 @@ node "Google Fit IW Stub" as gfitStub {
 
 interface "Google Fit API" as gfit
 
-userActR -> gfit : 1: get Google Fit Data
+backUserActR -up-> extAPI : 1: get Ext Data
+
+backUserActR -> backUserAct : 2: report
+
+citzRate --> backUserAct : 5:observe
+
+userActR -down-> gfit : 1: get Google Fit Data
 
 userActR -> userAct : 2: report
 
