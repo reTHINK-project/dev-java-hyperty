@@ -23,6 +23,7 @@ import walletManager.WalletManagerHyperty;
 
 
 @ExtendWith(VertxExtension.class)
+@Disabled
 class WalletManagerTest {
 
 	private static String userID = "test-userID";

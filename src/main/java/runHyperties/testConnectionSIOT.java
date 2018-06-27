@@ -26,7 +26,7 @@ public class testConnectionSIOT {
 	
 	public static void main(String[] args) throws ParseException {
 		// TODO Auto-generated method stub
-		/*String name = "newDeviceName1";
+		String name = "newDeviceName1";
 		String description = "newDeviceDescription1";
 		currentToken = getNewToken();
 		JsonObject newDevice = registerNewDevice(name, description);
@@ -41,7 +41,7 @@ public class testConnectionSIOT {
 		JsonObject subscription = createSubscription("suscriptionName", "subscriptionDescription", appID, newDevice.getString("id"), streamName, pointOfContact);
 		System.out.println("subscription result" + subscription.toString());
 
-		*/
+		
 
 	}
 
@@ -147,7 +147,6 @@ public class testConnectionSIOT {
 			StringBuilder received = new StringBuilder();
 			JsonObject toCreateDevice   = new JsonObject();
 			toCreateDevice.put("name", subscriptionName);
-			toCreateDevice.put("description", subscriptionDescription);
 			toCreateDevice.put("subscriber_id", appID);
 			toCreateDevice.put("device_id", deviceID);
 			toCreateDevice.put("stream", streamName);
