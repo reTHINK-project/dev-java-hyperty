@@ -1,13 +1,18 @@
 package runHyperties;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.ServerWebSocket;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -19,7 +24,10 @@ import io.vertx.ext.web.handler.sockjs.BridgeEventType;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import io.vertx.ext.web.handler.BodyHandler;
+
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
+import protostub.SmartIotProtostub;
 import tokenRating.CheckInRatingHyperty;
 import tokenRating.ElearningRatingHyperty;
 import tokenRating.UserActivityRatingHyperty;
@@ -29,8 +37,11 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	// private String mongoHost = "172.18.0.64";
-	private String mongoHost = "localhost";
+	private String mongoHost = "172.18.0.64";
+	// private String mongoHost = "localhost";
+	private String SIOTurl = "https://iot.alticelabs.com/api";
+	// private String SIOTurl = "http://10.112.77.148/api";
+	private String pointOfContact = "https://url_contact";
 
 	public static void main(String[] args) {
 
@@ -70,12 +81,45 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		String elearningHypertyURL = "hyperty://sharing-cities-dsm/elearning";
-
+		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
 		// Create Router object
 		Router router = Router.router(vertx);
 
 		// web sockets
+
+		Set<String> allowedHeaders = new HashSet<>();
+		allowedHeaders.add("x-requested-with");
+		allowedHeaders.add("Access-Control-Allow-Origin");
+		allowedHeaders.add("origin");
+		allowedHeaders.add("Content-Type");
+		allowedHeaders.add("accept");
+		allowedHeaders.add("cache-control");
+		allowedHeaders.add("version");
+		allowedHeaders.add("Accept-Encoding");
+		allowedHeaders.add("USER-AGENT");
+		allowedHeaders.add("CONTENT-LENGTH");
+
+		Set<HttpMethod> allowedMethods = new HashSet<>();
+		allowedMethods.add(HttpMethod.GET);
+		allowedMethods.add(HttpMethod.POST);
+
+		router.route("/requestpub*").handler(BodyHandler.create());
+		router.post("/requestpub").handler(this::handleRequestPub);
+
+		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
+
+		/*
+		 * router.route().handler(BodyHandler.create());
+		 * router.route().handler(CorsHandler.create("*").allowedHeaders(allowedHeaders)
+		 * .allowedMethods(allowedMethods));
+		 * 
+		 * router.post("/requestpub").handler(this::handleRequestPub);
+		 * 
+		 * 
+		 * router.route("/eventbus/*").handler(eventBusHandler(vertx));
+		 * router.post("/requestpub").handler(this::handleRequestPub);
+		 */
 
 		// deploy check-in rating hyperty
 
@@ -174,6 +218,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 			System.out.println("ElearningRatingHyperty Result->" + res.result());
 		});
 
+		// Rest service
+
 		// wallet manager hyperty deploy
 
 		JsonObject configWalletManager = new JsonObject();
@@ -184,7 +230,6 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("mongoHost", mongoHost);
 
 		configWalletManager.put("observers", new JsonArray().add(""));
-
 		// publicWallets
 		JsonArray publicWallets = new JsonArray();
 		// p0
@@ -206,10 +251,27 @@ public class StartJavaHyperties extends AbstractVerticle {
 		publicWallet.put("externalFeeds", "IoT2");
 		publicWallets.add(publicWallet);
 		configWalletManager.put("publicWallets", publicWallets);
+
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
 				.setWorker(true);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
+		});
+
+		// deploy smart Iot protostub
+
+		JsonObject configSmartIotStub = new JsonObject();
+		configSmartIotStub.put("url", smartIotProtostubUrl);
+		configSmartIotStub.put("db_name", "test");
+		configSmartIotStub.put("collection", "siotdevices");
+		configSmartIotStub.put("mongoHost", mongoHost);
+		configSmartIotStub.put("smart_iot_url", SIOTurl);
+		configSmartIotStub.put("point_of_contact", pointOfContact);
+
+		DeploymentOptions optionsconfigSmartIotStub = new DeploymentOptions().setConfig(configSmartIotStub)
+				.setWorker(true);
+		vertx.deployVerticle(SmartIotProtostub.class.getName(), optionsconfigSmartIotStub, res -> {
+			System.out.println("SmartIOTProtustub Result->" + res.result());
 		});
 
 		// Configure HttpServer and set it UP
@@ -244,6 +306,24 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		server.listen(9091);
 
+	}
+
+	private void handleRequestPub(RoutingContext routingContext) {
+
+		System.out.println("ENDPOINT POST RECEIVED DATA -> " + routingContext.getBodyAsString().toString());
+
+		// vertx.eventBus().publish("school://vertx-app/stream",
+		// routingContext.getBodyAsString().toString());
+
+		HttpServerResponse httpServerResponse = routingContext.response();
+		httpServerResponse.setChunked(true);
+		MultiMap headers = routingContext.request().headers();
+		for (String key : headers.names()) {
+			httpServerResponse.write(key + ": ");
+			httpServerResponse.write(headers.get(key));
+			httpServerResponse.write("<br>");
+		}
+		httpServerResponse.putHeader("Content-Type", "application/text").end("Success");
 	}
 
 }
