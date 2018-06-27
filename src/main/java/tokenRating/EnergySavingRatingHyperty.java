@@ -1,19 +1,9 @@
 package tokenRating;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import util.InitialData;
 
 /**
  * The Energy Saving Rating Hyperty uses the Smart IoT stub to observe devices
@@ -30,221 +20,66 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	public static String ratingPublic = "hyperty://sharing-cities-dsm/energy-saving-rating/public";
 	public static String ratingPrivate = "hyperty://sharing-cities-dsm/energy-saving-rating/private";
 
-	/**
-	 * Number of tokens awarded per checkin.
-	 */
-	private int checkInTokens;
-	/**
-	 * Max difference (in meters) between user and store location
-	 */
-	private int checkin_radius;
-	/**
-	 * Min difference (in hours) between current and last checkin times.
-	 */
-	private int min_frequency;
-
-	private String shopsCollection = "shops";
-	private String bonusCollection = "bonus";
-	private String dataSource = "checkin";
-
-	private CountDownLatch checkinLatch;
-	private CountDownLatch findRates;
+	private String dataSource = "energy-saving";
 
 	@Override
 	public void start() {
+
 		super.start();
 
-		// read config
-		checkInTokens = config().getInteger("tokens_per_checkin");
-		checkin_radius = config().getInteger("checkin_radius");
-		min_frequency = config().getInteger("min_frequency");
-
-		// TODO - listen to invitations
 	}
 
 	@Override
 	public void onNotification(JsonObject body) {
-		// TODO - validate
 		System.out.println(logMessage + "onNotification(): " + body.toString());
+
 		String from = body.getString("from");
-		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
+		String address = from.split("/subscription")[0];
+		String userID = getUserURL(address);
+		/*
+		 * Before the invitation is accepted, it checks there is no subscription yet for
+		 * the User CGUID URL. If accepted, a listener is added to the address set in
+		 * the from attribute.
+		 */
+		if (userID == null) {
+			System.out.println(logMessage + "no sub yet, adding listener");
+			String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
+			subscribe(address, guid);
+		}
 
-		subscribe(from, guid);
 	}
-
-	int tokenAmount;
 
 	@Override
 	int rate(Object data) {
 		// reset latch
-		System.out.println("1 - Rating");
+		System.out.println(logMessage + "rate(): " + data.toString());
 
-		tokenAmount = -1;
+		int tokenAmount = -1;
 		Long currentTimestamp = new Date().getTime();
 
 		// data contains shopID, users's location
-		JsonObject checkInMessage = (JsonObject) data;
-		System.out.println("CHECK IN MESSAGE " + checkInMessage.toString());
-		String user = checkInMessage.getString("guid");
-		String shopID = checkInMessage.getString("shopID");
-		Double userLatitude = checkInMessage.getDouble("latitude");
-		Double userLongitude = checkInMessage.getDouble("longitude");
+		JsonObject energyMessage = (JsonObject) data;
+		String id = energyMessage.getString("id");
+		String streamId = energyMessage.getString("streamId");
+		String deviceId = energyMessage.getString("deviceId");
+		String user = energyMessage.getString("guid");
+		int energyConsumption = energyMessage.getInteger("data");
 
-		checkinLatch = new CountDownLatch(1);
-		new Thread(() -> {
-			System.out.println("2 - Started thread");
-			// get shop with that ID
-			mongoClient.find(shopsCollection, new JsonObject().put("id", shopID), shopForIdResult -> {
-				System.out.println("2 - Received shop info");
-				JsonObject shopInfo = shopForIdResult.result().get(0);
-				boolean validPosition = validateUserPosition(user, userLatitude, userLongitude, shopInfo);
-				if (!validPosition) {
-					checkinLatch.countDown();
-					tokenAmount = -2;
-					return;
-				}
-				validateCheckinTimestamps(user, shopID, currentTimestamp);
-				checkinLatch.countDown();
-			});
-		}).start();
+		persistData(dataSource, user, currentTimestamp, id, null, null);
+		// TODO - rating algorithm
+		tokenAmount = applyPublicRating();
 
-		try {
-			checkinLatch.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
-			return tokenAmount;
-		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
-		}
-		System.out.println("3 - return other");
 		return tokenAmount;
-
-	}
-
-	private void validateCheckinTimestamps(String user, String shopID, long currentTimestamp) {
-
-		findRates = new CountDownLatch(1);
-
-		new Thread(() -> {
-			// get previous checkin from that user for that rating source
-			mongoClient.find(collection, new JsonObject().put("user", user), result -> {
-
-				// access checkins data source
-				JsonObject userRates = result.result().get(0);
-				JsonArray checkInRates = userRates.getJsonArray(dataSource);
-				// check ins for that store
-				ArrayList<JsonObject> a = (ArrayList<JsonObject>) checkInRates.getList();
-				List<JsonObject> rrr = (List<JsonObject>) a.stream() // convert list to stream
-						.filter(element -> shopID.equals(element.getString("id"))).collect(Collectors.toList());
-				if (rrr.size() == 0) {
-					System.out.println("User never went to this shop");
-					persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
-				} else {
-					// order by timestamp
-					Collections.sort(rrr, new Comparator<JsonObject>() {
-						@Override
-						public int compare(final JsonObject lhs, JsonObject rhs) {
-							if (lhs.getDouble("timestamp") > rhs.getDouble("timestamp")) {
-								return -1;
-							} else {
-								return 1;
-							}
-						}
-					});
-
-					double lastVisitTimestamp = rrr.get(0).getDouble("timestamp");
-					System.out.println("LAST VISIT TIMESTAMP->" + lastVisitTimestamp);
-					System.out.println("Current TIMESTAMP->" + currentTimestamp);
-					// TODO: THIS SHOULD BE *1000 to wait 1hour to a new checkin
-					// (lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp)
-					if (lastVisitTimestamp + (min_frequency * 60 * 1 * 1000) <= currentTimestamp) {
-						System.out.println("continue");
-						persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
-
-					} else {
-						System.out.println("invalid");
-						tokenAmount = -1;
-					}
-				}
-				findRates.countDown();
-
-			});
-		}).start();
-
-		try {
-			findRates.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
-			return;
-		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
-		}
-		System.out.println("3 - return other");
-		return;
-
 	}
 
 	/**
-	 * Check if user is inside shop boundaries.
+	 * Rate energy message according to the public algorithm.
 	 * 
-	 * @param userLatitude
-	 * @param userLongitude
-	 * @param shopInfo
-	 */
-	private boolean validateUserPosition(String user, Double userLatitude, Double userLongitude, JsonObject shopInfo) {
-		// access location
-		JsonObject location = shopInfo.getJsonObject("location");
-		Double latitude = location.getDouble("degrees-latitude");
-		Double longitude = location.getDouble("degrees-longitude");
-
-		// check if user in range
-		if (getDifferenceBetweenGPSCoordinates(userLatitude, userLongitude, latitude, longitude) <= checkin_radius) {
-			System.out.println("2 - User is close to store");
-
-			// persist check in
-			// persistData(dataSource, user, new Date().getTime(), shopID);
-			tokenAmount = checkInTokens;
-			return true;
-		} else {
-			System.out.println("2 - User is far from store");
-			return false;
-		}
-
-	}
-
-	/**
-	 * Get difference (in meters) between two points (in GPS coordinates)
-	 * 
-	 * @param userLatitude
-	 * @param userLongitude
-	 * @param shopLatitude
-	 * @param shopLongitude
 	 * @return
 	 */
-	private double getDifferenceBetweenGPSCoordinates(double userLatitude, double userLongitude, double shopLatitude,
-			double shopLongitude) {
-		int earthRadiusKm = 6371;
+	private int applyPublicRating() {
 
-		double dLat = degreesToRadians(shopLatitude - userLatitude);
-		double dLon = degreesToRadians(shopLongitude - userLongitude);
-
-		double lat1 = degreesToRadians(userLatitude);
-		double lat2 = degreesToRadians(shopLatitude);
-
-		double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-				+ Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
-		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-		double distanceInMeters = earthRadiusKm * c * 1000;
-		System.out.println("Distance: " + distanceInMeters);
-		return distanceInMeters;
-	}
-
-	/**
-	 * Convert degrees to radians.
-	 * 
-	 * @param degrees
-	 * @return
-	 */
-	private double degreesToRadians(double degrees) {
-		return degrees * Math.PI / 180;
+		return 1;
 	}
 
 	@Override
@@ -262,37 +97,25 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 						final JsonObject obj = data.getJsonObject(i);
 						final String name = obj.getString("name");
 						switch (name) {
-						case "latitude":
-						case "longitude":
-							changes.put(name, obj.getFloat("value"));
-							break;
-						case "checkin":
-							changes.put("shopID", obj.getString("value"));
+						case "iot":
+							changes.put("data", obj.getInteger("data"));
+							changes.put("id", obj.getString("id"));
+							changes.put("streamId", obj.getString("streamId"));
+							changes.put("deviceId", obj.getString("deviceId"));
 							break;
 						default:
 							break;
 						}
 					}
 					changes.put("guid", getUserURL(address));
-					System.out.println("CHANGES" + changes.toString());
+					System.out.println(logMessage + "onChanges(): change: " + changes.toString());
 
 					int numTokens = rate(changes);
-
-					/*
-					 * if (numTokens == -1) {
-					 * System.out.println("User is not inside any shop or already checkIn"); } else
-					 * { System.out.println("User is close"); mine(numTokens, changes, "checkin"); }
-					 */
-					if (numTokens < 0) {
-						System.out.println("User is not inside any shop or already checkIn");
-					} else {
-						System.out.println("User is close");
+					System.out.println(logMessage + "rate(): numTokens=" + numTokens);
+					if (numTokens > 0) {
+						mine(numTokens, changes, dataSource);
 					}
-
-					mine(numTokens, changes, "checkin");
-
 				}
-
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
