@@ -11,6 +11,8 @@ import util.DateUtils;
 
 public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
+	private static final String logMessage = "[AbstractTokenRatingHyperty] ";
+
 	/**
 	 * hyperty address where to setup an handler to process invitations in case the
 	 * data source is dynamic eg produced by the smart citizen
@@ -175,17 +177,16 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * removeStreamHandler for valid received delete messages.
 	 */
 	private void addMyHandler() {
-		System.out.println("..." + streamAddress);
+		System.out.println(logMessage + "addMyHandler: " + streamAddress);
 		vertx.eventBus().<JsonObject>consumer(streamAddress, message -> {
-			System.out.println("Abstract REC" + message.body().toString());
+			System.out.println(logMessage + "new message: " + message.body().toString());
 			mandatoryFieldsValidator(message);
-
 			JsonObject body = new JsonObject(message.body().toString());
 			String type = body.getString("type");
 			String handleCheckInUserURL = body.getJsonObject("identity").getJsonObject("userProfile")
 					.getString("userURL");
-
 			JsonObject response = new JsonObject();
+
 			// check message type
 			switch (type) {
 			case "create":
@@ -238,7 +239,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	}
 
 	public boolean checkIfCanHandleData(String userURL) {
-		System.out.println("CHECK IF CAN BE ADDED:" + userURL);
+		System.out.println(logMessage+"checkIfCanHandleData():" + userURL);
 		addHandler = false;
 
 		checkUser = new CountDownLatch(1);

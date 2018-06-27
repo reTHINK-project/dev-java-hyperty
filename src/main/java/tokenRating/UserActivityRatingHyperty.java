@@ -241,6 +241,8 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 				if (data.size() == 1) {
 					JsonObject changes = new JsonObject();
 
+					// TODO - check if from gfit or IoT
+
 					for (int i = 0; i < data.size(); i++) {
 						final JsonObject obj = data.getJsonObject(i);
 						final String type = obj.getString("type");

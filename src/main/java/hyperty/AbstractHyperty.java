@@ -15,8 +15,9 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 
-
 public class AbstractHyperty extends AbstractVerticle {
+
+	private static final String logMessage = "[AbstractHyperty] ";
 
 	protected JsonObject identity;
 
@@ -72,14 +73,14 @@ public class AbstractHyperty extends AbstractVerticle {
 	}
 
 	private Handler<Message<JsonObject>> onMessage() {
-		
+
 		return message -> {
-			
-			System.out.println("New message -> " +  message.body().toString());
+
+			System.out.println(logMessage + "New message -> " + message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 
-				System.out.println(
-						"[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] " + message.body());
+				System.out.println(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
+						+ "\n[Data] " + message.body());
 
 				final JsonObject body = new JsonObject(message.body().toString()).getJsonObject("body");
 				final String type = new JsonObject(message.body().toString()).getString("type");
@@ -87,24 +88,21 @@ public class AbstractHyperty extends AbstractVerticle {
 				JsonObject response = new JsonObject();
 				switch (type) {
 				case "read":
-
 					/*
 					 * return the queried data. If the read message body does not contain any
 					 * resource field, all persisted data is returned.
 					 */
-					
 					if (body != null && body.getString("resource") != null) {
-						System.out.println("Abstract");
-						System.out.println("Getting wallet address  msg:" + body.toString());
+						System.out.println(logMessage + "Getting wallet address  msg:" + body.toString());
 
-						JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid", body.getString("value")));
-						
+						JsonObject identity = new JsonObject().put("userProfile",
+								new JsonObject().put("guid", body.getString("value")));
+
 						JsonObject toSearch = new JsonObject().put("identity", identity);
-						
-					
-						System.out.println("Search on " + this.collection + "  with data" + toSearch.toString());
-						
-							
+
+						System.out.println(
+								logMessage + "Search on " + this.collection + "  with data" + toSearch.toString());
+
 						mongoClient.find(this.collection, toSearch, res -> {
 							if (res.result().size() != 0) {
 								JsonObject walletInfo = res.result().get(0);
@@ -113,12 +111,11 @@ public class AbstractHyperty extends AbstractVerticle {
 								message.reply(walletInfo);
 							}
 						});
-						
-						
 
 					} else {
 						mongoClient.find(this.collection, new JsonObject(), res -> {
-							System.out.println(res.result().size() + " <-value returned" + res.result().toString());
+							System.out.println(
+									logMessage + res.result().size() + " <-value returned" + res.result().toString());
 
 							response.put("data", new JsonArray(res.result().toString())).put("identity", this.identity);
 							message.reply(response);
@@ -127,22 +124,18 @@ public class AbstractHyperty extends AbstractVerticle {
 
 					break;
 				case "create":
-
 					if (from.contains("/subscription")) {
-						
 						onNotification(new JsonObject(message.body().toString()));
 					} else {
 						JsonObject msg = new JsonObject(message.body().toString());
-						
 						if (body == null) {
-							
 							// handle creation requests, like wallet
 							handleCreationRequest(msg, message);
 						} else {
-							//  handle transfer, from wallet for example
+							// handle transfer, from wallet for example
 							handleTransfer(msg);
 						}
-						
+
 					}
 
 					break;
@@ -156,12 +149,12 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	public void handleTransfer(JsonObject msg) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	/**
@@ -170,15 +163,12 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * some existing DataObjectObserver was deleted.
 	 * 
 	 */
-	private void onNotification(JsonObject body) {
+	public void onNotification(JsonObject body) {
 		System.out.println("HANDLING" + body.toString());
 		String from = body.getString("from");
 		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
-		
 
-		
 		subscribe(from, guid);
-		
 	}
 
 	/**
@@ -190,9 +180,9 @@ public class AbstractHyperty extends AbstractVerticle {
 	 *            sets the handler at <address>/changes (ie eventBus.sendMessage(
 	 *            ..)).
 	 */
-	private void subscribe(String address, String guid) {
-	
-		String ObjURL= address.split("/subscription")[0];
+	public void subscribe(String address, String guid) {
+
+		String ObjURL = address.split("/subscription")[0];
 		JsonObject subscribeMessage = new JsonObject();
 		subscribeMessage.put("from", this.url);
 		subscribeMessage.put("to", address);
@@ -200,33 +190,24 @@ public class AbstractHyperty extends AbstractVerticle {
 		JsonObject subscribeMessageBody = new JsonObject();
 		subscribeMessageBody.put("identity", this.identity);
 		subscribeMessage.put("body", subscribeMessageBody);
-		
-		System.out.println("SUBSCRIBE Message Sent" +  subscribeMessage.toString());
+
+		System.out.println(logMessage + "SUBSCRIBE Message Sent" + subscribeMessage.toString());
 		send(address, subscribeMessage, reply -> {
 			// after reply wait for changes
-			System.out.println("subscribe reply ->" + reply.result().body().toString());
-			
-			
+			System.out.println(logMessage + "subscribe reply ->" + reply.result().body().toString());
+
 			JsonObject resultBody = new JsonObject(reply.result().body().toString());
 			int code = resultBody.getJsonObject("body").getInteger("code");
 			if (code == 200) {
-				
-				//TODO: associate DataObjectURL to an identity of invite
-				
-
+				// TODO: associate DataObjectURL to an identity of invite
 				if (checkIfCanHandleData(guid) && persistDataObjUserURL(ObjURL, guid, "observer")) {
 					onChanges(ObjURL);
 				}
-							
-				
 			}
 
-			
-			
 		});
 	}
-	
-	
+
 	public boolean checkIfCanHandleData(String objURL) {
 		// TODO Auto-generated method stub
 		return true;
@@ -242,51 +223,46 @@ public class AbstractHyperty extends AbstractVerticle {
 	 *            ..)).
 	 */
 	public void onChanges(String address) {
-		System.out.println("ADDRESS TO PROCESS CHANGES" + address);
+		System.out.println(logMessage + "onChanges() -> ADDRESS TO PROCESS CHANGES" + address);
 		final String address_changes = address + "/changes";
 
 		eb.consumer(address_changes, message -> {
-			System.out.println("New Change Received ->"
-					+ message.body().toString());
+			System.out.println(logMessage + "New Change Received ->" + message.body().toString());
 		});
-		
+
 	}
-	
-	
+
 	public boolean persistDataObjUserURL(String address, String guid, String type) {
-		
-		
+
 		dataPersistedFlag = false;
-		
+
 		dataPersisted = new CountDownLatch(1);
-		
+
 		JsonObject document = new JsonObject();
 		document.put("guid", guid);
 		document.put("type", type);
-		
+
 		JsonObject toInsert = new JsonObject().put("url", address).put("metadata", document);
 		System.out.println("Creating DO entry -> " + toInsert.toString());
 		new Thread(() -> {
 
-			
 			mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
 				System.out.println("Setup complete - dataobjects + Insert" + res2.result().toString());
 				dataPersistedFlag = true;
 				dataPersisted.countDown();
 			});
-				
+
 		}).start();
-		
 
 		try {
 			dataPersisted.await(5L, TimeUnit.SECONDS);
-				return dataPersistedFlag;
+			return dataPersistedFlag;
 		} catch (InterruptedException e) {
 			System.out.println("3 - interrupted exception");
 		}
 		System.out.println("3 - return other");
-		return dataPersistedFlag;	
-		
+		return dataPersistedFlag;
+
 	}
 
 	/**
@@ -341,29 +317,29 @@ public class AbstractHyperty extends AbstractVerticle {
 	 */
 	public boolean validateSource(String from, String address, JsonObject identity, String collection) {
 		// allow wallet creator
-		System.out.println("validating source ... from:" + from +  "\nobservers:" + observers.getList().toString() + "\nourUserURL:" 
-								+ this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:" + collection);
-		
+		System.out.println("validating source ... from:" + from + "\nobservers:" + observers.getList().toString()
+				+ "\nourUserURL:" + this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:"
+				+ collection);
+
 		if (observers.getList().contains(from)) {
 			System.out.println("VALID");
 			return true;
 		} else {
 			JsonObject toFind = new JsonObject().put("identity", identity);
 			System.out.println("toFIND" + toFind.toString());
-			
+
 			acceptSubscription = false;
 			findWallet = new CountDownLatch(1);
-			
-			
+
 			new Thread(() -> {
 				mongoClient.find(collection, toFind, res -> {
 					if (res.result().size() != 0) {
 						JsonObject wallet = res.result().get(0);
 						System.out.println("to subscribe add:" + address + " wallet to compare" + wallet);
-						
-						if(address.equals(wallet.getString("address")) ) {
+
+						if (address.equals(wallet.getString("address"))) {
 							System.out.println("RIGHT WALLET");
-							if(wallet.getJsonObject("identity").equals(identity)) {
+							if (wallet.getJsonObject("identity").equals(identity)) {
 								System.out.println("RIGHT IDENTITY");
 								acceptSubscription = true;
 								findWallet.countDown();
@@ -371,37 +347,30 @@ public class AbstractHyperty extends AbstractVerticle {
 							}
 							findWallet.countDown();
 							return;
-							
+
 						} else {
 							System.out.println("OTHER WALLET");
 							findWallet.countDown();
 							return;
-						
+
 						}
 					}
-					
+
 				});
 			}).start();
-			
-			
 
 			try {
 				findWallet.await(5L, TimeUnit.SECONDS);
-					return acceptSubscription;
+				return acceptSubscription;
 			} catch (InterruptedException e) {
 				System.out.println("3 - interrupted exception");
 			}
 			System.out.println("3 - return other");
 			return acceptSubscription;
-			
+
 		}
-		
-		
-		
-		
-		
-		
-		//return false;
+
+		// return false;
 	}
 
 	/**

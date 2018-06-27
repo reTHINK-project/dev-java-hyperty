@@ -1,9 +1,6 @@
 package hyperty;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.io.IOException;
-import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
@@ -20,27 +17,23 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import tokenRating.CheckInRatingHyperty;
-import tokenRating.SchoolRatingHyperty;
-import util.DateUtils;
+import tokenRating.EnergySavingRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
-/*
- * Example of an asynchronous JUnit test for a Verticle.
- */
 @ExtendWith(VertxExtension.class)
-@Disabled
-class SchoolRatingTest {
+class EnergySavingRatingTest {
+
+	private static final String logMessage = "[EnergySavingRatingTest] ";
 
 	private static String userID = "test-userID";
 	private static String subscriptionsAddress = userID + "/subscription";
 	private static String changesAddress = userID + "/changes";
-	private static String schoolRatingHypertyURL = "hyperty://sharing-cities-dsm/school-rating";
+	private static String energySavingRatingHypertyURL = "hyperty://sharing-cities-dsm/energy-saving-rating";
 	private static String shopsInfoStreamAddress = "data://sharing-cities-dsm/shops";
 	private static String bonusInfoStreamAddress = "data://sharing-cities-dsm/bonus";
-	private static String from = "tester";
 
-	private static String storeID = "test-shopID";
+	
+
 	// mongo config
 	private static MongoClient mongoClient;
 	private static String ratesCollection = "rates";
@@ -50,18 +43,20 @@ class SchoolRatingTest {
 	private static String db_name = "test";
 	private static String mongoHost = "localhost";
 	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
-	private static JsonObject identity;
+	private static JsonObject identity = new JsonObject().put("userProfile",
+			new JsonObject().put("userURL", userID).put("guid", userID));;
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 
-		identity = new JsonObject().put("userProfile", new JsonObject().put("userURL", userID).put("guid", userID));
 		JsonObject config = new JsonObject();
-		config.put("url", schoolRatingHypertyURL);
+		config.put("url", energySavingRatingHypertyURL);
 		config.put("identity", identity);
+		// config
 		config.put("tokens_per_checkin", 10);
 		config.put("checkin_radius", 500);
 		config.put("min_frequency", 1);
+		//
 		config.put("hyperty", "123");
 		config.put("stream", "token-rating");
 		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
@@ -74,7 +69,7 @@ class SchoolRatingTest {
 
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 		Checkpoint checkpoint = context.checkpoint();
-		vertx.deployVerticle(SchoolRatingHyperty.class.getName(), optionsLocation, context.succeeding());
+		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsLocation, context.succeeding());
 
 		JsonObject configWalletManager = new JsonObject();
 		configWalletManager.put("url", walletManagerHypertyURL);
@@ -82,7 +77,7 @@ class SchoolRatingTest {
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
-		
+
 		final String causeAddress = "cause1-address";
 
 		configWalletManager.put("observers", new JsonArray().add(causeAddress));
@@ -95,15 +90,15 @@ class SchoolRatingTest {
 		});
 
 		makeMongoConnection(vertx);
-		
+
 		vertx.eventBus().consumer(causeAddress, message -> {
 			JsonObject msg = (JsonObject) message.body();
 			System.out.println("was invited: " + msg);
-			
+
 			// send message to invitation address (get from)
 			String invitationAddress = msg.getString("from");
 			System.out.println("invitation address: " + invitationAddress);
-			
+
 			msg.put("from", causeAddress);
 			vertx.eventBus().send(invitationAddress, msg, res -> {
 				System.out.println("Received reply from wallet invitation: " + res.result().body().toString());
@@ -111,12 +106,11 @@ class SchoolRatingTest {
 				JsonObject body = new JsonObject().put("code", 200);
 				newMsg.put("body", body);
 			});
-			
-			
+
 		});
 
 		vertx.eventBus().consumer(subscriptionsAddress, message -> {
-			System.out.println("TEST - sub received: " + message.body().toString());
+			System.out.println(logMessage + "sub received: " + message.body().toString());
 			// send reply
 			JsonObject reply = new JsonObject().put("body", new JsonObject().put("code", 200));
 			message.reply(reply);
@@ -124,7 +118,7 @@ class SchoolRatingTest {
 
 		// wait for Mongo connection to take place
 		try {
-			Thread.sleep(6000);
+			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -134,12 +128,12 @@ class SchoolRatingTest {
 		msg.put("from", subscriptionsAddress);
 		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 
-		vertx.eventBus().send(schoolRatingHypertyURL, msg, reply -> {
+		vertx.eventBus().send(energySavingRatingHypertyURL, msg, reply -> {
 			System.out.println("REP: " + reply.toString());
 		});
 
 		try {
-			Thread.sleep(5000);
+			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -201,44 +195,54 @@ class SchoolRatingTest {
 
 	}
 
+	private String SIOTendpoint = "siot0-endpoint";
+
 	@Test
-	void createWalletAndSubscribe(VertxTestContext testContext, Vertx vertx) {
-		
+	void sendInvitation(VertxTestContext testContext, Vertx vertx) {
+		System.out.println(logMessage + "test - sendInvitation ");
+
+		/*
+		 * On receiving an invitation to observe a new device energy comsuption stream,
+		 * the Hyperty subscribes it adding a listener to it according to weather it is
+		 * a public device or a private device. The invitation should include the wallet
+		 * and the type of device.
+		 */
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		JsonObject identityWithInfo = identity.copy();
 		JsonObject info = new JsonObject().put("cause", 0);
 		identityWithInfo.getJsonObject("userProfile").put("info", info);
 		msg.put("identity", identityWithInfo);
-		msg.put("from", schoolRatingHypertyURL);
+		msg.put("from", subscriptionsAddress);
 		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
-			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+			System.out.println(logMessage + "Received reply: " + res.result().body().toString());
 			JsonObject newMsg = new JsonObject();
 			JsonObject body = new JsonObject().put("code", 200);
 			newMsg.put("body", body);
 			res.result().reply(newMsg);
-		});	
-		
+		});
+
 		try {
-			Thread.sleep(10000);
+			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+
+		System.out.println(logMessage + "sending data");
+		JsonObject iotmessage = new JsonObject().put("name", "checkin").put("value", 0);
+		iotmessage.put("data", "321");
+		iotmessage.put("id", "3eecbfb1-745c-4768-a0b4-fffed40f8a5a");
+		iotmessage.put("streamId", "1a5a1b97-1332-4d09-ba4b-169a6ce4dca4");
+		iotmessage.put("deviceId", "355d0eb9-ee9a-4381-bcb0-cced33b8df05");
+		iotmessage.put("type", EnergySavingRatingHyperty.ratingPublic);
+
+		JsonArray toSend = new JsonArray();
+		toSend.add(iotmessage);
+		vertx.eventBus().send(changesAddress, toSend, reply -> {
+			System.out.println(logMessage + "changes reply: " + reply.toString());
+		});
+
 		testContext.completeNow();
 
-	}
-
-	@Test
-	@Disabled
-	void getShops(VertxTestContext testContext, Vertx vertx) {
-		System.out.println("TEST - get shops");
-		JsonObject config = new JsonObject().put("type", "read");
-		vertx.eventBus().send(shopsInfoStreamAddress, config, message -> {
-			// assert reply not null
-			JsonObject shops = (JsonObject) message.result().body();
-			System.out.println("SHOPS: " + shops);
-			testContext.completeNow();
-		});
 	}
 }

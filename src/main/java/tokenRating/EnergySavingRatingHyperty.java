@@ -16,16 +16,19 @@ import io.vertx.core.json.JsonObject;
 import util.InitialData;
 
 /**
- * The School Rating Hyperty uses the School stub to observe school energy data
- * consumption and calculate the tokens.
+ * The Energy Saving Rating Hyperty uses the Smart IoT stub to observe devices
+ * energy data consumption and calculate the tokens.
  * 
- * In addition the School Rating Agent is also observing the Wallets of citizens
- * supporting the cause and loads the School Wallet every time new tokens are
- * loaded there.
- * 
- * The Citizen Wallet is subscribed when an invitation is received.
+ * There are two types of ratings, each one having a different rating engine:
+ * public devices (schools) + individual devices (private residences)
  */
-public class SchoolRatingHyperty extends AbstractTokenRatingHyperty {
+public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
+
+	private static final String logMessage = "[EnergySavingRatingHyperty] ";
+
+	// rating types
+	public static String ratingPublic = "hyperty://sharing-cities-dsm/energy-saving-rating/public";
+	public static String ratingPrivate = "hyperty://sharing-cities-dsm/energy-saving-rating/private";
 
 	/**
 	 * Number of tokens awarded per checkin.
@@ -45,9 +48,7 @@ public class SchoolRatingHyperty extends AbstractTokenRatingHyperty {
 	private String dataSource = "checkin";
 
 	private CountDownLatch checkinLatch;
-	private CountDownLatch findUserID;
 	private CountDownLatch findRates;
-	private String userIDToReturn = null;
 
 	@Override
 	public void start() {
@@ -58,96 +59,17 @@ public class SchoolRatingHyperty extends AbstractTokenRatingHyperty {
 		checkin_radius = config().getInteger("checkin_radius");
 		min_frequency = config().getInteger("min_frequency");
 
-		createStreams();
+		// TODO - listen to invitations
 	}
 
-	private void createStreams() {
-		JsonObject streams = config().getJsonObject("streams");
+	@Override
+	public void onNotification(JsonObject body) {
+		// TODO - validate
+		System.out.println(logMessage + "onNotification(): " + body.toString());
+		String from = body.getString("from");
+		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 
-		// shops stream
-		String shopsStreamAddress = streams.getString("shops");
-		create(shopsStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
-
-		// bonus stream
-		String bonusStreamAddress = streams.getString("bonus");
-		create(bonusStreamAddress, new JsonObject(), false, subscriptionHandlerBonus(), readHandlerBonus());
-	}
-
-	/**
-	 * Handler for subscription requests (bonus).
-	 * 
-	 * @return
-	 */
-	private Handler<Message<JsonObject>> subscriptionHandlerBonus() {
-		return msg -> {
-			mongoClient.find(bonusCollection, new JsonObject(), res -> {
-				JsonArray bonus = new JsonArray(res.result());
-				msg.reply(bonus);
-			});
-		};
-
-	}
-
-	/**
-	 * Handler for subscription requests.
-	 * 
-	 * @return
-	 */
-	private Handler<Message<JsonObject>> subscriptionHandler() {
-		return msg -> {
-			mongoClient.find(shopsCollection, new JsonObject(), res -> {
-				JsonArray shops = new JsonArray(res.result());
-				// reply with shops info
-				msg.reply(shops);
-			});
-		};
-
-	}
-
-	/**
-	 * Handler for read requests (bonus).
-	 * 
-	 * @return
-	 */
-	private Handler<Message<JsonObject>> readHandlerBonus() {
-		return msg -> {
-			JsonObject response = new JsonObject();
-			if (msg.body().getJsonObject("resource") != null) {
-
-			} else {
-				mongoClient.find(bonusCollection, new JsonObject(), res -> {
-					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
-
-					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
-							.put("identity", this.identity);
-					msg.reply(response);
-				});
-			}
-		};
-
-	}
-
-	/**
-	 * Handler for read requests.
-	 * 
-	 * @return
-	 */
-	private Handler<Message<JsonObject>> readHandler() {
-		return msg -> {
-			JsonObject response = new JsonObject();
-			if (msg.body().getJsonObject("resource") != null) {
-
-			} else {
-				mongoClient.find(shopsCollection, new JsonObject(), res -> {
-					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
-
-					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
-							.put("identity", this.identity);
-					msg.reply(response);
-				});
-			}
-		};
-
+		subscribe(from, guid);
 	}
 
 	int tokenAmount;
@@ -329,12 +251,11 @@ public class SchoolRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		System.out.println("waiting for changes on ->" + address_changes);
+		System.out.println(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
-				if (data.size() == 3) {
+				if (data.size() == 1) {
 					JsonObject changes = new JsonObject();
 
 					for (int i = 0; i < data.size(); i++) {
