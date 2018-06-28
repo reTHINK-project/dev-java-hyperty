@@ -32,5 +32,5 @@ A [Wallet address request](../wallet-manager#wallet-address-request) is performe
 
 ### Rating handling
 
-Rating messages follow the [DO Context update msg](https://github.com/reTHINK-project/specs/tree/master/datamodel/data-objects/context)
+Rating messages follow the [DO Context update msg](https://github.com/reTHINK-project/specs/tree/master/datamodel/data-objects/context), with `WATT_PERCENTAGE` as unit
 
