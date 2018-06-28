@@ -18,6 +18,17 @@ import util.DateUtils;
 public class WalletManagerHyperty extends AbstractHyperty {
 
 	private String walletsCollection = "wallets";
+	private String causeWalletAddress = "wallet2bGranted";
+
+	private static final String logMessage = "[WalletManager] ";
+	private static final String smartMeterEnabled = "smartMeterEnabled";
+
+	// supporters
+	public static final String causeSupportersTotal = "causeSupportersTotal";
+	public static final String causeSupportersWithSM = "causeSupportersWithSM";
+
+	// counters
+	public static final String counters = "counters";
 
 	@Override
 	public void start() {
@@ -37,7 +48,12 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 		}
 
-		// createStreams();
+		eb.consumer("wallet-cause", message -> {
+			JsonObject received = (JsonObject) message.body();
+			int cause = received.getInteger("causeID");
+			getCauseSupporters(cause, message);
+
+		});
 
 	}
 
@@ -50,12 +66,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		newWallet.put("balance", 0);
 		newWallet.put("transactions", new JsonArray());
 		newWallet.put("status", "active");
+		// counters (by source)
+		JsonObject counters = new JsonObject();
+		counters.put("user-activity", 0);
+		counters.put("elearning", 0);
+		newWallet.put("counters", counters);
 
 		JsonObject document = new JsonObject(newWallet.toString());
 		mongoClient.save(walletsCollection, document, id -> {
 			System.out.println("Created public wallet with ID:" + id);
 		});
-
 	}
 
 	private void createStreams() {
@@ -219,13 +239,20 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	}
 
 	private void performTransaction(String walletAddress, JsonObject transaction) {
-		System.out.println("Transaction valid to" + walletAddress);
+		System.out.println(logMessage + "performTransaction() \n " + transaction.toString());
 		// get wallet document
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject walletInfo = res.result().get(0);
 
 			int currentBalance = walletInfo.getInteger("balance");
+			JsonObject profile = walletInfo.getJsonObject("profile");
 			int transactionValue = transaction.getInteger("value");
+			if (transaction.getString("source").equals("energy-saving")) {
+				// TODO - update profile info (must be done before transaction or energy-saving
+				// tokens will always be 0)
+				profile.put(smartMeterEnabled, true);
+				walletInfo.put("profile", profile);
+			}
 
 			// store transaction
 			JsonArray transactions = walletInfo.getJsonArray("transactions");
@@ -241,7 +268,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			JsonObject query = new JsonObject().put("address", walletAddress);
 			mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
-				System.out.println("Transaction added to wallet");
+				System.out.println(logMessage + "Transaction added to wallet");
 
 				// send wallet update
 				JsonObject updateMessage = new JsonObject();
@@ -263,8 +290,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
-	private void updatePublicWalletBalance(String walletAddress, int transactionValue) {
-		System.out.println("[WalletManager] updatePublicWalletBalance");
+	private void updatePublicWalletBalance(String walletAddress, int transactionValue, String source) {
+		System.out.println(logMessage + "updatePublicWalletBalance(): " + source);
 
 		// get wallet document
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
@@ -276,6 +303,20 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				walletInfo.put("balance", currentBalance + transactionValue);
 			} else {
 				walletInfo.put("balance", currentBalance);
+			}
+
+			JsonObject countersObj = walletInfo.getJsonObject(counters);
+
+			switch (source) {
+			case "elearning":
+				countersObj.put("elearning", countersObj.getInteger("elearning") + transactionValue);
+				break;
+			case "user-activity":
+				countersObj.put("user-activity", countersObj.getInteger("user-activity") + transactionValue);
+				break;
+
+			default:
+				break;
 			}
 
 			JsonObject document = new JsonObject(walletInfo.toString());
@@ -339,10 +380,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				performTransaction(walletAddress, transaction);
 
-				String publicWalletAddress = wallet.getString("wallet2bGranted");
+				String publicWalletAddress = wallet.getString(causeWalletAddress);
 				if (publicWalletAddress != null) {
 					// update wallet2bGranted balance
-					updatePublicWalletBalance(publicWalletAddress, transaction.getInteger("value"));
+					updatePublicWalletBalance(publicWalletAddress, transaction.getInteger("value"),
+							transaction.getString("source"));
 				}
 
 				// // check if nonce is repeated
@@ -413,7 +455,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
-	int cause;
+	int causeID;
 
 	/**
 	 * Create a new wallet.
@@ -458,9 +500,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								.getJsonObject("info");
 						System.out.println("[WalletManager] Profile info: " + profileInfo);
 						if (profileInfo != null) {
-							cause = profileInfo.getInteger("cause");
+							causeID = profileInfo.getInteger("cause");
 							newWallet.put("profile", profileInfo);
-							newWallet.put("wallet2bGranted", getCauseAddress(cause));
+							newWallet.put(causeWalletAddress, getCauseAddress(causeID));
 						} else {
 							JsonObject response = new JsonObject().put("code", 400).put("reason",
 									"you must provide user info (i.e. cause)");
@@ -504,11 +546,62 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
-	private String getCauseAddress(int cause) {
+	String causeAddress = "";
+
+	private void getCauseSupporters(int causeID, Message<Object> message) {
+
+		// get address for wallet with that cause
+		CountDownLatch findCauseAddress = new CountDownLatch(1);
+
+		new Thread(() -> {
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", causeID), res -> {
+				JsonObject causeWallet = res.result().get(0);
+				causeAddress = causeWallet.getString("address");
+				findCauseAddress.countDown();
+				return;
+			});
+		}).start();
+
+		try {
+			findCauseAddress.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		CountDownLatch findSupporters = new CountDownLatch(1);
+		int[] causeSuporters = new int[2];
+
+		new Thread(() -> {
+			// cause supporters
+			mongoClient.find(walletsCollection, new JsonObject().put(causeWalletAddress, causeAddress), res -> {
+				causeSuporters[0] = res.result().size();
+				for (JsonObject object : res.result()) {
+					JsonObject profile = object.getJsonObject("profile");
+					if (profile.containsKey(smartMeterEnabled))
+						causeSuporters[1]++;
+
+				}
+				findSupporters.countDown();
+			});
+		}).start();
+
+		try {
+			findSupporters.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		JsonObject reply = new JsonObject();
+		reply.put(causeSupportersTotal, causeSuporters[0]);
+		reply.put(causeSupportersWithSM, causeSuporters[1]);
+		message.reply(reply);
+	}
+
+	private String getCauseAddress(int causeID) {
 
 		for (Object pWallet : config().getJsonArray("publicWallets")) {
 			JsonObject wallet = (JsonObject) pWallet;
-			if (wallet.getInteger("identity") == cause) {
+			if (wallet.getInteger("identity") == causeID) {
 				return wallet.getString("address");
 			}
 		}

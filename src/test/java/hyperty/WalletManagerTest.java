@@ -23,7 +23,7 @@ import walletManager.WalletManagerHyperty;
 
 
 @ExtendWith(VertxExtension.class)
-@Disabled
+//@Disabled
 class WalletManagerTest {
 
 	private static String userID = "test-userID";
@@ -168,7 +168,7 @@ class WalletManagerTest {
 		body.put("resource", "something/" + walletAddress);
 		JsonObject transaction = new JsonObject();
 		transaction.put("recipient", "1");
-		transaction.put("source", "1");
+		transaction.put("source", "elearning");
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 10);
 		transaction.put("nonce", "10");

@@ -27,7 +27,6 @@ import walletManager.WalletManagerHyperty;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
-@Disabled
 class CheckInTest {
 
 	private static String userID = "test-userID";
@@ -181,7 +180,7 @@ class CheckInTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-	@AfterAll
+	//@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(4);

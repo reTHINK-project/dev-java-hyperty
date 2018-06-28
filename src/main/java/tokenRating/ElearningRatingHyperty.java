@@ -100,7 +100,6 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// reset latch
 		tokenAmount = -3;
-		// TODO - timestamp from message?
 		Long currentTimestamp = new Date().getTime();
 
 		// check unprocessed sessions

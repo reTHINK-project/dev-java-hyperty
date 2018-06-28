@@ -61,12 +61,12 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		// shops stream
 		String shopsStreamAddress = streams.getString("shops");
 		create(shopsStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
-		
+
 		// bonus stream
 		String bonusStreamAddress = streams.getString("bonus");
 		create(bonusStreamAddress, new JsonObject(), false, subscriptionHandlerBonus(), readHandlerBonus());
 	}
-	
+
 	/**
 	 * Handler for subscription requests (bonus).
 	 * 
@@ -97,7 +97,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		};
 
 	}
-	
+
 	/**
 	 * Handler for read requests (bonus).
 	 * 
@@ -112,7 +112,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 				mongoClient.find(bonusCollection, new JsonObject(), res -> {
 					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
 
-					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject()).put("identity", this.identity);
+					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
+							.put("identity", this.identity);
 					msg.reply(response);
 				});
 			}
@@ -134,7 +135,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 				mongoClient.find(shopsCollection, new JsonObject(), res -> {
 					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
 
-					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject()).put("identity", this.identity);
+					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
+							.put("identity", this.identity);
 					msg.reply(response);
 				});
 			}
@@ -193,12 +195,11 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	private void validateCheckinTimestamps(String user, String shopID, long currentTimestamp) {
 
 		findRates = new CountDownLatch(1);
-		
+
 		new Thread(() -> {
 			// get previous checkin from that user for that rating source
 			mongoClient.find(collection, new JsonObject().put("user", user), result -> {
-	
-				
+
 				// access checkins data source
 				JsonObject userRates = result.result().get(0);
 				JsonArray checkInRates = userRates.getJsonArray(dataSource);
@@ -221,26 +222,24 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 							}
 						}
 					});
-					
+
 					double lastVisitTimestamp = rrr.get(0).getDouble("timestamp");
 					System.out.println("LAST VISIT TIMESTAMP->" + lastVisitTimestamp);
 					System.out.println("Current TIMESTAMP->" + currentTimestamp);
-					//TODO: THIS SHOULD BE *1000 to wait 1hour to a new checkin
-					//(lastVisitTimestamp + (min_frequency * 60 * 60 * 1000 ) <= currentTimestamp)
 					if (lastVisitTimestamp + (min_frequency * 60 * 1 * 1000) <= currentTimestamp) {
 						System.out.println("continue");
 						persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
-						
+
 					} else {
 						System.out.println("invalid");
 						tokenAmount = -1;
 					}
 				}
 				findRates.countDown();
-	
+
 			});
 		}).start();
-		
+
 		try {
 			findRates.await(5L, TimeUnit.SECONDS);
 			System.out.println("3 - return from latch");
@@ -250,7 +249,6 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		}
 		System.out.println("3 - return other");
 		return;
-		
 
 	}
 
@@ -318,62 +316,59 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	private double degreesToRadians(double degrees) {
 		return degrees * Math.PI / 180;
 	}
-	
+
 	@Override
 	public void onChanges(String address) {
-		
+
 		final String address_changes = address + "/changes";
 		System.out.println("waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			
+
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 3) {
 					JsonObject changes = new JsonObject();
-					
+
 					for (int i = 0; i < data.size(); i++) {
 						final JsonObject obj = data.getJsonObject(i);
 						final String name = obj.getString("name");
 						switch (name) {
-							case "latitude":
-							case "longitude":
-								changes.put(name, obj.getFloat("value"));
-								break;
-							case "checkin":
-								changes.put("shopID", obj.getString("value"));
-								break;
-							default:
-								break;
+						case "latitude":
+						case "longitude":
+							changes.put(name, obj.getFloat("value"));
+							break;
+						case "checkin":
+							changes.put("shopID", obj.getString("value"));
+							break;
+						default:
+							break;
 						}
 					}
 					changes.put("guid", getUserURL(address));
 					System.out.println("CHANGES" + changes.toString());
-					
+
 					int numTokens = rate(changes);
-					
-					/*if (numTokens == -1) {
-						System.out.println("User is not inside any shop or already checkIn");
-					} else {
-						System.out.println("User is close");
-						mine(numTokens, changes, "checkin");
-					}*/
+
+					/*
+					 * if (numTokens == -1) {
+					 * System.out.println("User is not inside any shop or already checkIn"); } else
+					 * { System.out.println("User is close"); mine(numTokens, changes, "checkin"); }
+					 */
 					if (numTokens < 0) {
 						System.out.println("User is not inside any shop or already checkIn");
 					} else {
 						System.out.println("User is close");
 					}
-					
+
 					mine(numTokens, changes, "checkin");
-					
+
 				}
-				
+
 			} catch (Exception e) {
 				e.printStackTrace();
-			}			
+			}
 		});
-		
+
 	}
-	
-	
 
 }
