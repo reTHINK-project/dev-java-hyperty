@@ -33,6 +33,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	private CountDownLatch dataPersisted;
 	private boolean dataPersistedFlag;
 	protected String dataObjectsCollection = "dataobjects";
+	private CountDownLatch findDataObject;
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -156,6 +157,34 @@ public class AbstractHyperty extends AbstractVerticle {
 		// TODO Auto-generated method stub
 
 	}
+	
+	private String findDataObjectStream(String objURL) {
+		
+		System.out.println("{{AbstractHyperty}} find do:" + objURL);
+		final String device[] = new String[1];
+		findDataObject = new CountDownLatch(1);
+
+		new Thread(() -> {
+			mongoClient.find(this.dataObjectsCollection, new JsonObject().put("objURL", objURL), res -> {
+				if (res.result().size() != 0) {
+					String streamID = res.result().get(0).getString("url");
+
+					device[0] = streamID;
+
+				}
+				findDataObject.countDown();
+			});
+
+		}).start();
+
+		try {
+			findDataObject.await(5L, TimeUnit.SECONDS);
+			return device[0];
+		} catch (InterruptedException e) {
+			System.out.println(e);
+		}
+		return device[0];
+	}
 
 	/**
 	 * 
@@ -172,9 +201,16 @@ public class AbstractHyperty extends AbstractVerticle {
 			System.out.println("EXTERNAL INVITE");
 			String streamID = body.getString("streamID");
 			String objURL = from.split("/subscription")[0];
-			if (persistDataObjUserURL(streamID, guid, objURL, "reporter")) {
+			String CheckURL = findDataObjectStream(objURL);
+			if (CheckURL == null) {
+				if (persistDataObjUserURL(streamID, guid, objURL, "reporter")) {
+					onChanges(objURL);
+				}
+			} else {
 				onChanges(objURL);
 			}
+			
+			
 		} else {
 			subscribe(from, guid);
 		}
@@ -250,9 +286,8 @@ public class AbstractHyperty extends AbstractVerticle {
 		JsonObject document = new JsonObject();
 		document.put("guid", guid);
 		document.put("type", type);
-		document.put("objURL", objURL);
 
-		JsonObject toInsert = new JsonObject().put("url", streamID).put("metadata", document);
+		JsonObject toInsert = new JsonObject().put("url", streamID).put("objURL", objURL).put("metadata", document);
 		System.out.println("Creating DO entry -> " + toInsert.toString());
 		new Thread(() -> {
 

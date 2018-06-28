@@ -2,6 +2,8 @@ package runHyperties;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
@@ -18,6 +20,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JksOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.sockjs.BridgeEventType;
@@ -37,11 +40,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	private String mongoHost = "172.18.0.64";
-	//private String mongoHost = "localhost";
+	// private String mongoHost = "172.18.0.64";
+	private String mongoHost = "localhost";
 	private String SIOTurl = "https://iot.alticelabs.com/api";
 	// private String SIOTurl = "http://10.112.77.148/api";
 	private String pointOfContact = "https://url_contact";
+	private MongoClient mongoClient = null;
+	private CountDownLatch findDOUrl;
 
 	public static void main(String[] args) {
 
@@ -308,24 +313,68 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		server.listen(9091);
 
+		if (mongoHost != null) {
+			System.out.println("Setting up Mongo to:" + mongoHost);
+			final String uri = "mongodb://" + mongoHost + ":27017";
+
+			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
+
+			mongoClient = MongoClient.createShared(vertx, mongoconfig);
+		}
+
 	}
 
 	private void handleRequestPub(RoutingContext routingContext) {
 
 		System.out.println("ENDPOINT POST RECEIVED DATA -> " + routingContext.getBodyAsString().toString());
 
-		// vertx.eventBus().publish("school://vertx-app/stream",
-		// routingContext.getBodyAsString().toString());
+		JsonObject dataReceived = new JsonObject(routingContext.getBodyAsString().toString());
+		JsonArray values = dataReceived.containsKey("values") ? dataReceived.getJsonArray("values") : null;
 
+		if (values != null) {
+			int x;
+			for (x = 0; x < values.size(); x++) {
+				JsonObject currentObj = values.getJsonObject(x);
+				String objURL = findStream(currentObj.getString("streamId"));
+				System.out.println("publishin on " + objURL + "/changes");
+				
+				if (objURL != null) {
+					String changesObj = objURL + "/changes";
+					vertx.eventBus().publish(changesObj, currentObj);
+				}
+			}
+		}
 		HttpServerResponse httpServerResponse = routingContext.response();
 		httpServerResponse.setChunked(true);
-		MultiMap headers = routingContext.request().headers();
-		for (String key : headers.names()) {
-			httpServerResponse.write(key + ": ");
-			httpServerResponse.write(headers.get(key));
-			httpServerResponse.write("<br>");
+
+		httpServerResponse.putHeader("Content-Type", "application/text").end();
+	}
+
+	private String findStream(String streamID) {
+		System.out.println("find stream:" + streamID);
+		final String stream[] = new String[1];
+		findDOUrl = new CountDownLatch(1);
+
+		new Thread(() -> {
+			mongoClient.find("dataobjects", new JsonObject().put("url", streamID), res -> {
+				if (res.result().size() != 0) {
+					String objURL = res.result().get(0).getString("objURL");
+
+					stream[0] = objURL;
+					System.out.println("3,9" + stream[0]);
+				}
+				findDOUrl.countDown();
+			});
+
+		}).start();
+
+		try {
+			findDOUrl.await(5L, TimeUnit.SECONDS);
+			return stream[0];
+		} catch (InterruptedException e) {
+			System.out.println(e);
 		}
-		httpServerResponse.putHeader("Content-Type", "application/text").end("Success");
+		return stream[0];
 	}
 
 }
