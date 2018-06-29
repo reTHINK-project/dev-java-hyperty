@@ -93,17 +93,19 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		// rating algorithm
 		switch (ratingType) {
 		case ratingPublic:
-			tokenAmount = applyPublicRating(values);
+			applyPublicRating(values);
+			tokenAmount = 0;
 			break;
 		case ratingPrivate:
 			tokenAmount = applyPrivateRating(values);
+			// TODO
+			// persistData(dataSource, user, currentTimestamp, id, null, null);
 			break;
 		default:
 			break;
 		}
 
-		// TODO
-		// persistData(dataSource, user, currentTimestamp, id, null, null);
+		
 
 		return tokenAmount;
 	}
@@ -117,65 +119,127 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @return
 	 */
 	private int applyPublicRating(JsonArray values) {
-		System.out.println(logMessage + "applyPublicRating(): " + values);
 
-		int reductionCausePercentage = -1;
-		biggestReductionIndex = 0;
-
-		// get values for every cause
-		for (int i = 0; i < values.size(); i++) {
-			final JsonObject value = values.getJsonObject(i);
-			JsonObject valObject = value.getJsonObject("value");
-			int aux = valObject.getInteger("value");
-			if (aux > reductionCausePercentage) {
-				reductionCausePercentage = aux;
-				biggestReductionIndex = i;
-			}
-		}
-
-		// get tokens won for school with biggest reduction
-		System.out.println(logMessage + "applyPublicRating() school biggest reduction: " + biggestReductionIndex);
-
-		// return reductionCausePercentage * 5;
-
-		// get wallet from wallet manager
-		CountDownLatch readPublicWallet = new CountDownLatch(1);
+		CountDownLatch applyPublicRating = new CountDownLatch(1);
 
 		new Thread(() -> {
 
+			System.out.println(logMessage + "applyPublicRating(): " + values);
+
+			int reductionCausePercentage = -1;
+			biggestReductionIndex = 0;
+
+			// get values for every cause
+			for (int i = 0; i < values.size(); i++) {
+				final JsonObject value = values.getJsonObject(i);
+				JsonObject valObject = value.getJsonObject("value");
+				int aux = valObject.getInteger("value");
+				String id = valObject.getString("id");
+
+				CountDownLatch getPublicWallet = new CountDownLatch(1);
+
+				// get public wallet address
+				new Thread(() -> {
+					JsonObject msg = new JsonObject();
+					msg.put("type", "read");
+					msg.put("from", "myself");
+					JsonObject body = new JsonObject().put("resource", "wallet").put("value", id);
+					JsonObject identity = new JsonObject();
+					msg.put("body", body);
+					msg.put("identity", identity);
+					vertx.eventBus().send("wallet-cause-read", msg, res -> {
+						JsonObject reply = (JsonObject) res.result().body();
+						publicWallet = reply.getJsonObject("wallet");
+						System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
+						getPublicWallet.countDown();
+
+					});
+				}).start();
+
+				try {
+					getPublicWallet.await();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+
+				// transfer to public wallet
+				JsonObject msg = new JsonObject();
+				msg.put("address", publicWallet.getString("address"));
+				JsonObject transaction = new JsonObject();
+				transaction.put("source", "energy-saving");
+				transaction.put("value", aux * 5);
+				// TODO - put date
+				msg.put("transaction", transaction);
+				vertx.eventBus().send("wallet-cause-transfer", msg);
+
+				if (aux > reductionCausePercentage) {
+					reductionCausePercentage = aux;
+					biggestReductionIndex = i;
+				}
+			}
+
+			// get tokens won for school with biggest reduction
+			System.out.println(logMessage + "applyPublicRating() school biggest reduction: " + biggestReductionIndex);
+
+			// get wallet from wallet manager
+			CountDownLatch readPublicWallet = new CountDownLatch(1);
+
+			new Thread(() -> {
+
+				JsonObject msg = new JsonObject();
+				msg.put("type", "read");
+				msg.put("from", "myself");
+				JsonObject body = new JsonObject().put("resource", "wallet").put("value",
+						Integer.toString(biggestReductionIndex));
+				JsonObject identity = new JsonObject();
+				msg.put("body", body);
+				msg.put("identity", identity);
+				vertx.eventBus().send("wallet-cause-read", msg, res -> {
+					JsonObject reply = (JsonObject) res.result().body();
+					publicWallet = reply.getJsonObject("wallet");
+					System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
+					readPublicWallet.countDown();
+				});
+			}).start();
+
+			try {
+				readPublicWallet.await();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			// access wallet counters
+			JsonObject countersObj = publicWallet.getJsonObject(WalletManagerHyperty.counters);
+			// sum checkin + elearning + activity points
+			int monthlyPoints = countersObj.getInteger("user-activity") + countersObj.getInteger("elearning");
+			monthlyPoints += countersObj.getInteger("checkin");
+			monthlyPoints /= 10;
+
+			// apply bonus
+			System.out.println(logMessage + "applyPublicRating() bonus: " + monthlyPoints);
+
 			JsonObject msg = new JsonObject();
-			msg.put("type", "read");
-			msg.put("from", "myself");
-			JsonObject body = new JsonObject().put("resource", "wallet").put("value",
-					Integer.toString(biggestReductionIndex));
-			JsonObject identity = new JsonObject();
-			msg.put("body", body);
-			msg.put("identity", identity);
-			vertx.eventBus().send("wallet-cause-read", msg, res -> {
-				JsonObject reply = (JsonObject) res.result().body();
-				publicWallet = reply.getJsonObject("wallet");
-				System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
-				readPublicWallet.countDown();
-			});
+			msg.put("address", publicWallet.getString("address"));
+			JsonObject transaction = new JsonObject();
+			transaction.put("source", "energy-saving");
+			transaction.put("value", monthlyPoints);
+			// TODO - put date
+			msg.put("transaction", transaction);
+			vertx.eventBus().send("wallet-cause-transfer", msg);
+
+			// reset counters
+			vertx.eventBus().send("wallet-cause-reset", msg);
+			applyPublicRating.countDown();
+
 		}).start();
 
-		try {
-			readPublicWallet.await();
+		try
+
+		{
+			applyPublicRating.await();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-
-		// access wallet counters
-		JsonObject countersObj = publicWallet.getJsonObject(WalletManagerHyperty.counters);
-		// sum checkin + elearning + activity points
-		int monthlyPoints = countersObj.getInteger("user-activity") + countersObj.getInteger("elearning");
-		monthlyPoints += countersObj.getInteger("checkin");
-		monthlyPoints /= 10;
-
-		System.out
-				.println(logMessage + "applyPublicRating() bonus for cause with most monthly points: " + monthlyPoints);
-
-		// TODO - reset counters
 
 		return 0;
 	}

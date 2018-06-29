@@ -62,6 +62,39 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			transferToPublicWallet(received.getString("address"), received.getJsonObject("transaction"));
 		});
 
+		eb.consumer("wallet-cause-reset", message -> {
+			resetPublicWalletCounters();
+		});
+
+	}
+
+	private void resetPublicWalletCounters() {
+		System.out.println(logMessage + "resetPublicWalletCounters()");
+
+		JsonObject query = new JsonObject().put("identity",
+				new JsonObject().put("userProfile", new JsonObject().put("guid", "public-wallets")));
+		// get wallets document
+		mongoClient.find(walletsCollection, query, res -> {
+			JsonObject result = res.result().get(0);
+			JsonArray wallets = result.getJsonArray("wallets");
+
+			// create wallets
+			for (Object pWallet : wallets) {
+				JsonObject wallet = (JsonObject) pWallet;
+
+				// update counters
+				JsonObject countersObj = wallet.getJsonObject(counters);
+				String[] sources = new String[] { "user-activity", "elearning", "checkin" };
+				for (String source : sources) {
+					countersObj.put(source, 0);
+				}
+			}
+
+			mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
+				System.out.println("[WalletManager] counters reset");
+			});
+		});
+
 	}
 
 	public void createPublicWallets(JsonArray publicWallets) {
@@ -356,7 +389,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	}
 
 	private void transferToPublicWallet(String walletAddress, JsonObject transaction) {
-		System.out.println(logMessage + "updatePublicWalletBalance(): " + walletAddress);
+		System.out.println(logMessage + "transferToPublicWallet(): " + walletAddress + "\n" + transaction);
 		String source = transaction.getString("source");
 		int transactionValue = transaction.getInteger("value");
 
@@ -365,7 +398,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// get wallets document
 		mongoClient.find(walletsCollection, query, res -> {
 			JsonObject result = res.result().get(0);
-			System.out.println(logMessage + "updatePublicWalletBalance(): result" + result);
 			JsonArray wallets = result.getJsonArray("wallets");
 
 			// create wallets

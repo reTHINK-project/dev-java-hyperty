@@ -62,15 +62,9 @@ class EnergySavingRatingTest {
 		config.put("url", energySavingRatingHypertyURL);
 		config.put("identity", identity);
 		// config
-		config.put("tokens_per_checkin", 10);
-		config.put("checkin_radius", 500);
-		config.put("min_frequency", 1);
-		//
 		config.put("hyperty", "123");
 		config.put("stream", "token-rating");
 		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
-		config.put("streams",
-				new JsonObject().put("shops", shopsInfoStreamAddress).put("bonus", bonusInfoStreamAddress));
 		// mongo
 		config.put("collection", ratesCollection);
 		config.put("db_name", db_name);
@@ -138,7 +132,7 @@ class EnergySavingRatingTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-	@AfterAll
+	// @AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(3);
@@ -284,7 +278,7 @@ class EnergySavingRatingTest {
 		// cause 1
 		contextValueCause1.put("type", "POWER");
 		JsonObject value1 = new JsonObject();
-		value1.put("id", school0ID);
+		value1.put("id", school1ID);
 		value1.put("value", 20);
 		contextValueCause1.put("value", value1);
 		values.add(contextValueCause1);
