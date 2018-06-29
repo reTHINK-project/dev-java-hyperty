@@ -32,5 +32,23 @@ A [Wallet address request](../wallet-manager#wallet-address-request) is performe
 
 ### Rating handling
 
-Rating messages follow the [DO Context update msg](https://github.com/reTHINK-project/specs/tree/master/datamodel/data-objects/context), with `WATT_PERCENTAGE` as unit
+Rating messages follow the [DO Context update msg](https://github.com/reTHINK-project/specs/tree/master/datamodel/data-objects/context), with `WATT_PERCENTAGE` as unit. One example of a public rating message could be:
+
+```
+{
+	"id": 123,
+	"unit": "WATT_PERCENTAGE",
+	"values": [{
+		"type": "power",
+		"name": "reductionCause",
+		"value": 10
+	}, {
+		"type": "power",
+		"name": "reductionCause",
+		"value": 20
+	}]
+}
+```
+
+In this case, each entry on the `values` array corresponds to energy saving data for a cause.
 
