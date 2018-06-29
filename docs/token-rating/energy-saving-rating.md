@@ -39,13 +39,17 @@ Rating messages follow the [DO Context update msg](https://github.com/reTHINK-pr
 	"id": 123,
 	"unit": "WATT_PERCENTAGE",
 	"values": [{
-		"type": "power",
-		"name": "reductionCause",
-		"value": 10
+		"type": "POWER",
+		"value": {
+			"id": "school-0",
+			"value": 34
+		}
 	}, {
-		"type": "power",
-		"name": "reductionCause",
-		"value": 20
+		"type": "POWER",
+		"value": {
+			"id": "school-1",
+			"value": 40
+		}
 	}]
 }
 ```
