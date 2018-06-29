@@ -89,7 +89,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		}
 
 		transaction.put("nonce", 1);
-		if (source.equals("user_activity")) {
+		if (source.equals("user-activity")) {
 			// add data
 			JsonObject data = new JsonObject();
 			data.put("distance", msgOriginal.getInteger("distance"));

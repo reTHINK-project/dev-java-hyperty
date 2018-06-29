@@ -3,6 +3,7 @@ package hyperty;
 import java.io.IOException;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,7 +48,9 @@ class EnergySavingRatingTest {
 
 	// public wallets
 	private static String publicWalletAddress = "school0-wallet";
-	private static int schoolID = 0;
+	private static String publicWallet1Address = "school1-wallet";
+	private static String school0ID = "0";
+	private static String school1ID = "1";
 	private static String smartIoTPlatform = "IoT0";
 
 	private static String userCGUIDURL = "userCGUIDURL";
@@ -86,11 +89,18 @@ class EnergySavingRatingTest {
 
 		// publicWallets
 		JsonArray publicWallets = new JsonArray();
+		// wallet 0
 		JsonObject publicWallet = new JsonObject();
 		publicWallet.put("address", publicWalletAddress);
-		publicWallet.put("identity", schoolID);
+		publicWallet.put("identity", school0ID);
 		publicWallet.put("externalFeeds", smartIoTPlatform);
 		publicWallets.add(publicWallet);
+		// wallet 1
+		JsonObject publicWallet1 = new JsonObject();
+		publicWallet1.put("address", publicWallet1Address);
+		publicWallet1.put("identity", "1");
+		publicWallet1.put("externalFeeds", smartIoTPlatform);
+		publicWallets.add(publicWallet1);
 		configWalletManager.put("publicWallets", publicWallets);
 
 		final String causeAddress = "cause1-address";
@@ -171,7 +181,7 @@ class EnergySavingRatingTest {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		JsonObject identityWithInfo = identity.copy();
-		JsonObject info = new JsonObject().put("cause", 0);
+		JsonObject info = new JsonObject().put("cause", school0ID);
 		identityWithInfo.getJsonObject("userProfile").put("info", info);
 		msg.put("identity", identityWithInfo);
 		msg.put("from", "myself");
@@ -217,12 +227,7 @@ class EnergySavingRatingTest {
 		contextValueUser.put("name", EnergySavingRatingHyperty.reductionUser);
 		contextValueUser.put("value", 10);
 
-		JsonObject contextValueCause = new JsonObject();
-		contextValueCause.put("type", "power");
-		contextValueCause.put("name", EnergySavingRatingHyperty.reductionCause);
-		contextValueCause.put("value", 10);
-
-		JsonArray values = new JsonArray().add(contextValueCause);
+		JsonArray values = new JsonArray().add(contextValueUser);
 		energySavingsMessage.put("values", values);
 
 		JsonArray toSend = new JsonArray();
@@ -240,13 +245,13 @@ class EnergySavingRatingTest {
 	}
 
 	@Test
+	// @Disabled
 	void energySavingPublic(VertxTestContext testContext, Vertx vertx) {
 
 		// 1 - subscribe (public)
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		msg.put("from", subscriptionsAddress);
-		// TODO - put cause ID?
 		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 		JsonObject body = new JsonObject();
 		body.put("identity", userCGUIDURL);
@@ -270,14 +275,18 @@ class EnergySavingRatingTest {
 		JsonObject contextValueCause1 = new JsonObject();
 		JsonArray values = new JsonArray();
 		// cause 0
-		contextValueCause0.put("type", "power");
-		contextValueCause0.put("name", EnergySavingRatingHyperty.reductionCause);
-		contextValueCause0.put("value", 10);
+		contextValueCause0.put("type", "POWER");
+		JsonObject value0 = new JsonObject();
+		value0.put("id", school0ID);
+		value0.put("value", 10);
+		contextValueCause0.put("value", value0);
 		values.add(contextValueCause0);
 		// cause 1
-		contextValueCause1.put("type", "power");
-		contextValueCause1.put("name", EnergySavingRatingHyperty.reductionCause);
-		contextValueCause1.put("value", 20);
+		contextValueCause1.put("type", "POWER");
+		JsonObject value1 = new JsonObject();
+		value1.put("id", school0ID);
+		value1.put("value", 20);
+		contextValueCause1.put("value", value1);
 		values.add(contextValueCause1);
 
 		energySavingsMessage.put("values", values);
@@ -297,12 +306,13 @@ class EnergySavingRatingTest {
 	}
 
 	@Test
+	@Disabled
 	void getCauseSupporters(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
 
 		JsonObject messageData = new JsonObject();
-		messageData.put("causeID", 0);
+		messageData.put("causeID", school0ID);
 		vertx.eventBus().send("wallet-cause", messageData, res -> {
 			JsonObject result = (JsonObject) res.result().body();
 			int causeSupportersTotal = result.getInteger(WalletManagerHyperty.causeSupportersTotal);
@@ -311,7 +321,7 @@ class EnergySavingRatingTest {
 		});
 
 		try {
-			setupLatch.await();
+			setupLatch.await(5L, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

@@ -155,9 +155,9 @@ public class AbstractHyperty extends AbstractVerticle {
 	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
 
 	}
-	
+
 	private String findDataObjectStream(String objURL) {
-		
+
 		System.out.println("{{AbstractHyperty}} find do:" + objURL);
 		final String device[] = new String[1];
 		findDataObject = new CountDownLatch(1);
@@ -207,8 +207,7 @@ public class AbstractHyperty extends AbstractVerticle {
 			} else {
 				onChanges(objURL);
 			}
-			
-			
+
 		} else {
 			subscribe(from, guid);
 		}
@@ -274,7 +273,6 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 
-	
 	public boolean persistDataObjUserURL(String streamID, String guid, String objURL, String type) {
 
 		dataPersistedFlag = false;

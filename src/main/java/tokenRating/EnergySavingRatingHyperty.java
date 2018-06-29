@@ -2,6 +2,7 @@ package tokenRating;
 
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
@@ -82,7 +83,6 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		System.out.println(logMessage + "rate(): " + data.toString());
 
 		int tokenAmount = -1;
-		Long currentTimestamp = new Date().getTime();
 
 		// data contains shopID, users's location
 		String ratingType = ((JsonObject) data).getString("ratingType");
@@ -108,6 +108,9 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		return tokenAmount;
 	}
 
+	JsonObject publicWallet;
+	int biggestReductionIndex = 0;
+
 	/**
 	 * Rate energy message according to the public algorithm.
 	 * 
@@ -116,26 +119,64 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	private int applyPublicRating(JsonArray values) {
 		System.out.println(logMessage + "applyPublicRating(): " + values);
 
-		int reductionCausePercentage = 0;
-		int biggestReductionIndex = 0;
+		int reductionCausePercentage = -1;
+		biggestReductionIndex = 0;
 
 		// get values for every cause
 		for (int i = 0; i < values.size(); i++) {
 			final JsonObject value = values.getJsonObject(i);
-			switch (value.getString("name")) {
-			case reductionCause:
-				reductionCausePercentage = value.getInteger("value");
-				if (reductionCausePercentage > values.getJsonObject(biggestReductionIndex).getInteger("value"))
-					biggestReductionIndex = i;
-				break;
-			default:
-				break;
+			JsonObject valObject = value.getJsonObject("value");
+			int aux = valObject.getInteger("value");
+			if (aux > reductionCausePercentage) {
+				reductionCausePercentage = aux;
+				biggestReductionIndex = i;
 			}
 		}
 
-		// school with biggest reduction
+		// get tokens won for school with biggest reduction
+		System.out.println(logMessage + "applyPublicRating() school biggest reduction: " + biggestReductionIndex);
 
 		// return reductionCausePercentage * 5;
+
+		// get wallet from wallet manager
+		CountDownLatch readPublicWallet = new CountDownLatch(1);
+
+		new Thread(() -> {
+
+			JsonObject msg = new JsonObject();
+			msg.put("type", "read");
+			msg.put("from", "myself");
+			JsonObject body = new JsonObject().put("resource", "wallet").put("value",
+					Integer.toString(biggestReductionIndex));
+			JsonObject identity = new JsonObject();
+			msg.put("body", body);
+			msg.put("identity", identity);
+			vertx.eventBus().send("wallet-cause-read", msg, res -> {
+				JsonObject reply = (JsonObject) res.result().body();
+				publicWallet = reply.getJsonObject("wallet");
+				System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
+				readPublicWallet.countDown();
+			});
+		}).start();
+
+		try {
+			readPublicWallet.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// access wallet counters
+		JsonObject countersObj = publicWallet.getJsonObject(WalletManagerHyperty.counters);
+		// sum checkin + elearning + activity points
+		int monthlyPoints = countersObj.getInteger("user-activity") + countersObj.getInteger("elearning");
+		monthlyPoints += countersObj.getInteger("checkin");
+		monthlyPoints /= 10;
+
+		System.out
+				.println(logMessage + "applyPublicRating() bonus for cause with most monthly points: " + monthlyPoints);
+
+		// TODO - reset counters
+
 		return 0;
 	}
 
@@ -150,28 +191,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	private int applyPrivateRating(JsonArray values) {
 		System.out.println(logMessage + "applyPrivateRating(): " + values);
 
-		// CountDownLatch setupLatch = new CountDownLatch(1);
-		//
-		// JsonObject messageData = new JsonObject();
-		// messageData.put("causeID", 0);
-		// vertx.eventBus().send("wallet-cause", messageData, res -> {
-		// JsonObject result = (JsonObject) res.result().body();
-		// supportersTotal =
-		// result.getInteger(WalletManagerHyperty.causeSupportersTotal);
-		// supportersSM = result.getInteger(WalletManagerHyperty.causeSupportersWithSM);
-		// System.out.println("Supporters\n\t- total: " + supportersTotal + "\n\t- with
-		// SM: " + supportersSM);
-		// setupLatch.countDown();
-		// });
-		//
-		// try {
-		// setupLatch.await();
-		// } catch (InterruptedException e) {
-		// e.printStackTrace();
-		// }
-
 		int reductionUserPercentage = 0;
-		int reductionCausePercentage = 0;
 
 		for (int i = 0; i < values.size(); i++) {
 			final JsonObject value = values.getJsonObject(i);
@@ -179,15 +199,12 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			case reductionUser:
 				reductionUserPercentage = value.getInteger("value");
 				break;
-			case reductionCause:
-				reductionCausePercentage = value.getInteger("value");
-				break;
 			default:
 				break;
 			}
 		}
 
-		int totalReductionPercentage = reductionCausePercentage;
+		int totalReductionPercentage = reductionUserPercentage;
 
 		return totalReductionPercentage * 10;
 	}
