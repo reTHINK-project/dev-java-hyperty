@@ -158,7 +158,7 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 	
-	private String findDataObjectStream(String objURL) {
+	private String findDataObjectStream(String objURL, String guid) {
 		
 		System.out.println("{{AbstractHyperty}} find do:" + objURL);
 		final String device[] = new String[1];
@@ -166,11 +166,16 @@ public class AbstractHyperty extends AbstractVerticle {
 
 		new Thread(() -> {
 			mongoClient.find(this.dataObjectsCollection, new JsonObject().put("objURL", objURL), res -> {
-				if (res.result().size() != 0) {
-					String streamID = res.result().get(0).getString("url");
+				int x;
+				
+				for (x = 0; x < res.result().size(); x++) {
+					String currentGuid = res.result().get(x).getJsonObject("metadata").getString("guid");
+					if (currentGuid.equals(guid)) {
+						
+						String streamID = res.result().get(0).getString("url");
 
-					device[0] = streamID;
-
+						device[0] = streamID;
+					}
 				}
 				findDataObject.countDown();
 			});
@@ -201,7 +206,7 @@ public class AbstractHyperty extends AbstractVerticle {
 			System.out.println("EXTERNAL INVITE");
 			String streamID = body.getString("streamID");
 			String objURL = from.split("/subscription")[0];
-			String CheckURL = findDataObjectStream(objURL);
+			String CheckURL = findDataObjectStream(objURL, guid);
 			if (CheckURL == null) {
 				if (persistDataObjUserURL(streamID, guid, objURL, "reporter")) {
 					onChanges(objURL);

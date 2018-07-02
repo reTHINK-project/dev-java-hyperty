@@ -232,7 +232,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 					"{{SmartIOTProtostub}} DeviceID returned->" + deviceID + " ->streamName:" + thirdPtyUserId);
 			if (deviceID != null && thirdPtyUserId != null && thirdPtyPlatformId != null) {
 				String objURL = "context://sharing-cities-dsm/" + thirdPtyPlatformId + "/" + thirdPtyUserId;
-				String checkStreamID = findStream(objURL);
+				String checkStreamID = findStream(objURL, guid);
 				System.out.println("{{SmartIOTProtostub}} stream ID exist?" + checkStreamID);
 				if (checkStreamID != null) {
 					System.out.println("{{SmartIOTProtostub}} stream already created->" + objURL);
@@ -316,9 +316,6 @@ public class SmartIotProtostub extends AbstractVerticle {
 			toInviteHypertyUrl = "hyperty://sharing-cities-dsm/user-activity";
 		}
 
-		// TODO: to remove later
-		toInviteHypertyUrl = "hyperty://sharing-cities-dsm/user-activity";
-
 		JsonObject inviteMsg = new JsonObject();
 		inviteMsg.put("type", "create");
 		inviteMsg.put("to", toInviteHypertyUrl);
@@ -358,19 +355,26 @@ public class SmartIotProtostub extends AbstractVerticle {
 		return device[0];
 	}
 
-	private String findStream(String objURL) {
+	private String findStream(String objURL, String guid) {
 		System.out.println("{{SmartIOTProtostub}} find stream:" + objURL);
 		final String device[] = new String[1];
 		findDevice = new CountDownLatch(1);
 
 		new Thread(() -> {
 			mongoClient.find("dataobjects", new JsonObject().put("objURL", objURL), res -> {
-				if (res.result().size() != 0) {
-					String streamID = res.result().get(0).getString("url");
 
-					device[0] = streamID;
-					System.out.println("3,9" + device[0]);
+				int x;
+				
+				for (x = 0; x < res.result().size(); x++) {
+					String currentGuid = res.result().get(x).getJsonObject("metadata").getString("guid");
+					if (currentGuid.equals(guid)) {
+						
+						String streamID = res.result().get(0).getString("url");
+
+						device[0] = streamID;
+					}
 				}
+
 				findDevice.countDown();
 			});
 
