@@ -65,10 +65,9 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		// store transaction by sending it to wallet through wallet manager
 		String walletAddress = getWalletAddress(userId);
-		System.out.println("WAlletADDRESS " + walletAddress + "\nFROM " + userId);
 		JsonObject msgToWallet = new JsonObject();
 		msgToWallet.put("type", "create");
-		msgToWallet.put("identity", this.identity);
+		msgToWallet.put("identity", this.identity); 	
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();
@@ -90,7 +89,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		}
 
 		transaction.put("nonce", 1);
-		if (source.equals("user_activity")) {
+		if (source.equals("user-activity")) {
 			// add data
 			JsonObject data = new JsonObject();
 			data.put("distance", msgOriginal.getInteger("distance"));
@@ -109,7 +108,13 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			data.put("shopID", msgOriginal.getString("shopID"));
 			transaction.put("data", data);
 		}
-		
+		if (source.equals("energy-saving")) {
+			// TODOadd data
+			JsonObject data = new JsonObject();
+			data.put("something", "something");
+			transaction.put("data", data);
+		}
+
 		transaction.put("nonce", 1);
 		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
 
@@ -322,17 +327,18 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 */
 	void persistData(String dataSource, String user, long timestamp, String entryID, JsonObject userRates,
 			JsonObject data) {
+		System.out.println(logMessage + "persistData()");
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
 
 		new Thread(() -> {
-			if (userRates != null) {
+			if (userRates != null)
 				entryArray = userRates.getJsonArray(dataSource);
-			} else {
+			else
 				entryArray = new JsonArray();
-			}
 
 			JsonObject query = new JsonObject().put("user", user);
+
 			mongoClient.find(collection, query, result -> {
 				JsonObject currentDocument = result.result().get(0);
 				System.out.println("");

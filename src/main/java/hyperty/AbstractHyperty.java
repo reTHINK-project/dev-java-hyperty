@@ -73,7 +73,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.eb.publish(address, message, getDeliveryOptions(message));
 	}
 
-	private Handler<Message<JsonObject>> onMessage() {
+	public Handler<Message<JsonObject>> onMessage() {
 
 		return message -> {
 
@@ -149,17 +149,16 @@ public class AbstractHyperty extends AbstractVerticle {
 	}
 
 	public void handleTransfer(JsonObject msg) {
-		// TODO Auto-generated method stub
 
 	}
 
 	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
-		// TODO Auto-generated method stub
 
 	}
-	
+
 	private String findDataObjectStream(String objURL, String guid) {
 		
+
 		System.out.println("{{AbstractHyperty}} find do:" + objURL);
 		final String device[] = new String[1];
 		findDataObject = new CountDownLatch(1);
@@ -214,8 +213,7 @@ public class AbstractHyperty extends AbstractVerticle {
 			} else {
 				onChanges(objURL);
 			}
-			
-			
+
 		} else {
 			subscribe(from, guid);
 		}
@@ -259,7 +257,6 @@ public class AbstractHyperty extends AbstractVerticle {
 	}
 
 	public boolean checkIfCanHandleData(String objURL) {
-		// TODO Auto-generated method stub
 		return true;
 	}
 
@@ -281,7 +278,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		});
 
 	}
-	//streamID, guid, objURL, "reporter" 
+
 	public boolean persistDataObjUserURL(String streamID, String guid, String objURL, String type) {
 
 		dataPersistedFlag = false;
@@ -314,7 +311,6 @@ public class AbstractHyperty extends AbstractVerticle {
 		return dataPersistedFlag;
 
 	}
-
 
 	public boolean persistDataObjUserURL(String address, String guid, String type) {
 

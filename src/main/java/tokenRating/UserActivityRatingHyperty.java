@@ -262,7 +262,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 					System.out.println("CHANGES" + changes.toString());
 
 					int numTokens = rate(changes);
-					mine(numTokens, changes, "user_activity");
+					mine(numTokens, changes, "user-activity");
 
 				}
 

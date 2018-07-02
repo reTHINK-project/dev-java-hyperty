@@ -21,9 +21,8 @@ import io.vertx.junit5.VertxTestContext;
 import util.DateUtils;
 import walletManager.WalletManagerHyperty;
 
-
 @ExtendWith(VertxExtension.class)
-@Disabled
+// @Disabled
 class WalletManagerTest {
 
 	private static String userID = "test-userID";
@@ -42,8 +41,10 @@ class WalletManagerTest {
 	private static String rankingInfoAddress = "data://sharing-cities-dsm/ranking";
 
 	// public wallets
-	private static String publicWalletAddress = "school0-wallet";
-	private static int schoolID = 0;
+	private static String wallet0Address = "school0-wallet";
+	private static String wallet1Address = "school1-wallet";
+	private static String school0ID = "0";
+	private static String school1ID = "1";
 	private static String smartIoTPlatform = "IoT0";
 
 	@BeforeAll
@@ -60,11 +61,17 @@ class WalletManagerTest {
 
 		// publicWallets
 		JsonArray publicWallets = new JsonArray();
-		JsonObject publicWallet = new JsonObject();
-		publicWallet.put("address", publicWalletAddress);
-		publicWallet.put("identity", schoolID);
-		publicWallet.put("externalFeeds", smartIoTPlatform);
-		publicWallets.add(publicWallet);
+		JsonObject walletCause0 = new JsonObject();
+		walletCause0.put("address", wallet0Address);
+		walletCause0.put("identity", school0ID);
+		walletCause0.put("externalFeeds", smartIoTPlatform);
+		publicWallets.add(walletCause0);
+
+		JsonObject walletCause1 = new JsonObject();
+		walletCause1.put("address", wallet1Address);
+		walletCause1.put("identity", school1ID);
+		walletCause1.put("externalFeeds", smartIoTPlatform);
+		publicWallets.add(walletCause1);
 		config.put("publicWallets", publicWallets);
 
 		// pass observers
@@ -91,7 +98,7 @@ class WalletManagerTest {
 		checkpoint.flag();
 	}
 
-	@AfterAll
+	 @AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
@@ -119,7 +126,7 @@ class WalletManagerTest {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		JsonObject identityWithInfo = identity.copy();
-		JsonObject info = new JsonObject().put("cause", 0);
+		JsonObject info = new JsonObject().put("cause", school0ID);
 		identityWithInfo.getJsonObject("userProfile").put("info", info);
 		msg.put("identity", identityWithInfo);
 		msg.put("from", "myself");
@@ -168,7 +175,7 @@ class WalletManagerTest {
 		body.put("resource", "something/" + walletAddress);
 		JsonObject transaction = new JsonObject();
 		transaction.put("recipient", "1");
-		transaction.put("source", "1");
+		transaction.put("source", "elearning");
 		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 		transaction.put("value", 10);
 		transaction.put("nonce", "10");
@@ -187,7 +194,60 @@ class WalletManagerTest {
 			e.printStackTrace();
 		}
 
+		// assertions
+		JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+		JsonObject publicWalletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", school0ID));
+
+		CountDownLatch assertions = new CountDownLatch(1);
+
+		new Thread(() -> {
+
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
+				JsonObject walletInfo = res.result().get(0);
+
+				// check balance updated
+				int currentBalance = walletInfo.getInteger("balance");
+				assertEquals(10, currentBalance);
+
+				// check if transaction in transactions array
+				JsonArray transactions = walletInfo.getJsonArray("transactions");
+				assertEquals(1, transactions.size());
+				assertions.countDown();
+			});
+		}).start();
+		
+		/*
+
+		new Thread(() -> {
+
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", publicWalletIdentity), res -> {
+				JsonObject walletInfo = res.result().get(0);
+
+				// check balance updated
+				int currentBalance = walletInfo.getInteger("balance");
+				assertEquals(10, currentBalance);
+
+				// check if transaction in transactions array
+				JsonArray transactions = walletInfo.getJsonArray("transactions");
+				assertEquals(1, transactions.size());
+				assertions.countDown();
+
+				// counters
+				JsonObject counters = walletInfo.getJsonObject(WalletManagerHyperty.counters);
+				assertEquals(10, (int) counters.getInteger("elearning"));
+				assertions.countDown();
+			});
+		}).start();
+
+		try {
+			assertions.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		*/
+
 		testContext.completeNow();
+
 	}
 
 	static void makeMongoConnection(Vertx vertx) {

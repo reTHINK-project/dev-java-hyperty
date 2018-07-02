@@ -3,6 +3,7 @@ package hyperty;
 import java.io.IOException;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -22,7 +23,6 @@ import tokenRating.EnergySavingRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
-@Disabled
 class EnergySavingRatingTest {
 
 	private static final String logMessage = "[EnergySavingRatingTest] ";
@@ -46,6 +46,13 @@ class EnergySavingRatingTest {
 	private static JsonObject identity = new JsonObject().put("userProfile",
 			new JsonObject().put("userURL", userID).put("guid", userID));
 
+	// public wallets
+	private static String publicWalletAddress = "school0-wallet";
+	private static String publicWallet1Address = "school1-wallet";
+	private static String school0ID = "0";
+	private static String school1ID = "1";
+	private static String smartIoTPlatform = "IoT0";
+
 	private static String userCGUIDURL = "userCGUIDURL";
 
 	@BeforeAll
@@ -55,15 +62,9 @@ class EnergySavingRatingTest {
 		config.put("url", energySavingRatingHypertyURL);
 		config.put("identity", identity);
 		// config
-		config.put("tokens_per_checkin", 10);
-		config.put("checkin_radius", 500);
-		config.put("min_frequency", 1);
-		//
 		config.put("hyperty", "123");
 		config.put("stream", "token-rating");
 		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
-		config.put("streams",
-				new JsonObject().put("shops", shopsInfoStreamAddress).put("bonus", bonusInfoStreamAddress));
 		// mongo
 		config.put("collection", ratesCollection);
 		config.put("db_name", db_name);
@@ -80,6 +81,22 @@ class EnergySavingRatingTest {
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
 
+		// publicWallets
+		JsonArray publicWallets = new JsonArray();
+		// wallet 0
+		JsonObject publicWallet = new JsonObject();
+		publicWallet.put("address", publicWalletAddress);
+		publicWallet.put("identity", school0ID);
+		publicWallet.put("externalFeeds", smartIoTPlatform);
+		publicWallets.add(publicWallet);
+		// wallet 1
+		JsonObject publicWallet1 = new JsonObject();
+		publicWallet1.put("address", publicWallet1Address);
+		publicWallet1.put("identity", "1");
+		publicWallet1.put("externalFeeds", smartIoTPlatform);
+		publicWallets.add(publicWallet1);
+		configWalletManager.put("publicWallets", publicWallets);
+
 		final String causeAddress = "cause1-address";
 
 		configWalletManager.put("observers", new JsonArray().add(causeAddress));
@@ -93,86 +110,9 @@ class EnergySavingRatingTest {
 
 		makeMongoConnection(vertx);
 
-		vertx.eventBus().consumer(causeAddress, message -> {
-			JsonObject msg = (JsonObject) message.body();
-			System.out.println("was invited: " + msg);
-
-			// send message to invitation address (get from)
-			String invitationAddress = msg.getString("from");
-			System.out.println("invitation address: " + invitationAddress);
-
-			msg.put("from", causeAddress);
-			vertx.eventBus().send(invitationAddress, msg, res -> {
-				System.out.println("Received reply from wallet invitation: " + res.result().body().toString());
-				JsonObject newMsg = new JsonObject();
-				JsonObject body = new JsonObject().put("code", 200);
-				newMsg.put("body", body);
-			});
-
-		});
-
-		vertx.eventBus().consumer(userID, message -> {
-			System.out.println(logMessage + "sub received: " + message.body().toString());
-			// send reply
-			JsonObject reply = new JsonObject().put("body", new JsonObject().put("code", 200));
-			message.reply(reply);
-		});
-
 		// wait for Mongo connection to take place
 		try {
 			Thread.sleep(3000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-		CountDownLatch setupLatch = new CountDownLatch(1);
-
-		new Thread(() -> { // create wallet
-			System.out.println("no wallet yet, creating");
-
-			// build wallet document
-			JsonObject newWallet = new JsonObject();
-
-			String address = "walletAddress";
-			newWallet.put("address", address);
-			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
-			newWallet.put("created", new Date().getTime());
-			newWallet.put("balance", 0);
-			newWallet.put("transactions", new JsonArray());
-			newWallet.put("status", "active");
-
-			JsonObject document = new JsonObject(newWallet.toString());
-
-			mongoClient.save(walletsCollection, document, id -> {
-				System.out.println("New wallet with ID:" + id);
-				setupLatch.countDown();
-			});
-		}).start();
-
-		try {
-			setupLatch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-
-		// subscribe to stream
-		JsonObject msg = new JsonObject();
-		msg.put("type", "create");
-		msg.put("from", subscriptionsAddress);
-		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
-		JsonObject body = new JsonObject();
-		body.put("identity", userCGUIDURL);
-		msg.put("body", body);
-		vertx.eventBus().send(energySavingRatingHypertyURL, msg, res -> {
-			System.out.println(logMessage + "Received reply: " + res.result().body().toString());
-			JsonObject newMsg = new JsonObject();
-			newMsg.put("body", new JsonObject().put("code", 200));
-			res.result().reply(newMsg);
-		});
-
-		try {
-			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -192,7 +132,7 @@ class EnergySavingRatingTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-	@AfterAll
+	// @AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(3);
@@ -228,25 +168,154 @@ class EnergySavingRatingTest {
 	}
 
 	@Test
-	void sendToOnChanges(VertxTestContext testContext, Vertx vertx) {
-		System.out.println(logMessage + "test - sendToOnChanges() ");
+	@Disabled
+	void energySavingPrivate(VertxTestContext testContext, Vertx vertx) {
 
-		JsonObject iotmessage = new JsonObject();
-		iotmessage.put("name", "iot");
-		iotmessage.put("data", 321);
-		iotmessage.put("id", "3eecbfb1-745c-4768-a0b4-fffed40f8a5a");
-		iotmessage.put("streamId", "1a5a1b97-1332-4d09-ba4b-169a6ce4dca4");
-		iotmessage.put("deviceId", "355d0eb9-ee9a-4381-bcb0-cced33b8df05");
-		iotmessage.put("type", EnergySavingRatingHyperty.ratingPublic);
-
-		JsonArray toSend = new JsonArray();
-		toSend.add(iotmessage);
-		vertx.eventBus().send(changesAddress, toSend, reply -> {
-			System.out.println(logMessage + "changes reply: " + reply.toString());
+		// 1 - create wallet (pass cause)
+		JsonObject msg = new JsonObject();
+		msg.put("type", "create");
+		JsonObject identityWithInfo = identity.copy();
+		JsonObject info = new JsonObject().put("cause", school0ID);
+		identityWithInfo.getJsonObject("userProfile").put("info", info);
+		msg.put("identity", identityWithInfo);
+		msg.put("from", "myself");
+		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+			JsonObject newMsg = new JsonObject();
+			JsonObject body = new JsonObject().put("code", 200);
+			newMsg.put("body", body);
+			res.result().reply(newMsg);
 		});
 
 		try {
-			Thread.sleep(10000);
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// 2 - subscribe (private)
+		msg = new JsonObject();
+		msg.put("type", "create");
+		msg.put("from", subscriptionsAddress);
+		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+		JsonObject body = new JsonObject();
+		body.put("identity", userCGUIDURL);
+		msg.put("body", body);
+		vertx.eventBus().send(EnergySavingRatingHyperty.ratingPrivate, msg);
+
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// 3 - send energySavingsMessage
+		JsonObject energySavingsMessage = new JsonObject();
+		String contextIdentifier = "something";
+		energySavingsMessage.put("id", contextIdentifier);
+		energySavingsMessage.put("unit", "WATT_PERCENTAGE");
+
+		// ContextValues
+		JsonObject contextValueUser = new JsonObject();
+		contextValueUser.put("type", "power");
+		contextValueUser.put("name", EnergySavingRatingHyperty.reductionUser);
+		contextValueUser.put("value", 10);
+
+		JsonArray values = new JsonArray().add(contextValueUser);
+		energySavingsMessage.put("values", values);
+
+		JsonArray toSend = new JsonArray();
+		toSend.add(energySavingsMessage);
+		vertx.eventBus().send(changesAddress, toSend);
+
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		testContext.completeNow();
+
+	}
+
+	@Test
+	// @Disabled
+	void energySavingPublic(VertxTestContext testContext, Vertx vertx) {
+
+		// 1 - subscribe (public)
+		JsonObject msg = new JsonObject();
+		msg.put("type", "create");
+		msg.put("from", subscriptionsAddress);
+		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+		JsonObject body = new JsonObject();
+		body.put("identity", userCGUIDURL);
+		msg.put("body", body);
+		vertx.eventBus().send(EnergySavingRatingHyperty.ratingPublic, msg);
+
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// 2 - send energySavingsMessage
+		JsonObject energySavingsMessage = new JsonObject();
+		String contextIdentifier = "something";
+		energySavingsMessage.put("id", contextIdentifier);
+		energySavingsMessage.put("unit", "WATT_PERCENTAGE");
+
+		// ContextValues
+		JsonObject contextValueCause0 = new JsonObject();
+		JsonObject contextValueCause1 = new JsonObject();
+		JsonArray values = new JsonArray();
+		// cause 0
+		contextValueCause0.put("type", "POWER");
+		JsonObject value0 = new JsonObject();
+		value0.put("id", school0ID);
+		value0.put("value", 10);
+		contextValueCause0.put("value", value0);
+		values.add(contextValueCause0);
+		// cause 1
+		contextValueCause1.put("type", "POWER");
+		JsonObject value1 = new JsonObject();
+		value1.put("id", school1ID);
+		value1.put("value", 20);
+		contextValueCause1.put("value", value1);
+		values.add(contextValueCause1);
+
+		energySavingsMessage.put("values", values);
+
+		JsonArray toSend = new JsonArray();
+		toSend.add(energySavingsMessage);
+		vertx.eventBus().send(changesAddress, toSend);
+
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		testContext.completeNow();
+
+	}
+
+	@Test
+	@Disabled
+	void getCauseSupporters(VertxTestContext testContext, Vertx vertx) {
+
+		CountDownLatch setupLatch = new CountDownLatch(1);
+
+		JsonObject messageData = new JsonObject();
+		messageData.put("causeID", school0ID);
+		vertx.eventBus().send("wallet-cause", messageData, res -> {
+			JsonObject result = (JsonObject) res.result().body();
+			int causeSupportersTotal = result.getInteger(WalletManagerHyperty.causeSupportersTotal);
+			int causeSupportersWithSM = result.getInteger(WalletManagerHyperty.causeSupportersWithSM);
+			setupLatch.countDown();
+		});
+
+		try {
+			setupLatch.await(5L, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
