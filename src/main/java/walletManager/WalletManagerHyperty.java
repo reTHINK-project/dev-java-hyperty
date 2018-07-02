@@ -29,6 +29,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	// counters
 	public static final String counters = "counters";
+	
+	public static final String publicWalletGuid = "user-guid://public-wallets";
 
 	@Override
 	public void start() {
@@ -72,7 +74,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		System.out.println(logMessage + "resetPublicWalletCounters()");
 
 		JsonObject query = new JsonObject().put("identity",
-				new JsonObject().put("userProfile", new JsonObject().put("guid", "public-wallets")));
+				new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
 		// get wallets document
 		mongoClient.find(walletsCollection, query, res -> {
 			JsonObject result = res.result().get(0);
@@ -126,9 +128,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		}
 
 		// set identity
-		JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid", "public-wallets"));
+		JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid));
 		walletMain.put("wallets", wallets);
 		walletMain.put("identity", identity);
+		walletMain.put("status", "active");
+		walletMain.put("address", "public-wallets");
 		JsonObject document = new JsonObject(walletMain.toString());
 		mongoClient.save(walletsCollection, document, id -> {
 			System.out.println(logMessage + "createPublicWallets(): " + document);
@@ -354,7 +358,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		System.out.println(logMessage + "getPublicWallet(): " + walletAddress);
 
 		JsonObject query = new JsonObject().put("identity",
-				new JsonObject().put("userProfile", new JsonObject().put("guid", "public-wallets")));
+				new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
 
 		CountDownLatch readPublicWallet = new CountDownLatch(1);
 
@@ -394,7 +398,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		int transactionValue = transaction.getInteger("value");
 
 		JsonObject query = new JsonObject().put("identity",
-				new JsonObject().put("userProfile", new JsonObject().put("guid", "public-wallets")));
+				new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
 		// get wallets document
 		mongoClient.find(walletsCollection, query, res -> {
 			JsonObject result = res.result().get(0);
@@ -423,6 +427,21 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
 				System.out.println("[WalletManager] Transaction added to public wallet");
+				
+				// send wallets update
+				JsonObject updateMessage = new JsonObject();
+				updateMessage.put("type", "update");
+				updateMessage.put("from", url);
+				updateMessage.put("to", walletAddress + "/changes");
+				JsonObject updateBody = new JsonObject();
+				updateBody.put("wallets", wallets);
+				updateMessage.put("body", updateBody);
+				
+				// publish transaction in the event bus using the wallet address.
+				String toSendChanges = walletAddress + "/changes";
+				System.out.println(logMessage + "publishing on " + toSendChanges);
+				
+				publish(toSendChanges, updateMessage);
 			});
 		});
 
@@ -523,14 +542,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * @param message
 	 */
 	private void walletRead(JsonObject msg, Message<JsonObject> message) {
-		System.out.println("Getting wallet by address");
 		JsonObject body = msg.getJsonObject("body");
 		String walletAddress = body.getString("value");
-
-		JsonObject walletInfo = new JsonObject();
+		System.out.println(logMessage + "walletRead(): getting wallet for address " + walletAddress);
 
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject wallet = res.result().get(0);
+			System.out.println(logMessage + "walletRead(): " + wallet);
 			message.reply(wallet.toString());
 		});
 
