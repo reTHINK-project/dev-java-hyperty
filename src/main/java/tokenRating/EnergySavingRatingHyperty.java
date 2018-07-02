@@ -8,6 +8,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import util.DateUtils;
 import walletManager.WalletManagerHyperty;
 
 /**
@@ -24,10 +25,6 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	// rating types
 	public static final String ratingPublic = "hyperty://sharing-cities-dsm/energy-saving-rating/public";
 	public static final String ratingPrivate = "hyperty://sharing-cities-dsm/energy-saving-rating/private";
-
-	// message values
-	public static final String reductionUser = "reductionUser";
-	public static final String reductionCause = "reductionCause";
 
 	private String dataSource = "energy-saving";
 
@@ -47,7 +44,6 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 			System.out.println(logMessage + "new message -> " + message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
-				final JsonObject body = new JsonObject(message.body().toString()).getJsonObject("body");
 				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
 				final String type = new JsonObject(message.body().toString()).getString("type");
 				final String from = new JsonObject(message.body().toString()).getString("from");
@@ -60,9 +56,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 						String userID = getUserURL(address);
 						// checks there is no subscription yet for the User CGUID URL.
 						if (userID == null) {
-							String streamID = from;
-							String objURL = from.split("/subscription")[0];
-							if (persistDataObjUserURL(address, guid, "reporter")) {
+							if (persistDataObjUserURL(address, guid, "reporter") && checkIfCanHandleData(guid)) {
 								onChanges(address, streamType);
 							}
 						}
@@ -81,11 +75,13 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	int rate(Object data) {
 		// reset latch
 		System.out.println(logMessage + "rate(): " + data.toString());
+		Long currentTimestamp = new Date().getTime();
 
 		int tokenAmount = -1;
 
 		// data contains shopID, users's location
 		String ratingType = ((JsonObject) data).getString("ratingType");
+		String user = ((JsonObject) data).getString("guid");
 		JsonObject energyMessage = ((JsonObject) data).getJsonObject("message");
 		// parse values
 		JsonArray values = energyMessage.getJsonArray("values");
@@ -98,14 +94,11 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			break;
 		case ratingPrivate:
 			tokenAmount = applyPrivateRating(values);
-			// TODO
-			// persistData(dataSource, user, currentTimestamp, id, null, null);
 			break;
 		default:
 			break;
 		}
-
-		
+		persistData(dataSource, user, currentTimestamp, "1", null, null);
 
 		return tokenAmount;
 	}
@@ -168,7 +161,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				JsonObject transaction = new JsonObject();
 				transaction.put("source", "energy-saving");
 				transaction.put("value", aux * 5);
-				// TODO - put date
+				transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 				msg.put("transaction", transaction);
 				vertx.eventBus().send("wallet-cause-transfer", msg);
 
@@ -223,7 +216,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			JsonObject transaction = new JsonObject();
 			transaction.put("source", "energy-saving");
 			transaction.put("value", monthlyPoints);
-			// TODO - put date
+			transaction.put("date", DateUtils.getCurrentDateAsISO8601());
 			msg.put("transaction", transaction);
 			vertx.eventBus().send("wallet-cause-transfer", msg);
 
@@ -257,16 +250,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		int reductionUserPercentage = 0;
 
-		for (int i = 0; i < values.size(); i++) {
-			final JsonObject value = values.getJsonObject(i);
-			switch (value.getString("name")) {
-			case reductionUser:
-				reductionUserPercentage = value.getInteger("value");
-				break;
-			default:
-				break;
-			}
-		}
+		final JsonObject value = values.getJsonObject(0);
+		reductionUserPercentage = value.getInteger("value");
 
 		int totalReductionPercentage = reductionUserPercentage;
 

@@ -86,7 +86,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				// update counters
 				JsonObject countersObj = wallet.getJsonObject(counters);
-				String[] sources = new String[] { "user-activity", "elearning", "checkin" };
+				String[] sources = new String[] { "user-activity", "elearning", "checkin", "energy-saving" };
 				for (String source : sources) {
 					countersObj.put(source, 0);
 				}

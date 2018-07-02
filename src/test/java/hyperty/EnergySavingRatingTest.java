@@ -1,5 +1,7 @@
 package hyperty;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
@@ -23,6 +25,7 @@ import tokenRating.EnergySavingRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
+@Disabled
 class EnergySavingRatingTest {
 
 	private static final String logMessage = "[EnergySavingRatingTest] ";
@@ -132,7 +135,7 @@ class EnergySavingRatingTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-	// @AfterAll
+	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(3);
@@ -218,7 +221,6 @@ class EnergySavingRatingTest {
 		// ContextValues
 		JsonObject contextValueUser = new JsonObject();
 		contextValueUser.put("type", "power");
-		contextValueUser.put("name", EnergySavingRatingHyperty.reductionUser);
 		contextValueUser.put("value", 10);
 
 		JsonArray values = new JsonArray().add(contextValueUser);
@@ -230,6 +232,58 @@ class EnergySavingRatingTest {
 
 		try {
 			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+		JsonObject publicWalletIdentity = new JsonObject().put("userProfile",
+				new JsonObject().put("guid", "user-guid://public-wallets"));
+
+		CountDownLatch assertions = new CountDownLatch(2);
+
+		new Thread(() -> {
+
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
+				JsonObject walletInfo = res.result().get(0);
+
+				// check balance updated
+				int currentBalance = walletInfo.getInteger("balance");
+				assertEquals(100, currentBalance);
+
+				// check if transaction in transactions array
+				JsonArray transactions = walletInfo.getJsonArray("transactions");
+				assertEquals(1, transactions.size());
+				assertions.countDown();
+			});
+		}).start();
+
+		new Thread(() -> {
+
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", publicWalletIdentity), res -> {
+				JsonObject wallets = res.result().get(0);
+				System.out.println("here: " + wallets);
+				JsonObject walletInfo = wallets.getJsonArray("wallets").getJsonObject(0);
+
+				// check balance updated int currentBalance =
+				int currentBalance = walletInfo.getInteger("balance");
+				assertEquals(100, currentBalance);
+
+				// check if transaction in transactions array JsonArray transactions =
+				walletInfo.getJsonArray("transactions");
+				JsonArray transactions = walletInfo.getJsonArray("transactions");
+				assertEquals(1, transactions.size());
+				assertions.countDown();
+
+				// counters JsonObject counters =
+				JsonObject counters = walletInfo.getJsonObject(WalletManagerHyperty.counters);
+				assertEquals(100, (int) counters.getInteger("energy-saving"));
+				assertions.countDown();
+			});
+		}).start();
+
+		try {
+			assertions.await();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
