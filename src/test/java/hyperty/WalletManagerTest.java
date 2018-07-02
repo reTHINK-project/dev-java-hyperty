@@ -32,6 +32,8 @@ class WalletManagerTest {
 	private static JsonObject profileInfo = new JsonObject().put("age", 24);
 	private static JsonObject identity = new JsonObject().put("userProfile",
 			new JsonObject().put("userURL", userURL).put("guid", userID).put("info", profileInfo));
+	private static JsonObject identityPublicWallets = new JsonObject().put("userProfile",
+			new JsonObject().put("guid", "public-wallets"));
 
 	// MongoDB
 	private static MongoClient mongoClient;
@@ -98,7 +100,7 @@ class WalletManagerTest {
 		checkpoint.flag();
 	}
 
-	 @AfterAll
+	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
@@ -120,6 +122,7 @@ class WalletManagerTest {
 	}
 
 	@Test
+	@Disabled
 	void createWalletAndTransfer(VertxTestContext testContext, Vertx vertx) {
 
 		// 1 - create wallet (pass cause)
@@ -215,36 +218,29 @@ class WalletManagerTest {
 				assertions.countDown();
 			});
 		}).start();
-		
+
 		/*
-
-		new Thread(() -> {
-
-			mongoClient.find(walletsCollection, new JsonObject().put("identity", publicWalletIdentity), res -> {
-				JsonObject walletInfo = res.result().get(0);
-
-				// check balance updated
-				int currentBalance = walletInfo.getInteger("balance");
-				assertEquals(10, currentBalance);
-
-				// check if transaction in transactions array
-				JsonArray transactions = walletInfo.getJsonArray("transactions");
-				assertEquals(1, transactions.size());
-				assertions.countDown();
-
-				// counters
-				JsonObject counters = walletInfo.getJsonObject(WalletManagerHyperty.counters);
-				assertEquals(10, (int) counters.getInteger("elearning"));
-				assertions.countDown();
-			});
-		}).start();
-
-		try {
-			assertions.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		*/
+		 * 
+		 * new Thread(() -> {
+		 * 
+		 * mongoClient.find(walletsCollection, new JsonObject().put("identity",
+		 * publicWalletIdentity), res -> { JsonObject walletInfo = res.result().get(0);
+		 * 
+		 * // check balance updated int currentBalance =
+		 * walletInfo.getInteger("balance"); assertEquals(10, currentBalance);
+		 * 
+		 * // check if transaction in transactions array JsonArray transactions =
+		 * walletInfo.getJsonArray("transactions"); assertEquals(1,
+		 * transactions.size()); assertions.countDown();
+		 * 
+		 * // counters JsonObject counters =
+		 * walletInfo.getJsonObject(WalletManagerHyperty.counters); assertEquals(10,
+		 * (int) counters.getInteger("elearning")); assertions.countDown(); });
+		 * }).start();
+		 * 
+		 * try { assertions.await(); } catch (InterruptedException e) {
+		 * e.printStackTrace(); }
+		 */
 
 		testContext.completeNow();
 
@@ -378,6 +374,42 @@ class WalletManagerTest {
 
 		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
 			testContext.completeNow();
+		});
+	}
+
+	@Test
+	@Disabled
+	void getPublicWalletsByRead(VertxTestContext testContext, Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", "read");
+		msg.put("from", userID);
+		msg.put("identity", identity);
+		JsonObject body = new JsonObject().put("resource", "wallet").put("value", "public-wallets");
+		msg.put("body", body);
+		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
+			JsonObject wallet = new JsonObject(reply.result().body().toString());
+			System.out.println("getPublicWalletsByRead(): " + wallet);
+			testContext.completeNow();
+		});
+	}
+
+	@Test
+	void getPublicWalletsByCreate(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("TEST - getPublicWalletsByCreate()");
+		JsonObject msg = new JsonObject();
+		msg.put("type", "create");
+		msg.put("from", userID);
+		msg.put("identity", identityPublicWallets);
+		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
+
+			JsonObject newMsg = new JsonObject();
+			JsonObject body = new JsonObject().put("code", 200);
+			newMsg.put("body", body);
+			reply.result().reply(newMsg, rep -> {
+				JsonObject wallet = new JsonObject(rep.result().body().toString()).getJsonObject("wallet");
+				System.out.println("getPublicWalletsByCreate(): " + wallet);
+				testContext.completeNow();
+			});
 		});
 	}
 

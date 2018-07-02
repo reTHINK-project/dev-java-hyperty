@@ -27,12 +27,14 @@ import io.vertx.ext.web.handler.sockjs.BridgeEventType;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.ext.web.handler.BodyHandler;
 
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import protostub.SmartIotProtostub;
 import tokenRating.CheckInRatingHyperty;
 import tokenRating.ElearningRatingHyperty;
+import tokenRating.EnergySavingRatingHyperty;
 import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
@@ -86,6 +88,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		String elearningHypertyURL = "hyperty://sharing-cities-dsm/elearning";
+		String energySavingRatingHypertyURL = "hyperty://sharing-cities-dsm/energy-saving-rating";
 		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
 		// Create Router object
 		Router router = Router.router(vertx);
@@ -225,6 +228,23 @@ public class StartJavaHyperties extends AbstractVerticle {
 			System.out.println("ElearningRatingHyperty Result->" + res.result());
 		});
 
+		JsonObject configEnergySaving = new JsonObject();
+		configEnergySaving.put("url", energySavingRatingHypertyURL);
+		configEnergySaving.put("identity", identity);
+		// config
+		configEnergySaving.put("hyperty", "123");
+		configEnergySaving.put("stream", "token-rating");
+		configEnergySaving.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
+		// mongo
+		configEnergySaving.put("collection", "rates");
+		configEnergySaving.put("db_name", "test");
+		configEnergySaving.put("mongoHost", mongoHost);
+
+		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(true);
+		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsEnergy, res -> {
+			System.out.println("EnergySavingRatingHyperty Result->" + res.result());
+		});
+
 		// Rest service
 
 		// wallet manager hyperty deploy
@@ -237,26 +257,27 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("mongoHost", mongoHost);
 
 		configWalletManager.put("observers", new JsonArray().add(""));
+
+		// public wallets
+		String wallet0Address = "school0-wallet";
+		String wallet1Address = "school1-wallet";
+		String school0ID = "0";
+		String school1ID = "1";
+		String smartIoTPlatform = "IoT0";
+
 		// publicWallets
 		JsonArray publicWallets = new JsonArray();
-		// p0
-		JsonObject publicWallet = new JsonObject();
-		publicWallet.put("address", "school0-address");
-		publicWallet.put("identity", 0);
-		publicWallet.put("externalFeeds", "IoT0");
-		publicWallets.add(publicWallet);
-		// p1
-		publicWallet = new JsonObject();
-		publicWallet.put("address", "school1-address");
-		publicWallet.put("identity", 1);
-		publicWallet.put("externalFeeds", "IoT1");
-		publicWallets.add(publicWallet);
-		// p2
-		publicWallet = new JsonObject();
-		publicWallet.put("address", "school2-address");
-		publicWallet.put("identity", 2);
-		publicWallet.put("externalFeeds", "IoT2");
-		publicWallets.add(publicWallet);
+		JsonObject walletCause0 = new JsonObject();
+		walletCause0.put("address", wallet0Address);
+		walletCause0.put("identity", school0ID);
+		walletCause0.put("externalFeeds", smartIoTPlatform);
+		publicWallets.add(walletCause0);
+
+		JsonObject walletCause1 = new JsonObject();
+		walletCause1.put("address", wallet1Address);
+		walletCause1.put("identity", school1ID);
+		walletCause1.put("externalFeeds", smartIoTPlatform);
+		publicWallets.add(walletCause1);
 		configWalletManager.put("publicWallets", publicWallets);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
@@ -337,7 +358,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 				JsonObject currentObj = values.getJsonObject(x);
 				String objURL = findStream(currentObj.getString("streamId"));
 				System.out.println("publishin on " + objURL + "/changes");
-				
+
 				if (objURL != null) {
 					String changesObj = objURL + "/changes";
 					vertx.eventBus().publish(changesObj, currentObj);
