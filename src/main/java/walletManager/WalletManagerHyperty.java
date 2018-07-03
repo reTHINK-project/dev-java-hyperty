@@ -99,7 +99,35 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
+	boolean walletsExist;
+
 	public void createPublicWallets(JsonArray publicWallets) {
+
+		CountDownLatch getPublicWallets = new CountDownLatch(1);
+		walletsExist = false;
+
+		new Thread(() -> {
+			// get wallets document
+			// check if public wallets already exist
+			JsonObject query = new JsonObject().put("identity",
+					new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
+			mongoClient.find(walletsCollection, query, res -> {
+				JsonArray wallets = new JsonArray(res.result());
+				if (wallets.size() != 0)
+					walletsExist = true;
+				getPublicWallets.countDown();
+			});
+		}).start();
+
+		try {
+			getPublicWallets.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		if (walletsExist == true) {
+			return;
+		}
 
 		JsonObject walletMain = new JsonObject();
 		JsonArray wallets = new JsonArray();
