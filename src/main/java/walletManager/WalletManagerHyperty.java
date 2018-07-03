@@ -29,7 +29,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	// counters
 	public static final String counters = "counters";
-	
+
 	public static final String publicWalletGuid = "user-guid://public-wallets";
 
 	@Override
@@ -109,6 +109,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonObject wallet = (JsonObject) pWallet;
 			String address = wallet.getString("address");
 			String identity = wallet.getString("identity");
+			String externalFeeds = wallet.getString("externalFeeds");
+			// TODO - For each public wallet, a new device and a new sensor is created at
+			// the Smart IoT Stub
 			JsonObject newWallet = new JsonObject();
 			newWallet.put("address", address);
 			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", identity)));
@@ -140,46 +143,34 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
-	private void createStreams() {
-		JsonObject streams = config().getJsonObject("streams");
-
-		// shops stream
-		String shopsStreamAddress = streams.getString("ranking");
-		create(shopsStreamAddress, new JsonObject(), false, subscriptionHandler(), readRankingHandler());
-	}
-
 	/**
 	 * Handler for read requests.
 	 * 
 	 * @return
 	 */
-	private Handler<Message<JsonObject>> readRankingHandler() {
-		return msg -> {
-			System.out.println("Handler: " + msg.body().toString());
-			final String userToFind = msg.body().getString("guid");
-			JsonObject response = new JsonObject();
-			if (msg.body().getJsonObject("resource") != null) {
+	private void generateRankings() {
 
-			} else {
-				// mongoClient.find("wallets", new JsonObject(), res -> {
-				FindOptions findOptions = new FindOptions();
-				findOptions.setSort(new JsonObject().put("balance", -1));
-				mongoClient.findWithOptions("wallets", new JsonObject(), findOptions, res -> {
-					int ranking = 0;
-					// iterate through all
-					for (JsonObject entry : res.result()) {
-						ranking++;
-						if (entry.getJsonObject("identity").getJsonObject("userProfile")
-								.getString("guid") == userToFind) {
-							break;
-						}
-					}
-					// get position of wallet with that identity ()
-					response.put("ranking", ranking);
-					msg.reply(response);
+		// mongoClient.find("wallets", new JsonObject(), res -> {
+		FindOptions findOptions = new FindOptions();
+		findOptions.setSort(new JsonObject().put("balance", -1));
+		mongoClient.findWithOptions("wallets", new JsonObject(), findOptions, res -> {
+			int ranking = 0;
+			// iterate through all
+			for (JsonObject wallet : res.result()) {
+				// discard public wallets
+				if (wallet.getJsonObject("identity").getJsonObject("userProfile").getString("guid")
+						.equals(publicWalletGuid)) {
+					continue;
+				}
+				ranking++;
+				wallet.put("wanking", ranking);
+				JsonObject query = new JsonObject();
+				query.put("identity", wallet.getJsonObject("identity"));
+				mongoClient.findOneAndReplace(collection, query, wallet, id -> {
+					System.out.println(logMessage + "generateRankings() document updated: " + wallet);
 				});
 			}
-		};
+		});
 	}
 
 	/**
@@ -347,6 +338,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				System.out.println(logMessage + "publishing on " + toSendChanges);
 
 				publish(toSendChanges, updateMessage);
+
+				// get rankings
+				generateRankings();
 			});
 		});
 
@@ -427,7 +421,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
 				System.out.println("[WalletManager] Transaction added to public wallet");
-				
+
 				// send wallets update
 				JsonObject updateMessage = new JsonObject();
 				updateMessage.put("type", "update");
@@ -436,11 +430,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				JsonObject updateBody = new JsonObject();
 				updateBody.put("wallets", wallets);
 				updateMessage.put("body", updateBody);
-				
+
 				// publish transaction in the event bus using the wallet address.
 				String toSendChanges = walletAddress + "/changes";
 				System.out.println(logMessage + "publishing on " + toSendChanges);
-				
+
 				publish(toSendChanges, updateMessage);
 			});
 		});

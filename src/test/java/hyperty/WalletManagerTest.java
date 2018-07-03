@@ -2,7 +2,11 @@ package hyperty;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.Date;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -123,6 +127,53 @@ class WalletManagerTest {
 
 	@Test
 	@Disabled
+	void testRanking(VertxTestContext testContext, Vertx vertx) {
+
+		int numWallets = 10;
+		CountDownLatch setupLatch = new CountDownLatch(numWallets);
+
+		for (int i = 0; i < numWallets; i++) {
+
+			new Thread(() -> { // create wallet
+				System.out.println("no wallet yet, creating");
+				byte[] array = new byte[7]; // length is bounded by 7
+				new Random().nextBytes(array);
+				String walletID = new String(array, Charset.forName("UTF-8"));
+
+				int min = 10;
+				int max = 1000;
+
+				int randomNum = ThreadLocalRandom.current().nextInt(min, max + 1);
+
+				// build wallet document
+				JsonObject newWallet = new JsonObject();
+
+				String address = "walletAddress";
+				newWallet.put("address", address);
+				newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", walletID)));
+				newWallet.put("created", new Date().getTime());
+				newWallet.put("balance", randomNum);
+				newWallet.put("transactions", new JsonArray());
+				newWallet.put("status", "active");
+
+				JsonObject document = new JsonObject(newWallet.toString());
+
+				mongoClient.save(walletsCollection, document, id -> {
+					System.out.println("New wallet with ID:" + id);
+					setupLatch.countDown();
+				});
+			}).start();
+
+		}
+		try {
+			setupLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		testContext.completeNow();
+	}
+
+	@Test
 	void createWalletAndTransfer(VertxTestContext testContext, Vertx vertx) {
 
 		// 1 - create wallet (pass cause)
