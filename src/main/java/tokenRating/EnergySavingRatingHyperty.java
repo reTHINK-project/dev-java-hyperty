@@ -52,14 +52,15 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 				case "create":
 					if (from.contains("/subscription")) {
-						String address = from.split("/subscription")[0];
+						/*String address = from.split("/subscription")[0];
 						String userID = getUserURL(address);
 						// checks there is no subscription yet for the User CGUID URL.
 						if (userID == null) {
 							if (persistDataObjUserURL(address, guid, "reporter") && checkIfCanHandleData(guid)) {
 								onChanges(address, streamType);
 							}
-						}
+						}*/
+						onNotification(new JsonObject(message.body().toString()), streamType);
 
 					}
 					break;
@@ -250,13 +251,18 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		int reductionUserPercentage = 0;
 
-		final JsonObject value = values.getJsonObject(0);
-		reductionUserPercentage = value.getInteger("value");
+		final JsonObject valueObject = values.getJsonObject(0);
+		
+		final JsonObject dataValueObject = valueObject.getJsonObject("value");
+		
+		reductionUserPercentage = dataValueObject.getInteger("value");
+		
 
 		int totalReductionPercentage = reductionUserPercentage;
 
 		return totalReductionPercentage * 10;
 	}
+
 
 	public void onChanges(String address, String ratingType) {
 
@@ -271,7 +277,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 					changes.put("ratingType", ratingType);
 					changes.put("message", data.getJsonObject(0));
-					changes.put("guid", getUserURL(address));
+					changes.put("guid", getUserGuid(address));
+
 					System.out.println(logMessage + "onChanges(): change: " + changes.toString());
 
 					int numTokens = rate(changes);
@@ -285,6 +292,54 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			}
 		});
 
+	}
+	
+	public String getUserGuid(String address) {
+
+		CountDownLatch findUserID = new CountDownLatch(1);
+		new Thread(() -> {
+			mongoClient.find(dataObjectsCollection, new JsonObject().put("objURL", address), userURLforAddress -> {
+				if (userURLforAddress.result().size() == 0) {
+					findUserID.countDown();
+					return;
+				}
+				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
+				userIDToReturn = dataObjectInfo.getString("guid");
+				findUserID.countDown();
+			});
+		}).start();
+
+		try {
+			findUserID.await(5L, TimeUnit.SECONDS);
+			System.out.println("3 - return from latch");
+			return userIDToReturn;
+		} catch (InterruptedException e) {
+			System.out.println("3 - interrupted exception");
+		}
+		System.out.println("3 - return other");
+		return userIDToReturn;
+	}
+
+
+	public void onNotification(JsonObject body, String streamType) {
+		System.out.println("HANDLING" + body.toString());
+		String from = body.getString("from");
+		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
+
+		if (body.containsKey("external") && body.getBoolean("external")) {
+			System.out.println("EXTERNAL INVITE");
+			String streamID = body.getString("streamID");
+			String objURL = from.split("/subscription")[0];
+			String CheckURL = findDataObjectStream(objURL, guid);
+			if (CheckURL == null) {
+				if (persistDataObjUserURL(streamID, guid, objURL, "reporter") && checkIfCanHandleData(guid)) {
+					onChanges(objURL, streamType);
+				}
+			} else {
+				onChanges(objURL, streamType);
+			}
+
+		}
 	}
 
 }

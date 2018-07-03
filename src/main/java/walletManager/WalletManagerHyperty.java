@@ -5,6 +5,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import data_objects.DataObjectReporter;
 import hyperty.AbstractHyperty;
@@ -32,6 +33,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	public static final String publicWalletGuid = "user-guid://public-wallets";
 
+	private CountDownLatch createDevice;
+	
 	@Override
 	public void start() {
 
@@ -41,6 +44,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		// check public wallets to be created
 		JsonArray publicWallets = config().getJsonArray("publicWallets");
+		
 		if (publicWallets != null) {
 			createPublicWallets(publicWallets);
 		}
@@ -67,6 +71,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		eb.consumer("wallet-cause-reset", message -> {
 			resetPublicWalletCounters();
 		});
+		
+		
 
 	}
 
@@ -125,9 +131,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			e.printStackTrace();
 		}
 
-		if (walletsExist == true) {
-			return;
-		}
 
 		JsonObject walletMain = new JsonObject();
 		JsonArray wallets = new JsonArray();
@@ -137,12 +140,58 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonObject wallet = (JsonObject) pWallet;
 			String address = wallet.getString("address");
 			String identity = wallet.getString("identity");
-			String externalFeeds = wallet.getString("externalFeeds");
+			JsonArray externalFeeds = wallet.getJsonArray("externalFeeds");
 			// TODO - For each public wallet, a new device and a new sensor is created at
 			// the Smart IoT Stub
+			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", identity));
+			
+			System.out.println("WalletManager - create new Device " + this.siotStubUrl);
+			
+			JsonObject messageDevice = new JsonObject();
+			messageDevice.put("identity", walletIdentity);
+			messageDevice.put("from", this.url);
+			messageDevice.put("type", "create");
+			messageDevice.put("to", this.siotStubUrl);
+			JsonObject bodyDevice = new JsonObject().put("resource", "device")
+					.put("name", "device Name")
+					.put("description", "device description");
+			messageDevice.put("body", bodyDevice);
+
+			int codeDevice = smartIOTIntegration(messageDevice, this.siotStubUrl);
+			System.out.println("WalletManager result code " + codeDevice);
+			if (codeDevice == 200) {
+				for (int i = 0; i < externalFeeds.size(); i++)
+				{
+					JsonObject feed = externalFeeds.getJsonObject(i);
+					String platformID = feed.getString("platformID");
+					String platformUID = feed.getString("platformUID");
+					
+					System.out.println("WalletManager - create new Stream");
+					JsonObject messageStream = new JsonObject();
+
+					messageStream.put("identity", walletIdentity);
+					messageStream.put("from", this.url);
+					messageStream.put("type", "create");
+					messageStream.put("to", this.siotStubUrl);
+					
+					JsonObject body = new JsonObject().put("resource", "stream")
+							.put("name", "device Name")
+							.put("description", "device description")
+							.put("platformID", platformID)
+							.put("platformUID", platformUID)
+							.put("ratingType", "public");
+					messageStream.put("body", body);
+					
+					int codeStream = smartIOTIntegration(messageStream, this.siotStubUrl);
+					System.out.println("WalletManager result code " + codeStream);
+						
+				}
+			}
+
+			
 			JsonObject newWallet = new JsonObject();
 			newWallet.put("address", address);
-			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", identity)));
+			newWallet.put("identity", walletIdentity);
 			newWallet.put("created", new Date().getTime());
 			newWallet.put("balance", 0);
 			newWallet.put("transactions", new JsonArray());
@@ -158,6 +207,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			wallets.add(newWallet);
 		}
 
+
+		if (walletsExist == true) {
+			return;
+		}
+		
 		// set identity
 		JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid));
 		walletMain.put("wallets", wallets);
@@ -169,6 +223,30 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			System.out.println(logMessage + "createPublicWallets(): " + document);
 		});
 
+	}
+
+	private int smartIOTIntegration(JsonObject message, String siotUrl) {
+		// TODO Auto-generated method stub
+		
+		createDevice = new CountDownLatch(1);
+		final int code[] = new int[1];
+		
+		new Thread(() -> {
+			send(siotUrl, message, reply -> {
+				System.out.println("REP: " + reply.result().body().toString());
+				int result = new JsonObject(reply.result().body().toString()).getJsonObject("body").getInteger("code");
+				code[0] = result;
+			});
+			
+		}).start();
+		
+		try {
+			createDevice.await(5L, TimeUnit.SECONDS);
+			return code[0];
+		} catch (InterruptedException e) {
+			System.out.println(e);
+		}
+		return code[0];
 	}
 
 	/**

@@ -26,7 +26,7 @@ import util.DateUtils;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
-// @Disabled
+@Disabled
 class WalletManagerTest {
 
 	private static String userID = "test-userID";

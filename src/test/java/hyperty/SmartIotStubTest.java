@@ -13,6 +13,7 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import protostub.SmartIotProtostub;
+import tokenRating.EnergySavingRatingHyperty;
 import tokenRating.UserActivityRatingHyperty;
 
 
@@ -60,6 +61,7 @@ class SmartIotStubTest {
 			e.printStackTrace();
 		}
 		
+		/*
 		// deploy user activity rating hyperty
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 		JsonObject configUserActivity = new JsonObject();
@@ -83,7 +85,24 @@ class SmartIotStubTest {
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, res -> {
 			System.out.println("UserActivityRatingHyperty Result->" + res.result());
 		});
-		
+		*/
+		String energySavingRatingHypertyURL = "hyperty://sharing-cities-dsm/energy-saving-rating";
+		JsonObject configEnergySaving = new JsonObject();
+		configEnergySaving.put("url", energySavingRatingHypertyURL);
+		configEnergySaving.put("identity", identity);
+		// config
+		configEnergySaving.put("hyperty", "123");
+		configEnergySaving.put("stream", "token-rating");
+		configEnergySaving.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
+		// mongo
+		configEnergySaving.put("collection", "rates");
+		configEnergySaving.put("db_name", "test");
+		configEnergySaving.put("mongoHost", mongoHost);
+
+		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(true);
+		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsEnergy, res -> {
+			System.out.println("EnergySavingRatingHyperty Result->" + res.result());
+		});
 		
 		try {
 			Thread.sleep(2000);
@@ -200,7 +219,8 @@ class SmartIotStubTest {
 				.put("name", "device Name")
 				.put("description", "device description")
 				.put("platformID", "edp")
-				.put("platformUID", "edpLuisUSERid");
+				.put("platformUID", "edpLuisUSERid")
+				.put("ratingType", "private");
 		message.put("body", body);
 
 		

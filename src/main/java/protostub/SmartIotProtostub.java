@@ -226,18 +226,19 @@ public class SmartIotProtostub extends AbstractVerticle {
 			final JsonObject body = messageToCreate.getJsonObject("body");
 			final String thirdPtyUserId = body.containsKey("platformUID") ? body.getString("platformUID") : null;
 			final String thirdPtyPlatformId = body.containsKey("platformID") ? body.getString("platformID") : null;
+			final String ratingType = body.containsKey("ratingType") ? body.getString("ratingType") : null;
 			final String deviceID = findDevice(guid);
 
 			System.out.println(
 					"{{SmartIOTProtostub}} DeviceID returned->" + deviceID + " ->streamName:" + thirdPtyUserId);
-			if (deviceID != null && thirdPtyUserId != null && thirdPtyPlatformId != null) {
+			if (deviceID != null && thirdPtyUserId != null && thirdPtyPlatformId != null && ratingType != null) {
 				String objURL = "context://sharing-cities-dsm/" + thirdPtyPlatformId + "/" + thirdPtyUserId;
 				String checkStreamID = findStream(objURL, guid);
 				System.out.println("{{SmartIOTProtostub}} stream ID exist?" + checkStreamID);
 				if (checkStreamID != null) {
 					System.out.println("{{SmartIOTProtostub}} stream already created->" + objURL);
 					inviteHyperty(thirdPtyUserId, thirdPtyPlatformId, messageToCreate.getJsonObject("identity"),
-							checkStreamID);
+							checkStreamID, ratingType);
 
 					responseBodyOK.put("description", "stream already exist");
 					JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
@@ -269,7 +270,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 											System.out.println("{{SmartIOTProtostub}} result>" + res.succeeded());
 										});
 								inviteHyperty(thirdPtyUserId, thirdPtyPlatformId,
-										messageToCreate.getJsonObject("identity"), currentStream.getString("id"));
+										messageToCreate.getJsonObject("identity"), currentStream.getString("id"), ratingType);
 								responseBodyOK.put("description", "new stream created");
 								JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
 								message.reply(responseOK);
@@ -303,7 +304,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 	}
 
-	private void inviteHyperty(String thirdPtyUserId, String thirdPtyPlatformId, JsonObject identity, String streamID) {
+	private void inviteHyperty(String thirdPtyUserId, String thirdPtyPlatformId, JsonObject identity, String streamID, String ratingType) {
 
 		// case edp: hyperty://sharing-cities-dsm/energy-saving-rating
 		// case gira/mobi-e: hyperty://sharing-cities-dsm/user-activity
@@ -311,7 +312,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		String fromUrl = "context://sharing-cities-dsm/" + thirdPtyPlatformId + "/" + thirdPtyUserId + "/subscription";
 
 		if (thirdPtyPlatformId.equals("edp")) {
-			toInviteHypertyUrl = "hyperty://sharing-cities-dsm/energy-saving-rating";
+			toInviteHypertyUrl = "hyperty://sharing-cities-dsm/energy-saving-rating/" + ratingType;
 		} else {
 			toInviteHypertyUrl = "hyperty://sharing-cities-dsm/user-activity";
 		}

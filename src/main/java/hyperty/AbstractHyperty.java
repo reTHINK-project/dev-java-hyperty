@@ -39,6 +39,8 @@ public class AbstractHyperty extends AbstractVerticle {
 	 */
 	protected JsonArray observers;
 
+	protected String siotStubUrl;
+
 	@Override
 	public void start() {
 		this.url = config().getString("url");
@@ -48,6 +50,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.mongoHost = config().getString("mongoHost");
 		this.schemaURL = config().getString("schemaURL");
 		this.observers = config().getJsonArray("observers");
+		this.siotStubUrl = config().getString("siot_stub_url");
 
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
@@ -156,7 +159,7 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 
-	private String findDataObjectStream(String objURL, String guid) {
+	public String findDataObjectStream(String objURL, String guid) {
 		
 
 		System.out.println("{{AbstractHyperty}} find do:" + objURL);

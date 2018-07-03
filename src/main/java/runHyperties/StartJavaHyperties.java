@@ -257,26 +257,28 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("mongoHost", mongoHost);
 
 		configWalletManager.put("observers", new JsonArray().add(""));
+		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 
 		// public wallets
 		String wallet0Address = "school0-wallet";
 		String wallet1Address = "school1-wallet";
-		String school0ID = "0";
-		String school1ID = "1";
-		String smartIoTPlatform = "IoT0";
+		String school0ID = "user-guid://school-0";
+		String school1ID = "user-guid://school-1";
+		JsonObject feed0 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet0userID");
+		JsonObject feed1 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet1userID");
 
 		// publicWallets
 		JsonArray publicWallets = new JsonArray();
 		JsonObject walletCause0 = new JsonObject();
 		walletCause0.put("address", wallet0Address);
 		walletCause0.put("identity", school0ID);
-		walletCause0.put("externalFeeds", smartIoTPlatform);
+		walletCause0.put("externalFeeds", new JsonArray().add(feed0));
 		publicWallets.add(walletCause0);
 
 		JsonObject walletCause1 = new JsonObject();
 		walletCause1.put("address", wallet1Address);
 		walletCause1.put("identity", school1ID);
-		walletCause1.put("externalFeeds", smartIoTPlatform);
+		walletCause1.put("externalFeeds", new JsonArray().add(feed1));
 		publicWallets.add(walletCause1);
 		configWalletManager.put("publicWallets", publicWallets);
 
@@ -356,12 +358,23 @@ public class StartJavaHyperties extends AbstractVerticle {
 			int x;
 			for (x = 0; x < values.size(); x++) {
 				JsonObject currentObj = values.getJsonObject(x);
+				String value = currentObj.getString("data");
+				
+				JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value));
+				JsonObject valueObject = new JsonObject().put("type", "POWER")
+														.put("value", valueData);
+				
+				JsonArray valuesArray = new JsonArray().add(valueObject);
+				
+				JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE")
+															.put("values", valuesArray);
+				
 				String objURL = findStream(currentObj.getString("streamId"));
 				System.out.println("publishin on " + objURL + "/changes");
 
 				if (objURL != null) {
 					String changesObj = objURL + "/changes";
-					vertx.eventBus().publish(changesObj, currentObj);
+					vertx.eventBus().publish(changesObj, new JsonArray().add(newObjToSend));
 				}
 			}
 		}
