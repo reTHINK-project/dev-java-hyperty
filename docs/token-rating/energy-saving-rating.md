@@ -55,4 +55,18 @@ Rating messages follow the [DO Context update msg](https://github.com/reTHINK-pr
 ```
 
 In this case, each entry on the `values` array corresponds to energy saving data for a cause.
+For a private energy rating message:
+
+```
+{
+	"id": 123,
+	"unit": "WATT_PERCENTAGE",
+	"values": [{
+		"type": "POWER",
+		"value": {
+			"value": 34
+		}
+	}]
+}
+```
 
