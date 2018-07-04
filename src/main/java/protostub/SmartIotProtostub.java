@@ -158,6 +158,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 						if (newDevice.containsKey("unauthorised") && newDevice.getBoolean("unauthorised")) {
 							newDevice = registerNewDevice(name, description);
 						}
+						final JsonObject deviceCreated = newDevice;
 
 						if (newDevice != null) {
 							System.out.println("{{SmartIOTProtostub}} Device for " + name + "  -> |||  create with id->"
@@ -168,6 +169,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 								createDevice.countDown();
 								System.out.println("{{SmartIOTProtostub}} New device added to mongo" + id);
 								responseBodyOK.put("description", "new device created");
+								responseBodyOK.put("device", deviceCreated);
 								JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
 								message.reply(responseOK);
 							});
