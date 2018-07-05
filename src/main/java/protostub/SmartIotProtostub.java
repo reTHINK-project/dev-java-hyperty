@@ -182,8 +182,9 @@ public class SmartIotProtostub extends AbstractVerticle {
 							message.reply(responseDenied);
 						}
 					} else {
-						System.out.println("{{SmartIOTProtostub}} Device already created for this user");
+						System.out.println("{{SmartIOTProtostub}} Device already created for this user" + res.result().get(0).toString());
 						createDevice.countDown();
+						responseBodyOK.put("device", res.result().get(0).getJsonObject("device"));
 						responseBodyOK.put("description", "device already exist");
 						JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
 						message.reply(responseOK);
@@ -282,6 +283,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 								inviteHyperty(thirdPtyUserId, thirdPtyPlatformId,
 										messageToCreate.getJsonObject("identity"), currentStream.getString("id"), ratingType);
 								responseBodyOK.put("description", "new stream created");
+								responseBodyOK.put("stream", currentStream);
 								JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
 								message.reply(responseOK);
 
