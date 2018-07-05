@@ -155,7 +155,10 @@ public class SmartIotProtostub extends AbstractVerticle {
 						System.out.println("{{SmartIOTProtostub}} no device yet, creating");
 
 						JsonObject newDevice = registerNewDevice(name, description);
+						
+						System.out.println("{{SmartIOTProtostub}} no device yet, creating response1st->" + newDevice.toString());
 						if (newDevice.containsKey("unauthorised") && newDevice.getBoolean("unauthorised")) {
+
 							newDevice = registerNewDevice(name, description);
 						}
 						final JsonObject deviceCreated = newDevice;
@@ -246,8 +249,13 @@ public class SmartIotProtostub extends AbstractVerticle {
 					JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
 					message.reply(responseOK);
 				} else {
-
-					if (registerNewStream(deviceID, thirdPtyUserId)) {
+					boolean streamCreated1st = registerNewStream(deviceID, thirdPtyUserId);
+					boolean streamCreated2nd = false;
+					if (!streamCreated1st) {
+						streamCreated2nd = registerNewStream(deviceID, thirdPtyUserId);
+					}
+					
+					if (streamCreated1st || streamCreated2nd) {
 
 						JsonArray streamList = new JsonObject(getStreamsList(deviceID)).getJsonArray("streams");
 						System.out.println("{{SmartIOTProtostub}} - stream list" + streamList.toString());
@@ -491,22 +499,24 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 			for (int c; (c = in.read()) >= 0;)
 				received.append(Character.toChars(c));
-
-			conn.disconnect();
-
+		
 			if (conn.getResponseCode() == 401) {
 				this.currentToken = Authentication();
-				return new JsonObject().put("unauthorised", true);
+				
 			}
+			conn.disconnect();
 
 			System.out
 					.println("{{SmartIOTProtostub}} [newDevice](" + conn.getResponseCode() + ")" + received.toString());
+			conn.disconnect();
 			return new JsonObject(received.toString());
 
 		} catch (Exception e) {
 			e.printStackTrace();
+			this.currentToken = Authentication();
+			return new JsonObject().put("unauthorised", true);
 		}
-		return null;
+
 	}
 
 	private boolean registerNewStream(String deviceID, String streamName) {
@@ -530,12 +540,16 @@ public class SmartIotProtostub extends AbstractVerticle {
 					.println("{{SmartIOTProtostub}} [newStream](" + conn.getResponseCode() + ")" + received.toString());
 			if (conn.getResponseCode() == 204) {
 				return true;
+			} else {
+				this.currentToken = Authentication();
+				return false;
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			e.printStackTrace(); 
+			this.currentToken = Authentication();
+			return false;
 		}
-		return false;
 
 	}
 

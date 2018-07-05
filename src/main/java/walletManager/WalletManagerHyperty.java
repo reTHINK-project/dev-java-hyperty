@@ -157,6 +157,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					.put("description", "device description");
 			messageDevice.put("body", bodyDevice);
 
+			
 			int codeDevice = smartIOTIntegration(messageDevice, this.siotStubUrl);
 			System.out.println("WalletManager result code " + codeDevice);
 			if (codeDevice == 200) {
