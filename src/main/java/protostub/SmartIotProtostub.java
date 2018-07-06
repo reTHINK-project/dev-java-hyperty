@@ -121,12 +121,183 @@ public class SmartIotProtostub extends AbstractVerticle {
 					}
 
 					break;
+				case "delete":
+					if (body.getString("resource").equals("stream")) {
+						handleStreamDeleteRequest(message);
+					} else if (body.getString("resource").equals("device")) {
+						handleDeviceDeleteRequest(message);
+					}
 				default:
 					break;
 				}
 
 			}
 		};
+	}
+
+	private void handleStreamDeleteRequest(Message<JsonObject> message) {
+
+		final JsonObject messageToDelete = new JsonObject(message.body().toString());
+
+		final JsonObject userProfile = messageToDelete.getJsonObject("identity").getJsonObject("userProfile");
+
+		final String guid = userProfile.containsKey("guid") ? userProfile.getString("guid") : null;
+		JsonObject responseDenied = new JsonObject().put("body", new JsonObject().put("code", 406).put("value", false));
+		JsonObject responseBodyOK = new JsonObject().put("code", 200);
+
+		if (guid != null) {
+			System.out.println("{{SmartIOTProtostub}} search Device of guid->" + guid);
+			final JsonObject body = messageToDelete.getJsonObject("body");
+
+			final String streamName = body.containsKey("value") ? body.getString("value") : null;
+			final JsonObject device = findDeviceObject(guid);
+
+			System.out.println(" ->streamName:" + streamName);
+			if (device != null && streamName != null) {
+				final String deviceID = device.getString("id");
+				System.out.println("{{SmartIOTProtostub}} DeviceID returned->" + deviceID);
+
+				JsonArray streamList = device.getJsonArray("stream_list");
+				boolean streamExist = false;
+				String platformID = null;
+				for (int i = 0; i < streamList.size(); i++) {
+					JsonObject currentStream = streamList.getJsonObject(i);
+					if (currentStream.getString("name").equals(streamName)) {
+						streamExist = true;
+						platformID = currentStream.getString("platform");
+					}
+				}
+				if (streamExist) {
+
+					boolean streamDeleted1st = deleteStream(deviceID, streamName);
+					boolean streamDeleted2nd = false;
+					if (!streamDeleted1st) {
+						streamDeleted2nd = deleteStream(deviceID, streamName);
+					}
+
+					if (streamDeleted1st || streamDeleted2nd) {
+
+						JsonObject update = new JsonObject().put("$pull",
+								new JsonObject().put("device.stream_list", new JsonObject().put("name", streamName)));
+
+						System.out.println("{{SmartIOTProtostub}} delete" + update.toString());
+
+						mongoClient.updateCollection(this.collection, new JsonObject().put("guid", guid), update,
+								res -> {
+									System.out.println("{{SmartIOTProtostub}} result>" + res.succeeded());
+								});
+
+						String dataObjectURL = "context://sharing-cities-dsm/" + platformID + "/" + streamName;
+
+						mongoClient.findOneAndDelete("dataobjects", new JsonObject().put("objURL", dataObjectURL),
+								res -> {
+									System.out
+											.println("{{SmartIOTProtostub}} result delete from dataobjects collection>"
+													+ res.succeeded());
+								});
+
+						responseBodyOK.put("result", true);
+						JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
+						message.reply(responseOK);
+					}
+					responseBodyOK.put("result", false);
+					JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
+					message.reply(responseOK);
+
+				}
+
+			}
+
+			message.reply(responseDenied);
+
+			return;
+		}
+
+		message.reply(responseDenied);
+		return;
+
+		/*
+		 * 
+		 * { "type": "delete", "to": "runtime://sharing-cities-dsm/protostub/smart-iot",
+		 * "from": "hyperty://localhost/f7ce7531-1926-4b7d-94e0-2e42312bc562",
+		 * "identity": { "userProfile": { "userURL":
+		 * "user://google.com/lduarte.suil@gmail.com", "guid":
+		 * "user-guid://0da2eee3820e141b90fff1d4614d755f1252ec2aacf9d7b1515d7c5ac9ad2dfc"
+		 * } }, "body": { "resource": "stream", "value": "luisuserID" } }
+		 */
+
+	}
+
+	private void handleDeviceDeleteRequest(Message<JsonObject> message) {
+
+		final JsonObject messageToDelete = new JsonObject(message.body().toString());
+
+		final JsonObject userProfile = messageToDelete.getJsonObject("identity").getJsonObject("userProfile");
+
+		final String guid = userProfile.containsKey("guid") ? userProfile.getString("guid") : null;
+		JsonObject responseDenied = new JsonObject().put("body", new JsonObject().put("code", 406).put("value", false));
+		JsonObject responseBodyOK = new JsonObject().put("code", 200);
+
+		if (guid != null) {
+			System.out.println("{{SmartIOTProtostub}} search Device of guid->" + guid);
+			final JsonObject body = messageToDelete.getJsonObject("body");
+
+			final String deviceID = body.containsKey("value") ? body.getString("value") : null;
+			final JsonObject device = findDeviceObject(guid);
+			if (device.getString("id").equals(deviceID)) {
+				boolean deviceDeleted1st = deleteDevice(deviceID);
+				boolean deviceDeleted2nd = false;
+				if (!deviceDeleted1st) {
+					deviceDeleted2nd = deleteDevice(deviceID);
+				}
+				
+				if (deviceDeleted1st || deviceDeleted2nd) {
+					System.out.println("{{SmartIOTProtostub}} TO REMOVE on mongo (device) ->" + device.toString());
+					JsonArray streamList = device.getJsonArray("stream_list");
+
+					for ( int i = 0; i < streamList.size(); i++) {
+						JsonObject currentStream = streamList.getJsonObject(i);
+						String dataObjectURL = "context://sharing-cities-dsm/" + currentStream.getString("platform") + "/" +  currentStream.getString("name");
+						System.out.println("{{SmartIOTProtostub}} to remove (obj)->" + dataObjectURL);
+						
+						mongoClient.findOneAndDelete("dataobjects", new JsonObject().put("objURL", dataObjectURL),
+								res -> {
+									System.out
+											.println("{{SmartIOTProtostub}} result delete on dataobject (" + dataObjectURL + ")>"
+													+ res.succeeded());
+								});
+					}
+					mongoClient.findOneAndDelete(this.collection, new JsonObject().put("guid", guid),
+							res -> {
+								System.out
+										.println("{{SmartIOTProtostub}} result delete on siotdevices (" + guid + ")>"
+												+ res.succeeded());
+							});
+					
+					responseBodyOK.put("result", true);
+					JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
+					message.reply(responseOK);	
+				
+				}
+				
+				responseBodyOK.put("result", false);
+				JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
+				message.reply(responseOK);	
+				
+			}
+
+		}
+
+		/*
+		 * 
+		 * { "type": "delete", "to": "runtime://sharing-cities-dsm/protostub/smart-iot",
+		 * "from": "hyperty://localhost/f7ce7531-1926-4b7d-94e0-2e42312bc562",
+		 * "identity": { "userProfile": { "userURL":
+		 * "user://google.com/lduarte.suil@gmail.com", "guid":
+		 * "user-guid://0da2eee3820e141b90fff1d4614d755f1252ec2aacf9d7b1515d7c5ac9ad2dfc"
+		 * } }, "body": { "resource": "device", "value": "luisuserID" } }
+		 */
+
 	}
 
 	private void handleDeviceCreationRequest(Message<JsonObject> message) {
@@ -155,8 +326,9 @@ public class SmartIotProtostub extends AbstractVerticle {
 						System.out.println("{{SmartIOTProtostub}} no device yet, creating");
 
 						JsonObject newDevice = registerNewDevice(name, description);
-						
-						System.out.println("{{SmartIOTProtostub}} no device yet, creating response1st->" + newDevice.toString());
+
+						System.out.println(
+								"{{SmartIOTProtostub}} no device yet, creating response1st->" + newDevice.toString());
 						if (newDevice.containsKey("unauthorised") && newDevice.getBoolean("unauthorised")) {
 
 							newDevice = registerNewDevice(name, description);
@@ -182,7 +354,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 							message.reply(responseDenied);
 						}
 					} else {
-						System.out.println("{{SmartIOTProtostub}} Device already created for this user" + res.result().get(0).toString());
+						System.out.println("{{SmartIOTProtostub}} Device already created for this user"
+								+ res.result().get(0).toString());
 						createDevice.countDown();
 						responseBodyOK.put("device", res.result().get(0).getJsonObject("device"));
 						responseBodyOK.put("description", "device already exist");
@@ -255,7 +428,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 					if (!streamCreated1st) {
 						streamCreated2nd = registerNewStream(deviceID, thirdPtyUserId);
 					}
-					
+
 					if (streamCreated1st || streamCreated2nd) {
 
 						JsonArray streamList = new JsonObject(getStreamsList(deviceID)).getJsonArray("streams");
@@ -281,7 +454,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 											System.out.println("{{SmartIOTProtostub}} result>" + res.succeeded());
 										});
 								inviteHyperty(thirdPtyUserId, thirdPtyPlatformId,
-										messageToCreate.getJsonObject("identity"), currentStream.getString("id"), ratingType);
+										messageToCreate.getJsonObject("identity"), currentStream.getString("id"),
+										ratingType);
 								responseBodyOK.put("description", "new stream created");
 								responseBodyOK.put("stream", currentStream);
 								JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
@@ -316,7 +490,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 	}
 
-	private void inviteHyperty(String thirdPtyUserId, String thirdPtyPlatformId, JsonObject identity, String streamID, String ratingType) {
+	private void inviteHyperty(String thirdPtyUserId, String thirdPtyPlatformId, JsonObject identity, String streamID,
+			String ratingType) {
 
 		// case edp: hyperty://sharing-cities-dsm/energy-saving-rating
 		// case gira/mobi-e: hyperty://sharing-cities-dsm/user-activity
@@ -368,6 +543,33 @@ public class SmartIotProtostub extends AbstractVerticle {
 		return device[0];
 	}
 
+	private JsonObject findDeviceObject(String guid) {
+
+		final JsonObject device[] = new JsonObject[1];
+		findDevice = new CountDownLatch(1);
+
+		new Thread(() -> {
+			mongoClient.find(this.collection, new JsonObject().put("guid", guid), res -> {
+				if (res.result().size() != 0) {
+					JsonObject deviceFound = res.result().get(0).getJsonObject("device");
+					System.out.println("3,5" + deviceFound.toString());
+					device[0] = deviceFound;
+					System.out.println("3,9" + device[0]);
+				}
+				findDevice.countDown();
+			});
+
+		}).start();
+
+		try {
+			findDevice.await(5L, TimeUnit.SECONDS);
+			return device[0];
+		} catch (InterruptedException e) {
+			System.out.println(e);
+		}
+		return device[0];
+	}
+
 	private String findStream(String objURL, String guid) {
 		System.out.println("{{SmartIOTProtostub}} find stream:" + objURL);
 		final String device[] = new String[1];
@@ -377,11 +579,11 @@ public class SmartIotProtostub extends AbstractVerticle {
 			mongoClient.find("dataobjects", new JsonObject().put("objURL", objURL), res -> {
 
 				int x;
-				
+
 				for (x = 0; x < res.result().size(); x++) {
 					String currentGuid = res.result().get(x).getJsonObject("metadata").getString("guid");
 					if (currentGuid.equals(guid)) {
-						
+
 						String streamID = res.result().get(0).getString("url");
 
 						device[0] = streamID;
@@ -501,10 +703,10 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 			for (int c; (c = in.read()) >= 0;)
 				received.append(Character.toChars(c));
-		
+
 			if (conn.getResponseCode() == 401) {
 				this.currentToken = Authentication();
-				
+
 			}
 			conn.disconnect();
 
@@ -525,18 +727,12 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 		try {
 			StringBuilder received = new StringBuilder();
-			URL url = new URL(smartIotUrl + "/devices/" + deviceID + "/streams/" + streamName);
+			String urlToCreate = smartIotUrl + "/devices/" + deviceID + "/streams/" + streamName;
+			System.out.println("{{SmartIOTProtostub}} create with url " + urlToCreate + "\nwithtoken->" + currentToken);
+			URL url = new URL(urlToCreate);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("PUT");
-
 			conn.setRequestProperty("authorization", "Bearer " + currentToken);
-
-			Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-
-			for (int c; (c = in.read()) >= 0;)
-				received.append(Character.toChars(c));
-
-			conn.disconnect();
 
 			System.out
 					.println("{{SmartIOTProtostub}} [newStream](" + conn.getResponseCode() + ")" + received.toString());
@@ -548,7 +744,67 @@ public class SmartIotProtostub extends AbstractVerticle {
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace(); 
+			e.printStackTrace();
+			this.currentToken = Authentication();
+			return false;
+		}
+
+	}
+
+	private boolean deleteStream(String deviceID, String streamName) {
+
+		try {
+			StringBuilder received = new StringBuilder();
+			String urlToDelete = smartIotUrl + "/devices/" + deviceID + "/streams/" + streamName;
+			System.out.println("{{SmartIOTProtostub}} delete with url " + urlToDelete + "\nwithtoken->" + currentToken);
+			URL url = new URL(urlToDelete);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("DELETE");
+			conn.setRequestProperty("authorization", "Bearer " + currentToken);
+
+			conn.disconnect();
+
+			System.out.println(
+					"{{SmartIOTProtostub}} [deleteStream](" + conn.getResponseCode() + ")" + received.toString());
+			if (conn.getResponseCode() == 204) {
+				return true;
+			} else {
+				this.currentToken = Authentication();
+				return false;
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			this.currentToken = Authentication();
+			return false;
+		}
+
+	}
+	
+	private boolean deleteDevice(String deviceID) {
+
+		try {
+			StringBuilder received = new StringBuilder();
+			String urlToDelete = smartIotUrl + "/devices/" + deviceID;
+			System.out.println("{{SmartIOTProtostub}} delete with url " + urlToDelete + "\nwithtoken->" + currentToken);
+			URL url = new URL(urlToDelete);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("DELETE");
+			conn.setRequestProperty("authorization", "Bearer " + currentToken);
+
+			conn.disconnect();
+
+			System.out.println(
+					"{{SmartIOTProtostub}} [deleteDevice](" + conn.getResponseCode() + ")" + received.toString());
+			if (conn.getResponseCode() == 204) {
+				return true;
+			} else {
+				this.currentToken = Authentication();
+				return false;
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
 			this.currentToken = Authentication();
 			return false;
 		}
