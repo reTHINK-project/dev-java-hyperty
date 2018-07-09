@@ -29,18 +29,19 @@ public class testConnectionSIOT {
 		String name = "newDeviceName1";
 		String description = "newDeviceDescription1";
 		currentToken = getNewToken();
-		JsonObject newDevice = registerNewDevice(name, description);
+		/*JsonObject newDevice = registerNewDevice(name, description);
 		JsonObject app = registerNewDevice("app name", "app description");
 		String appID = app.getString("id");
 		String appSecret = app.getString("secret");
 		String streamName = "userguidddd-dddddd-dddasdas-idddd-dddddd-dsdas";
-		String pointOfContact = "https://pointofcontactURL";
-		registerNewStream(newDevice.getString("id"), streamName);
-		getStreamsList(newDevice.getString("id"));
-
+		String pointOfContact = "https://pointofcontactURL";*/
+		registerNewStream("9b42a603-e1a0-499c-a763-ee5340ecddc4", "test8");
+	/*	getStreamsList(newDevice.getString("id"));
+		deleteStream(newDevice.getString("id"), streamName);
+	
 		JsonObject subscription = createSubscription("suscriptionName", "subscriptionDescription", appID, newDevice.getString("id"), streamName, pointOfContact);
 		System.out.println("subscription result" + subscription.toString());
-
+*/
 		
 
 	}
@@ -203,5 +204,31 @@ public class testConnectionSIOT {
 			e.printStackTrace();
 		}
 		
+	}
+	
+	private static boolean deleteStream(String deviceID, String streamName) {
+
+		try {
+			StringBuilder received = new StringBuilder();
+			String urlToDelete = smartIotUrl + "/devices/" + deviceID + "/streams/" + streamName;
+			System.out.println("{{SmartIOTProtostub}} delete with url " + urlToDelete +"\nwithtoken->" + currentToken);
+			URL url = new URL(urlToDelete);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("DELETE");
+			conn.setRequestProperty("authorization", "Bearer " + currentToken);
+
+			conn.disconnect();
+
+			System.out.println("{{SmartIOTProtostub}} [deleteStream](" + conn.getResponseCode() + ")" + received.toString());
+			if (conn.getResponseCode() == 204) {
+				return true;
+			}
+
+		} catch (Exception e) {
+
+			return false;
+		}
+		return false;
+
 	}
 }
