@@ -30,6 +30,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	// counters
 	public static final String counters = "counters";
+	
+	// public wallets
+	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";
 
 	public static final String publicWalletGuid = "user-guid://public-wallets";
 
@@ -543,6 +546,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				System.out.println(logMessage + "publishing on " + toSendChanges);
 
 				publish(toSendChanges, updateMessage);
+				publish(publicWalletsOnChangesAddress, updateMessage);
 			});
 		});
 
