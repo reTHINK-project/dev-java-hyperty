@@ -385,7 +385,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		System.out.println("Transfer op");
 		JsonObject body = msg.getJsonObject("body");
-		String walletAddress = body.getString("resource").split("/")[1];
+		String walletAddress = body.getString("resource").split("wallet/")[1];
 		JsonObject transaction = body.getJsonObject("value");
 
 		validateTransaction(transaction, walletAddress);
