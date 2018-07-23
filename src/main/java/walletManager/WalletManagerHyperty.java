@@ -450,7 +450,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				publish(toSendChanges, updateMessage);
 
 				// get rankings
-				generateRankings();
+				// generateRankings();
 			});
 		});
 

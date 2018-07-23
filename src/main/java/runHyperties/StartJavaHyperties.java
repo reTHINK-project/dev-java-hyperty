@@ -262,10 +262,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// public wallets
 		String wallet0Address = "school0-wallet";
 		String wallet1Address = "school1-wallet";
+		String wallet2Address = "school2-wallet";
 		String school0ID = "user-guid://school-0";
 		String school1ID = "user-guid://school-1";
+		String school2ID = "user-guid://school-2";
 		JsonObject feed0 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet0userID");
 		JsonObject feed1 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet1userID");
+		JsonObject feed2 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet2userID");
 
 		// publicWallets
 		JsonArray publicWallets = new JsonArray();
@@ -280,6 +283,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 		walletCause1.put("identity", school1ID);
 		walletCause1.put("externalFeeds", new JsonArray().add(feed1));
 		publicWallets.add(walletCause1);
+		
+		JsonObject walletCause2 = new JsonObject();
+		walletCause2.put("address", wallet2Address);
+		walletCause2.put("identity", school2ID);
+		walletCause2.put("externalFeeds", new JsonArray().add(feed2));
+		publicWallets.add(walletCause2);
+		
 		configWalletManager.put("publicWallets", publicWallets);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
