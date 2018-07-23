@@ -217,8 +217,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configElearning.put("collection", "rates");
 		configElearning.put("mongoHost", mongoHost);
 
-		configElearning.put("tokens_per_completed_quiz", 10);
-		configElearning.put("tokens_per_correct_answer", 10);
+		configElearning.put("tokens_per_completed_quiz", 50);
+		configElearning.put("tokens_per_correct_answer", 5);
 		configElearning.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configElearning.put("streams", new JsonObject().put("elearning", "data://sharing-cities-dsm/elearning"));
 		configElearning.put("hyperty", "123");
