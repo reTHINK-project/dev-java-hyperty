@@ -197,7 +197,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			newWallet.put("address", address);
 			newWallet.put("identity", walletIdentity);
 			newWallet.put("created", new Date().getTime());
-			newWallet.put("balance", 50);
+			newWallet.put("balance", 0);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
 
@@ -696,7 +696,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("address", address);
 						newWallet.put("identity", identity);
 						newWallet.put("created", new Date().getTime());
-						newWallet.put("balance", 0);
+						newWallet.put("balance", msg.getJsonObject("identity").getJsonObject("userProfile").getJsonObject("info").getInteger("balance"));
 						newWallet.put("transactions", new JsonArray());
 						newWallet.put("status", "active");
 						// check if profile info
