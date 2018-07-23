@@ -197,7 +197,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			newWallet.put("address", address);
 			newWallet.put("identity", walletIdentity);
 			newWallet.put("created", new Date().getTime());
-			newWallet.put("balance", 0);
+			newWallet.put("balance", 50);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
 
