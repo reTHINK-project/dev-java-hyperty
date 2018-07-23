@@ -691,12 +691,18 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 						// build wallet document
 						JsonObject newWallet = new JsonObject();
+						int bal = 0;
+						JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile").getJsonObject("info");
+						if (info.containsKey("balance")) {
+							bal = info.getInteger("balance");
+						}
+
 
 						String address = generateWalletAddress(msg.getJsonObject("identity"));
 						newWallet.put("address", address);
 						newWallet.put("identity", identity);
 						newWallet.put("created", new Date().getTime());
-						newWallet.put("balance", msg.getJsonObject("identity").getJsonObject("userProfile").getJsonObject("info").getInteger("balance"));
+						newWallet.put("balance", bal);
 						newWallet.put("transactions", new JsonArray());
 						newWallet.put("status", "active");
 						// check if profile info
