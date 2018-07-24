@@ -67,11 +67,8 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 		new Thread(() -> {
 			JsonObject query = new JsonObject().put("user", user);
-			System.out.println(logMessage + "SEARCHING in " + collection + " for " + query);
 			mongoClient.find(collection, query, result -> {
-				System.out.println(logMessage + "SEARCHING result " + result.result());
 				JsonObject currentDocument = result.result().get(0);
-				// get sessions
 				JsonArray sessions = currentDocument.getJsonArray(dataSource);
 
 				// filter unprocessed sessions
@@ -93,6 +90,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 			e.printStackTrace();
 		}
 
+		System.out.println(logMessage + "user unprocessed sessions: " + unprocessed.toString());
 		return unprocessed;
 	}
 
@@ -101,23 +99,21 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		for (int i = 0; i < sessions.size(); i++) {
 			count += sessions.getJsonObject(i).getDouble("distance");
 		}
+		System.out.println(logMessage + "sumSessionsDistance(): " + count);
 		return count;
 	}
 
 	@Override
 	int rate(Object data) {
 
-		// reset latch
+		// invalid-short-distance
 		tokenAmount = -3;
 		Long currentTimestamp = new Date().getTime();
-
-		// check unprocessed sessions
 		JsonObject activityMessage = (JsonObject) data;
 		System.out.println(logMessage + " message: " + activityMessage.toString());
 		String user = activityMessage.getString("guid");
 		String activity = activityMessage.getString("activity");
-		int distance = activityMessage.getInteger("distance");
-
+		int currentSessionDistance = activityMessage.getInteger("distance");
 		JsonArray unprocessed = getUnprocessedSessions(user, activity);
 
 		// persist in MongoDB
@@ -126,55 +122,67 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		activityMessage.remove("identity");
 		activityMessage.put("processed", false);
 		// min distance according to activity
-		if (checkMinDistance(activity, distance)) {
+		if (checkMinDistance(activity, currentSessionDistance)) {
 			activityMessage.put("processed", true);
 		}
 		persistData(dataSource, user, currentTimestamp, "1", null, activityMessage);
-
-		// check if there are unaccounted sessions
-		int totalDistance = sumSessionsDistance(distance, unprocessed);
-		if (checkMinDistance(activity, distance)) {
-			processSessions(unprocessed.add(activityMessage), user);
+		if ((activity.equals("user_walking_context") || activity.equals("user_biking_context"))
+				&& currentSessionDistance < 300) {
+			System.out.println(logMessage + "distance < 300!");
+			return tokenAmount;
 		}
 
-		checkinLatch = new CountDownLatch(1);
+		// get total distance (unprocessed sessions)
+		int totalDistance = sumSessionsDistance(currentSessionDistance, unprocessed);
+		if (checkMinDistance(activity, totalDistance)) {
+			processSessions(unprocessed.add(activityMessage), user);
+			return getTokensForDistance(activity, totalDistance);
+		} else {
+			return tokenAmount;
+		}
+
+	}
+
+	/**
+	 * Turn unprocessed sessions into processed ones.
+	 * 
+	 * @param sessionsToProcess
+	 * @param user
+	 */
+	private void processSessions(JsonArray sessionsToProcess, String user) {
+
+		CountDownLatch processSessionsLatch = new CountDownLatch(1);
+
 		new Thread(() -> {
-			if (checkMinDistance(activity, totalDistance)) {
-				tokenAmount = getTokensForDistance(activity, totalDistance);
-			}
-			checkinLatch.countDown();
+
+			JsonObject query = new JsonObject().put("user", user);
+			mongoClient.find(collection, query, result -> {
+				JsonObject currentDocument = result.result().get(0);
+				JsonArray sessions = currentDocument.getJsonArray(dataSource);
+
+				// filter unprocessed sessions
+				for (int i = 0; i < sessions.size(); i++) {
+					JsonObject currentSession = sessions.getJsonObject(i);
+					if (!currentSession.getBoolean("processed") && sessionsToProcess.contains(currentSession)) {
+						currentSession.put("processed", true);
+					}
+				}
+				
+				// update only corresponding data source
+				mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
+					System.out.println(logMessage + "processSessions: document with ID " + id + " was updated");
+					processSessionsLatch.countDown();
+				});
+
+			});
 		}).start();
 
 		try {
-			checkinLatch.await(5L, TimeUnit.SECONDS);
-			return tokenAmount;
+			processSessionsLatch.await(5L, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		return tokenAmount;
-	}
 
-	private void processSessions(JsonArray sessionsToProcess, String user) {
-		JsonObject query = new JsonObject().put("user", user);
-		mongoClient.find(collection, query, result -> {
-			JsonObject currentDocument = result.result().get(0);
-			// get sessions
-			JsonArray sessions = currentDocument.getJsonArray(dataSource);
-
-			// filter unprocessed sessions
-			for (int i = 0; i < sessions.size(); i++) {
-				JsonObject currentSession = sessions.getJsonObject(i);
-				if (!currentSession.getBoolean("processed") && sessionsToProcess.contains(currentSession)) {
-					currentSession.put("processed", true);
-				}
-			}
-
-			// update only corresponding data source
-			mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
-				System.out.println(logMessage + "Document with ID:" + id + " was updated");
-			});
-
-		});
 	}
 
 	/**
@@ -210,7 +218,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @return
 	 */
 	private int getTokensForDistance(String activity, int distance) {
-		System.out.println("getTokensForDistance: " + distance);
+
 		int tokens = 0;
 		switch (activity) {
 		case "user_walking_context":
@@ -226,6 +234,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		default:
 			break;
 		}
+		System.out.println(logMessage + "getTokensForDistance(): " + activity + "/" + distance + " - " + tokens);
 		return tokens;
 	}
 
@@ -259,7 +268,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 						}
 					}
 					changes.put("guid", getUserURL(address));
-					System.out.println("CHANGES" + changes.toString());
+					System.out.println(logMessage + "changes: " + changes.toString());
 
 					int numTokens = rate(changes);
 					mine(numTokens, changes, "user-activity");

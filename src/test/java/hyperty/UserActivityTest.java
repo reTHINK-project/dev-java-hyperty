@@ -202,7 +202,6 @@ class UserActivityTest {
 	void sessionWithoutTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session without tokens");
 		JsonObject activityMessage = new JsonObject();
-
 		activityMessage.put("identity", new JsonObject());
 		activityMessage.put("userID", userID);
 		activityMessage.put("type", "user_walking_context");
@@ -216,7 +215,7 @@ class UserActivityTest {
 
 		// wait for op
 		try {
-			Thread.sleep(8000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -240,7 +239,7 @@ class UserActivityTest {
 		activityMessage.put("identity", new JsonObject());
 		activityMessage.put("userID", userID);
 		activityMessage.put("type", "user_walking_context");
-		activityMessage.put("value", 600);
+		activityMessage.put("value", 300);
 		activityMessage.put("source", source);
 		JsonArray toSend = new JsonArray();
 		toSend.add(activityMessage);
@@ -250,22 +249,56 @@ class UserActivityTest {
 
 		// wait for op
 		try {
-			Thread.sleep(8000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		
+		CountDownLatch assertions = new CountDownLatch(2);
 
-		// check if session is unprocessed
-		JsonObject query = new JsonObject().put("user", userID);
-		mongoClient.find(ratesCollection, query, result -> {
-			JsonObject rates = result.result().get(0);
-			JsonArray sessions = rates.getJsonArray("user-activity");
-			assertEquals(2, sessions.size());
-			// check all processed
-			assertEquals(true, sessions.getJsonObject(0).getBoolean("processed"));
-			assertEquals(true, sessions.getJsonObject(1).getBoolean("processed"));
-			testContext.completeNow();
-		});
+		new Thread(() -> {
+
+			// check if sessions are processed
+			JsonObject query = new JsonObject().put("user", userID);
+			mongoClient.find(ratesCollection, query, result -> {
+				JsonObject rates = result.result().get(0);
+				JsonArray sessions = rates.getJsonArray("user-activity");
+				assertEquals(2, sessions.size());
+				assertEquals(true, sessions.getJsonObject(0).getBoolean("processed"));
+				assertEquals(true, sessions.getJsonObject(1).getBoolean("processed"));
+				assertions.countDown();
+				
+			});
+		}).start();
+
+		new Thread(() -> {
+
+			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
+				JsonObject walletInfo = res.result().get(0);
+
+				// check balance updated
+				int currentBalance = walletInfo.getInteger("balance");
+				assertEquals(5, currentBalance);
+
+				// check if transaction in transactions array
+				JsonArray transactions = walletInfo.getJsonArray("transactions");
+				assertEquals(2, transactions.size());
+				assertions.countDown();
+			});
+		}).start();
+
+		try {
+			assertions.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		testContext.completeNow();
+
+		
+		
+		
 	}
 
 	void tearDownStream(VertxTestContext testContext, Vertx vertx) {
