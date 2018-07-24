@@ -525,7 +525,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					// update counters
 					JsonObject countersObj = wallet.getJsonObject(counters);
-					countersObj.put(source, countersObj.getInteger(source) + transactionValue);
+					if (! source.equals("created")) {
+						countersObj.put(source, countersObj.getInteger(source) + transactionValue);
+					}
+					
 				}
 			}
 
@@ -688,22 +691,36 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					if (res.result().size() == 0) {
 						System.out.println("no wallet yet, creating");
-
-						// build wallet document
-						JsonObject newWallet = new JsonObject();
+						
+						String address = generateWalletAddress(msg.getJsonObject("identity"));
 						int bal = 0;
+						JsonArray transactions = new JsonArray();
+						JsonObject newTransaction = new JsonObject();
 						JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile").getJsonObject("info");
 						if (info.containsKey("balance")) {
 							bal = info.getInteger("balance");
+							
+							newTransaction.put("recipient", address);
+							newTransaction.put("source", "created");
+							newTransaction.put("date", DateUtils.getCurrentDateAsISO8601());
+							newTransaction.put("value", bal);
+							newTransaction.put("description", "valid");
+							newTransaction.put("nonce", 1);
+							JsonObject data = new JsonObject();
+							data.put("created","true");
+							newTransaction.put("data", data);
+							transactions.add(newTransaction);
 						}
+						// build wallet document
+						JsonObject newWallet = new JsonObject();
+						
 
 
-						String address = generateWalletAddress(msg.getJsonObject("identity"));
 						newWallet.put("address", address);
 						newWallet.put("identity", identity);
 						newWallet.put("created", new Date().getTime());
 						newWallet.put("balance", bal);
-						newWallet.put("transactions", new JsonArray());
+						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						// check if profile info
 						JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
@@ -727,6 +744,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						});
 						JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
 						System.out.println("wallet created, reply" + response.toString());
+						
+						if (bal > 0 ) {
+							transferToPublicWallet(newWallet.getString(causeWalletAddress), newTransaction);
+						}
+						
+						/*
+						 * transaction to pubwallet
+						 * */
+						
 						reply2.result().reply(response);
 
 					} else {
