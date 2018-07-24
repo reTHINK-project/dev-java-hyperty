@@ -126,11 +126,13 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 			activityMessage.put("processed", true);
 		}
 		persistData(dataSource, user, currentTimestamp, "1", null, activityMessage);
+		/*
 		if ((activity.equals("user_walking_context") || activity.equals("user_biking_context"))
 				&& currentSessionDistance < 300) {
 			System.out.println(logMessage + "distance < 300!");
 			return tokenAmount;
 		}
+		*/
 
 		// get total distance (unprocessed sessions)
 		int totalDistance = sumSessionsDistance(currentSessionDistance, unprocessed);
