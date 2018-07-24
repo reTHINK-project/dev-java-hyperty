@@ -42,8 +42,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	//private String mongoHost = "172.20.0.64";
-	private String mongoHost = "localhost";
+	private String mongoHost = "172.18.0.64";
+	//private String mongoHost = "localhost";
 	private String SIOTurl = "https://iot.alticelabs.com/api";
 	// private String SIOTurl = "http://10.112.77.148/api";
 	private String pointOfContact = "https://url_contact";
