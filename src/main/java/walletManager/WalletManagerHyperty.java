@@ -692,7 +692,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					if (res.result().size() == 0) {
 						System.out.println("no wallet yet, creating");
 						
-						String address = generateWalletAddress(msg.getJsonObject("identity"));
+						String address = generateWalletAddressv2(msg.getJsonObject("identity"));
 						int bal = 0;
 						JsonArray transactions = new JsonArray();
 						JsonObject newTransaction = new JsonObject();
@@ -927,6 +927,25 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
+		return "";
+	}
+	
+
+	private String generateWalletAddressv2(JsonObject jsonObject) {
+		System.out.println("JSON is " + jsonObject);
+/**{
+ * "userProfile":
+ * 			{"userURL":"user://google.com/lduarte.suil@gmail.com",
+ * 			"guid":"user-guid://aa8ac1ae0c8d8d502f9d1bbabf569fe63ab4ae5969bab33d4af6cbe3e0ca8e0e",
+ * }}
+ * */
+		if (jsonObject.containsKey("userProfile")) {
+			JsonObject userProfile = jsonObject.getJsonObject("userProfile");
+			if (userProfile.containsKey("guid")) {
+				return userProfile.getString("guid").split("user-guid://")[1];
+			}
+		}
+			
 		return "";
 	}
 
