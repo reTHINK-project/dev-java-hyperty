@@ -21,6 +21,8 @@ before_install:
     - sudo mongo 127.0.0.1/test  --eval 'db.createCollection("wallets")'
     - sudo mongo 127.0.0.1/test  --eval 'db.createCollection("shops")'
     - sudo mongo 127.0.0.1/test  --eval 'db.createCollection("rates")'
+    - sudo mongo 127.0.0.1/test  --eval 'db.createCollection("elearnings")'
+    - sudo mongo 127.0.0.1/test  --eval 'db.createCollection("dataobjects")'
     - mvn clean
 
 test: mvn test -B

@@ -184,7 +184,6 @@ class ElearningTest {
 			System.out.println("Wallet removed from DB");
 			setupLatch.countDown();
 		});
-		
 
 		// remove from dataobjects
 		query = new JsonObject();
@@ -237,8 +236,6 @@ class ElearningTest {
 			// assertEquals(false, quizzes.getJsonObject(0).getBoolean("processed"));
 			testContext.completeNow();
 		});
-
-		// TODO - validate tokens ?
 	}
 
 	@Test

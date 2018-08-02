@@ -11,6 +11,8 @@ import util.DateUtils;
 
 public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
+	private static final String logMessage = "[AbstractTokenRatingHyperty] ";
+
 	/**
 	 * hyperty address where to setup an handler to process invitations in case the
 	 * data source is dynamic eg produced by the smart citizen
@@ -58,17 +60,14 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * stored in the recipient wallet ?) (future in a blockchain?):
 	 */
 	void mine(int numTokens, JsonObject msgOriginal, String source) {
-		System.out.println("Mining " + numTokens + " tokens...");
+		System.out.println(logMessage + "mine(): Mining " + numTokens + " tokens...\n msg: " + msgOriginal);
 		String userId = msgOriginal.getString("guid");
-		System.out.println("MINING: " + msgOriginal);
 
 		// store transaction by sending it to wallet through wallet manager
 		String walletAddress = getWalletAddress(userId);
-
-		System.out.println("WAlletADDRESS " + walletAddress + "\nFROM " + userId);
 		JsonObject msgToWallet = new JsonObject();
 		msgToWallet.put("type", "create");
-		msgToWallet.put("identity", this.identity);
+		msgToWallet.put("identity", this.identity); 	
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();
@@ -90,7 +89,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		}
 
 		transaction.put("nonce", 1);
-		if (source.equals("user_activity")) {
+		if (source.equals("user-activity")) {
 			// add data
 			JsonObject data = new JsonObject();
 			data.put("distance", msgOriginal.getInteger("distance"));
@@ -109,6 +108,13 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			data.put("shopID", msgOriginal.getString("shopID"));
 			transaction.put("data", data);
 		}
+		if (source.equals("energy-saving")) {
+			// TODOadd data
+			JsonObject data = new JsonObject();
+			data.put("something", "something");
+			transaction.put("data", data);
+		}
+
 		transaction.put("nonce", 1);
 		JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress).put("value", transaction);
 
@@ -160,7 +166,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		}).start();
 
 		try {
-			setupLatch.await();
+			setupLatch.await(10L, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -175,17 +181,16 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * removeStreamHandler for valid received delete messages.
 	 */
 	private void addMyHandler() {
-		System.out.println("..." + streamAddress);
+		System.out.println(logMessage + "addMyHandler: " + streamAddress);
 		vertx.eventBus().<JsonObject>consumer(streamAddress, message -> {
-			System.out.println("Abstract REC" + message.body().toString());
+			System.out.println(logMessage + "new message: " + message.body().toString());
 			mandatoryFieldsValidator(message);
-
 			JsonObject body = new JsonObject(message.body().toString());
 			String type = body.getString("type");
 			String handleCheckInUserURL = body.getJsonObject("identity").getJsonObject("userProfile")
 					.getString("userURL");
-
 			JsonObject response = new JsonObject();
+
 			// check message type
 			switch (type) {
 			case "create":
@@ -212,8 +217,37 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		});
 	}
 
+	String userIDToReturn = null;
+
+	public String getUserURL(String address) {
+
+		CountDownLatch findUserID = new CountDownLatch(1);
+		new Thread(() -> {
+			mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {
+				System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
+				if (userURLforAddress.result().size() == 0) {
+					findUserID.countDown();
+					return;
+				}
+				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
+				userIDToReturn = dataObjectInfo.getString("guid");
+				findUserID.countDown();
+			});
+		}).start();
+
+		try {
+			findUserID.await(5L, TimeUnit.SECONDS);
+			System.out.println("3 - return from latch");
+			return userIDToReturn;
+		} catch (InterruptedException e) {
+			System.out.println("3 - interrupted exception");
+		}
+		System.out.println("3 - return other");
+		return userIDToReturn;
+	}
+
 	public boolean checkIfCanHandleData(String userURL) {
-		System.out.println("CHECK IF CAN BE ADDED:" + userURL);
+		System.out.println(logMessage + "checkIfCanHandleData():" + userURL);
 		addHandler = false;
 
 		checkUser = new CountDownLatch(1);
@@ -233,6 +267,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 					document.put("checkin", new JsonArray());
 					document.put("user-activity", new JsonArray());
 					document.put("elearning", new JsonArray());
+					document.put("energy-saving", new JsonArray());
 					System.out.println("User exists false");
 					mongoClient.insert(collection, document, res2 -> {
 						System.out.println("Setup complete - rates");
@@ -292,20 +327,21 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 */
 	void persistData(String dataSource, String user, long timestamp, String entryID, JsonObject userRates,
 			JsonObject data) {
+		System.out.println(logMessage + "persistData()");
 
 		CountDownLatch setupLatch = new CountDownLatch(1);
 
 		new Thread(() -> {
-			if (userRates != null) {
+			if (userRates != null)
 				entryArray = userRates.getJsonArray(dataSource);
-			} else {
+			else
 				entryArray = new JsonArray();
-			}
 
 			JsonObject query = new JsonObject().put("user", user);
+
 			mongoClient.find(collection, query, result -> {
-				System.out.println("collection " + result.result());
 				JsonObject currentDocument = result.result().get(0);
+				System.out.println("");
 				entryArray = currentDocument.getJsonArray(dataSource);
 				if (data != null) {
 					data.put("timestamp", timestamp);
@@ -321,7 +357,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 				// update only corresponding data source
 				mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
-					System.out.println("Document " + id + " was updated");
+					System.out.println(logMessage + "persistData -document updated: " + currentDocument);
 					setupLatch.countDown();
 				});
 			});

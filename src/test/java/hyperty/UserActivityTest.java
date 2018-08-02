@@ -3,6 +3,7 @@ package hyperty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
@@ -22,9 +23,7 @@ import io.vertx.junit5.VertxTestContext;
 import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
-/*
- * Example of an asynchronous JUnit test for a Verticle.
- */
+
 @ExtendWith(VertxExtension.class)
 @Disabled
 class UserActivityTest {
@@ -32,30 +31,38 @@ class UserActivityTest {
 	private static String userID = "test-userID";
 	private static String subscriptionsAddress = userID + "/subscription";
 	private static String changesAddress = userID + "/changes";
+	private static String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
+	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 	// mongo config
 	private static MongoClient mongoClient;
+	// collections
 	private static String ratesCollection = "rates";
+	private static String walletsCollection = "wallets";
+	private static String dataobjectsCollection = "dataobjects";
+
 	private static String db_name = "test";
 	private static String source = "user-activity";
 	private static String mongoHost = "localhost";
-	private static String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
-	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 
 		String streamAddress = "vertx://sharing-cities-dsm/user-activity";
-		JsonObject identityUserActivity = new JsonObject().put("userProfile", new JsonObject().put("userURL", userID));
+		JsonObject identity = new JsonObject().put("userProfile",
+				new JsonObject().put("userURL", userID).put("guid", userID));
 		JsonObject configUserActivity = new JsonObject();
 		configUserActivity.put("url", userActivityHypertyURL);
-		configUserActivity.put("identity", identityUserActivity);
+		configUserActivity.put("identity", identity);
 		// mongo
 		configUserActivity.put("db_name", "test");
 		configUserActivity.put("collection", "rates");
 		configUserActivity.put("mongoHost", mongoHost);
 
+		// tokens per activity
 		configUserActivity.put("tokens_per_walking_km", 10);
 		configUserActivity.put("tokens_per_biking_km", 10);
+		configUserActivity.put("tokens_per_bikesharing_km", 10);
+		configUserActivity.put("tokens_per_evehicle_km", 5);
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", streamAddress);
@@ -64,11 +71,9 @@ class UserActivityTest {
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, context.succeeding());
 
-		// TODO - use another strategy
-
 		JsonObject configWalletManager = new JsonObject();
 		configWalletManager.put("url", walletManagerHypertyURL);
-		configWalletManager.put("identity", identityUserActivity);
+		configWalletManager.put("identity", identity);
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
@@ -100,7 +105,7 @@ class UserActivityTest {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		msg.put("from", subscriptionsAddress);
-		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("userURL", userID)));
+		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 
 		vertx.eventBus().send(userActivityHypertyURL, msg, reply -> {
 			System.out.println("REP: " + reply.toString());
@@ -113,20 +118,35 @@ class UserActivityTest {
 			e.printStackTrace();
 		}
 
-		/*
-		 * CountDownLatch setupLatch = new CountDownLatch(1);
-		 * 
-		 * new Thread(() -> { // insert entry in "rates" JsonObject document = new
-		 * JsonObject(); document.put("user", userID); document.put("checkin", new
-		 * JsonArray()); document.put("user-activity", new JsonArray());
-		 * mongoClient.insert(ratesCollection, document, res -> {
-		 * System.out.println("Setup complete - rates"); setupLatch.countDown(); });
-		 * }).start();
-		 * 
-		 * try { setupLatch.await(); } catch (InterruptedException e) {
-		 * e.printStackTrace(); }
-		 * 
-		 */
+		CountDownLatch setupLatch = new CountDownLatch(1);
+
+		new Thread(() -> { // create wallet
+			System.out.println("no wallet yet, creating");
+
+			// build wallet document
+			JsonObject newWallet = new JsonObject();
+
+			String address = "walletAddress";
+			newWallet.put("address", address);
+			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+			newWallet.put("created", new Date().getTime());
+			newWallet.put("balance", 0);
+			newWallet.put("transactions", new JsonArray());
+			newWallet.put("status", "active");
+
+			JsonObject document = new JsonObject(newWallet.toString());
+
+			mongoClient.save(walletsCollection, document, id -> {
+				System.out.println("New wallet with ID:" + id);
+				setupLatch.countDown();
+			});
+		}).start();
+
+		try {
+			setupLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 		checkpoint.flag();
 	}
@@ -146,13 +166,35 @@ class UserActivityTest {
 	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
+		CountDownLatch setupLatch = new CountDownLatch(3);
+
 		// remove from rates
 		JsonObject query = new JsonObject();
-		query.put("user", userID);
-		mongoClient.removeDocument(ratesCollection, query, res -> {
+		mongoClient.removeDocuments(ratesCollection, query, res -> {
 			System.out.println("Rates removed from DB");
-			testContext.completeNow();
+			setupLatch.countDown();
 		});
+
+		// remove from wallets
+		query = new JsonObject();
+		mongoClient.removeDocuments(walletsCollection, query, res -> {
+			System.out.println("Wallet removed from DB");
+			setupLatch.countDown();
+		});
+
+		// remove from dataobjects
+		query = new JsonObject();
+		mongoClient.removeDocuments(dataobjectsCollection, query, res -> {
+			System.out.println("Dataobject removed from DB");
+			setupLatch.countDown();
+		});
+
+		try {
+			setupLatch.await();
+			testContext.completeNow();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 	}
 
@@ -160,7 +202,6 @@ class UserActivityTest {
 	void sessionWithoutTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session without tokens");
 		JsonObject activityMessage = new JsonObject();
-
 		activityMessage.put("identity", new JsonObject());
 		activityMessage.put("userID", userID);
 		activityMessage.put("type", "user_walking_context");
@@ -174,7 +215,7 @@ class UserActivityTest {
 
 		// wait for op
 		try {
-			Thread.sleep(8000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -195,11 +236,10 @@ class UserActivityTest {
 		System.out.println("TEST - Session with tokens");
 		JsonObject activityMessage = new JsonObject();
 
-
 		activityMessage.put("identity", new JsonObject());
 		activityMessage.put("userID", userID);
 		activityMessage.put("type", "user_walking_context");
-		activityMessage.put("value", 600);
+		activityMessage.put("value", 300);
 		activityMessage.put("source", source);
 		JsonArray toSend = new JsonArray();
 		toSend.add(activityMessage);
@@ -209,22 +249,56 @@ class UserActivityTest {
 
 		// wait for op
 		try {
-			Thread.sleep(8000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		
+		CountDownLatch assertions = new CountDownLatch(2);
 
-		// check if session is unprocessed
-		JsonObject query = new JsonObject().put("user", userID);
-		mongoClient.find(ratesCollection, query, result -> {
-			JsonObject rates = result.result().get(0);
-			JsonArray sessions = rates.getJsonArray("user-activity");
-			assertEquals(2, sessions.size());
-			// check all processed
-			assertEquals(true, sessions.getJsonObject(0).getBoolean("processed"));
-			assertEquals(true, sessions.getJsonObject(1).getBoolean("processed"));
-			testContext.completeNow();
-		});
+		new Thread(() -> {
+
+			// check if sessions are processed
+			JsonObject query = new JsonObject().put("user", userID);
+			mongoClient.find(ratesCollection, query, result -> {
+				JsonObject rates = result.result().get(0);
+				JsonArray sessions = rates.getJsonArray("user-activity");
+				assertEquals(2, sessions.size());
+				assertEquals(true, sessions.getJsonObject(0).getBoolean("processed"));
+				assertEquals(true, sessions.getJsonObject(1).getBoolean("processed"));
+				assertions.countDown();
+				
+			});
+		}).start();
+
+		new Thread(() -> {
+
+			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
+				JsonObject walletInfo = res.result().get(0);
+
+				// check balance updated
+				int currentBalance = walletInfo.getInteger("balance");
+				assertEquals(5, currentBalance);
+
+				// check if transaction in transactions array
+				JsonArray transactions = walletInfo.getJsonArray("transactions");
+				assertEquals(2, transactions.size());
+				assertions.countDown();
+			});
+		}).start();
+
+		try {
+			assertions.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		testContext.completeNow();
+
+		
+		
+		
 	}
 
 	void tearDownStream(VertxTestContext testContext, Vertx vertx) {

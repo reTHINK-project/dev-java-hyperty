@@ -62,7 +62,6 @@ class CheckInTest {
 		config.put("min_frequency", 1);
 		config.put("hyperty", "123");
 		config.put("stream", "token-rating");
-		config.put("identity", identity);
 		config.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		config.put("streams",
 				new JsonObject().put("shops", shopsInfoStreamAddress).put("bonus", bonusInfoStreamAddress));
@@ -123,6 +122,7 @@ class CheckInTest {
 
 		CountDownLatch setupLatch = new CountDownLatch(2);
 
+		
 		new Thread(() -> { // create wallet
 			System.out.println("no wallet yet, creating");
 
@@ -144,6 +144,7 @@ class CheckInTest {
 				setupLatch.countDown();
 			});
 		}).start();
+		
 
 		new Thread(() -> {
 			// add shop
@@ -180,7 +181,7 @@ class CheckInTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-	@AfterAll
+	//@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(4);
@@ -228,6 +229,30 @@ class CheckInTest {
 
 	@Test
 	void userCloseToShop(VertxTestContext testContext, Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", "create");
+		JsonObject profileInfo = new JsonObject().put("age", 24);
+		JsonObject identity = new JsonObject().put("userProfile",
+				new JsonObject().put("userURL", userID).put("guid", userID).put("info", profileInfo));
+		JsonObject identityWithInfo = identity.copy();
+		JsonObject info = new JsonObject().put("cause", 0);
+		identityWithInfo.getJsonObject("userProfile").put("info", info);
+		msg.put("identity", identityWithInfo);
+		msg.put("from", "myself");
+		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+			JsonObject newMsg = new JsonObject();
+			JsonObject body = new JsonObject().put("code", 200);
+			newMsg.put("body", body);
+			res.result().reply(newMsg);
+		});	
+		
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
 		System.out.println("TEST - User close to shop");
 		// latitude
 		JsonObject latitude = new JsonObject().put("name", "latitude").put("value", 40.0001);
