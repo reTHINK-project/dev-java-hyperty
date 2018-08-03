@@ -7,7 +7,7 @@ import hyperty.AbstractHyperty;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import util.DateUtils;
+import util.DateUtilsHelper;
 
 public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
@@ -67,25 +67,28 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		String walletAddress = getWalletAddress(userId);
 		JsonObject msgToWallet = new JsonObject();
 		msgToWallet.put("type", "create");
-		msgToWallet.put("identity", this.identity); 	
+		msgToWallet.put("identity", this.identity);
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();
 		// transaction.put("address", walletAddress);
 		transaction.put("recipient", walletAddress);
 		transaction.put("source", source);
-		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
+		transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 		transaction.put("value", numTokens);
 
-		if (numTokens == -1) {
-			transaction.put("description", "invalid-timestamp");
-		} else if (numTokens == -2) {
-			transaction.put("description", "invalid-location");
-		} else if (numTokens == -3) {
-			transaction.put("description", "invalid-short-distance");
-			transaction.put("value", 0);
-		} else {
-			transaction.put("description", "valid");
+		// when source is bonus numTokens is always negative
+		if (!source.equals("bonus")) {
+			if (numTokens == -1) {
+				transaction.put("description", "invalid-timestamp");
+			} else if (numTokens == -2) {
+				transaction.put("description", "invalid-location");
+			} else if (numTokens == -3) {
+				transaction.put("description", "invalid-short-distance");
+				transaction.put("value", 0);
+			} else {
+				transaction.put("description", "valid");
+			}
 		}
 
 		transaction.put("nonce", 1);
@@ -318,12 +321,9 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	/**
 	 * Save data to MongoDB.
 	 * 
-	 * @param user
-	 *            user ID
-	 * @param timestamp
-	 *            time in millis since epoch
-	 * @param entryID
-	 *            entryID
+	 * @param user      user ID
+	 * @param timestamp time in millis since epoch
+	 * @param entryID   entryID
 	 */
 	void persistData(String dataSource, String user, long timestamp, String entryID, JsonObject userRates,
 			JsonObject data) {

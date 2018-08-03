@@ -22,7 +22,7 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import util.DateUtils;
+import util.DateUtilsHelper;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
@@ -230,7 +230,7 @@ class WalletManagerTest {
 		JsonObject transaction = new JsonObject();
 		transaction.put("recipient", "1");
 		transaction.put("source", "elearning");
-		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
+		transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 		transaction.put("value", 10);
 		transaction.put("nonce", "10");
 		body.put("value", transaction);
@@ -490,7 +490,7 @@ class WalletManagerTest {
 		transaction.put("type", "transfer");
 		transaction.put("recipient", walletAddress);
 		transaction.put("source", "source");
-		transaction.put("date", DateUtils.getCurrentDateAsISO8601());
+		transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
 		transaction.put("from", "");
