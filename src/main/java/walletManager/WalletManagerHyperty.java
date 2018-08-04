@@ -397,6 +397,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonObject walletInfo = res.result().get(0);
 
 			int currentBalance = walletInfo.getInteger("balance");
+			int bonusCredit = walletInfo.getInteger("bonus-credit");
 			JsonObject profile = walletInfo.getJsonObject("profile");
 			int transactionValue = transaction.getInteger("value");
 			if (transaction.getString("source").equals("energy-saving")) {
@@ -411,6 +412,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			transactions.add(transaction);
 			// update balance
 			walletInfo.put("balance", currentBalance + transactionValue);
+			// TODO - update bonus-credit algorithm
+			walletInfo.put("bonus-credit", bonusCredit + transactionValue);
 
 			JsonObject document = new JsonObject(walletInfo.toString());
 
@@ -574,8 +577,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				if (transaction.getString("source").equals("bonus")) {
 					// check if user has item.cost tokens
-
 					int walletBalance = wallet.getInteger("balance");
+					// TODO - check with bonus-credit field
+//					int walletBalance = wallet.getInteger("bonus-credit");
 					int cost = transaction.getInteger("value");
 					if (walletBalance + cost < 0) {
 						System.out.println(logMessage + "insufficient funds for pick up");

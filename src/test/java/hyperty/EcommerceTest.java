@@ -51,6 +51,7 @@ class EcommerceTest {
 	private static String mongoHost = "localhost";
 	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 	private static int walletInitialBalance = 30;
+	private static int walletInitialBonusCredit = 30;
 	private static int itemCost = 10;
 
 	@BeforeAll
@@ -139,6 +140,7 @@ class EcommerceTest {
 			newWallet.put("balance", walletInitialBalance);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
+			newWallet.put("bonus-credit", walletInitialBonusCredit);
 
 			JsonObject document = new JsonObject(newWallet.toString());
 
@@ -305,13 +307,21 @@ class EcommerceTest {
 
 		new Thread(() -> {
 
-			// check wallet balance
+			// check wallet
 			JsonObject query = new JsonObject().put("identity",
 					new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
+				// check bonus-credit
+				int bonusCredit = wallet.getInteger("bonus-credit");
+				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
+				// balance
 				int balance = wallet.getInteger("balance");
 				assertEquals(walletInitialBalance - itemCost, balance);
+				// transactions
+				JsonArray transactions = wallet.getJsonArray("transactions");
+				assertEquals(1, transactions.size());
+				assertEquals(true, transactions.getJsonObject(0).getBoolean("bonus"));
 				testContext.completeNow();
 				assertions.countDown();
 			});

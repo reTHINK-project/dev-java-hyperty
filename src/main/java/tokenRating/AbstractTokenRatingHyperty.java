@@ -89,6 +89,10 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			} else {
 				transaction.put("description", "valid");
 			}
+			transaction.put("bonus", false);
+		} else {
+			transaction.put("description", "valid");
+			transaction.put("bonus", true);
 		}
 
 		transaction.put("nonce", 1);
@@ -132,7 +136,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * @param transaction
 	 */
 	private void transfer(JsonObject msg) {
-		System.out.println("Sending transaction to Wallet Manager..." + msg.toString());
+		System.out.println(logMessage+"transfer(): " + msg.toString());
 
 		vertx.eventBus().publish(walletManagerAddress, msg);
 	}

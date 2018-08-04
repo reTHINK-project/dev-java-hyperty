@@ -324,6 +324,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 								valid = false;
 							}
 						}
+						// TODO - hour ?
 					}
 					if (valid) {
 						tokenAmount = bonusInfo.getInteger("cost") * -1;
