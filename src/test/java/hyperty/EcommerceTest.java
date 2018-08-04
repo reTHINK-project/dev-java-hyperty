@@ -26,7 +26,7 @@ import tokenRating.CheckInRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
-@Disabled
+//@Disabled
 class EcommerceTest {
 
 	private static String userID = "test-userID";
@@ -218,7 +218,7 @@ class EcommerceTest {
 	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
-		CountDownLatch setupLatch = new CountDownLatch(5);
+		CountDownLatch setupLatch = new CountDownLatch(4);
 
 		// remove from rates
 		JsonObject query = new JsonObject();
@@ -229,12 +229,12 @@ class EcommerceTest {
 		});
 
 		// remove from wallets
-		query = new JsonObject();
-		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
-		mongoClient.removeDocument(walletsCollection, query, res -> {
-			System.out.println("Wallet removed from DB");
-			setupLatch.countDown();
-		});
+//		query = new JsonObject();
+//		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+//		mongoClient.removeDocument(walletsCollection, query, res -> {
+//			System.out.println("Wallet removed from DB");
+//			setupLatch.countDown();
+//		});
 
 		// remove from dataobjects
 		query = new JsonObject();

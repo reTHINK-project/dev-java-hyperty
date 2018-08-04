@@ -3,6 +3,8 @@ package walletManager;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +49,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		// check public wallets to be created
 		JsonArray publicWallets = config().getJsonArray("publicWallets");
+		int rankingTimer = config().getInteger("rankingTimer");
 
 		if (publicWallets != null) {
 			createPublicWallets(publicWallets);
@@ -75,6 +78,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			resetPublicWalletCounters();
 		});
 
+		// calc rankings every x miliseconds
+		Timer timer = new Timer();
+		timer.schedule(new RankingsTimer(), 0, rankingTimer);
+
+	}
+
+	class RankingsTimer extends TimerTask {
+		public void run() {
+			generateRankings();
+		}
 	}
 
 	private void resetPublicWalletCounters() {
@@ -243,13 +256,12 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	}
 
 	/**
-	 * Handler for read requests.
-	 * 
-	 * @return
+	 * Generate rankings and persist them
 	 */
 	private void generateRankings() {
 
-		// mongoClient.find("wallets", new JsonObject(), res -> {
+//		System.out.println(logMessage + "generateRankings()");
+
 		FindOptions findOptions = new FindOptions();
 		findOptions.setSort(new JsonObject().put("balance", -1));
 		mongoClient.findWithOptions("wallets", new JsonObject(), findOptions, res -> {
@@ -262,12 +274,35 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					continue;
 				}
 				ranking++;
-				wallet.put("wanking", ranking);
+				int previousRanking = wallet.getInteger("ranking");
+				wallet.put("ranking", ranking);
 				JsonObject query = new JsonObject();
 				query.put("identity", wallet.getJsonObject("identity"));
 				mongoClient.findOneAndReplace(collection, query, wallet, id -> {
 					System.out.println(logMessage + "generateRankings() document updated: " + wallet);
 				});
+
+				// publish update if ranking changed
+				if (previousRanking != ranking) {
+					// send wallet update
+					String walletAddress = wallet.getString("address");
+					JsonObject updateMessage = new JsonObject();
+					updateMessage.put("type", "update");
+					updateMessage.put("from", url);
+					updateMessage.put("to", walletAddress + "/changes");
+					JsonObject updateBody = new JsonObject();
+					updateBody.put("balance", wallet.getInteger("balance"));
+					updateBody.put("transactions", wallet.getJsonArray("transactions"));
+					updateBody.put("ranking", ranking);
+					updateMessage.put("body", updateBody);
+
+					// publish transaction in the event bus using the wallet address.
+					String toSendChanges = walletAddress + "/changes";
+					System.out.println(logMessage + "publishing on " + toSendChanges);
+
+					publish(toSendChanges, updateMessage);
+				}
+
 			}
 		});
 	}
@@ -429,6 +464,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				JsonObject updateBody = new JsonObject();
 				updateBody.put("balance", walletInfo.getInteger("balance"));
 				updateBody.put("transactions", walletInfo.getJsonArray("transactions"));
+				updateBody.put("rankings", walletInfo.getInteger("ranking"));
 				updateMessage.put("body", updateBody);
 
 				// publish transaction in the event bus using the wallet address.
@@ -720,6 +756,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("balance", bal);
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
+
+						// TODO - initial ranking
+						newWallet.put("ranking", 0);
+
 						// check if profile info
 						JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
 								.getJsonObject("info");
