@@ -162,20 +162,20 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		String shopID = changesMessage.getString("shopID");
 		String bonusID = changesMessage.getString("bonusID");
 		if (bonusID != null) {
-			System.out.println(logMessage + "PICK UP MESSAGE " + changesMessage.toString());
+			// COLLECT BONUS
+			System.out.println(logMessage + "COLLECT MESSAGE " + changesMessage.toString());
 			checkinLatch = new CountDownLatch(1);
 			new Thread(() -> {
-				System.out.println("2 - Started thread");
 				// get bonus from DB
 				mongoClient.find(bonusCollection, new JsonObject().put("id", bonusID), bonusForIdResult -> {
-					System.out.println("2 - Received bonus info");
+					System.out.println(logMessage + "Received bonus info");
 					JsonObject bonusInfo = bonusForIdResult.result().get(0);
 					validatePickUpItem(changesMessage.getString("guid"), bonusInfo, currentTimestamp);
 					checkinLatch.countDown();
 				});
 			}).start();
 		} else {
-			// data contains shopID, users's location
+			// CHECKIN
 			System.out.println("CHECK IN MESSAGE " + changesMessage.toString());
 			String user = changesMessage.getString("guid");
 			Double userLatitude = changesMessage.getDouble("latitude");
@@ -276,6 +276,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		System.out.println(logMessage + " - validatePickUpItem(): " + bonusInfo.toString());
 
 		findRates = new CountDownLatch(1);
+		
+		// TODO - check wallet funds
 
 		new Thread(() -> {
 			// get previous checkin from that user for that rating source

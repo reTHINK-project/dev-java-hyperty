@@ -26,7 +26,7 @@ import tokenRating.CheckInRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
-//@Disabled
+@Disabled
 class EcommerceTest {
 
 	private static String userID = "test-userID";
@@ -85,13 +85,14 @@ class EcommerceTest {
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
+		configWalletManager.put("rankingTimer", 20000);
 
 		configWalletManager.put("observers", new JsonArray().add(""));
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
 				.setWorker(true);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
-			System.out.println("ElearningRatingHyperty Result->" + res.result());
+			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
 
 		makeMongoConnection(vertx);
@@ -218,7 +219,7 @@ class EcommerceTest {
 	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
-		CountDownLatch setupLatch = new CountDownLatch(4);
+		CountDownLatch setupLatch = new CountDownLatch(5);
 
 		// remove from rates
 		JsonObject query = new JsonObject();
@@ -229,12 +230,12 @@ class EcommerceTest {
 		});
 
 		// remove from wallets
-//		query = new JsonObject();
-//		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
-//		mongoClient.removeDocument(walletsCollection, query, res -> {
-//			System.out.println("Wallet removed from DB");
-//			setupLatch.countDown();
-//		});
+		query = new JsonObject();
+		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
+		mongoClient.removeDocument(walletsCollection, query, res -> {
+			System.out.println("Wallet removed from DB");
+			setupLatch.countDown();
+		});
 
 		// remove from dataobjects
 		query = new JsonObject();
@@ -285,7 +286,7 @@ class EcommerceTest {
 
 		// wait for op
 		try {
-			Thread.sleep(6000);
+			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -317,7 +318,7 @@ class EcommerceTest {
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");
-				assertEquals(walletInitialBalance - itemCost, balance);
+				assertEquals(walletInitialBalance, balance);
 				// transactions
 				JsonArray transactions = wallet.getJsonArray("transactions");
 				assertEquals(1, transactions.size());
@@ -353,7 +354,7 @@ class EcommerceTest {
 
 		// wait for op
 		try {
-			Thread.sleep(6000);
+			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -381,7 +382,7 @@ class EcommerceTest {
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
 				int balance = wallet.getInteger("balance");
-				assertEquals(walletInitialBalance - itemCost, balance);
+				assertEquals(walletInitialBalance, balance);
 				testContext.completeNow();
 				assertions.countDown();
 			});

@@ -445,10 +445,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// store transaction
 			JsonArray transactions = walletInfo.getJsonArray("transactions");
 			transactions.add(transaction);
-			// update balance
-			walletInfo.put("balance", currentBalance + transactionValue);
-			// TODO - update bonus-credit algorithm
-			walletInfo.put("bonus-credit", bonusCredit + transactionValue);
+			if (transaction.getString("source").equals("bonus")) {
+				// update bonus-credit
+				walletInfo.put("bonus-credit", bonusCredit + transactionValue);
+			} else {
+				// update balance
+				walletInfo.put("balance", currentBalance + transactionValue);
+			}
 
 			JsonObject document = new JsonObject(walletInfo.toString());
 
@@ -612,14 +615,12 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				System.out.println(logMessage + "Wallet exists: " + wallet.toString());
 
 				if (transaction.getString("source").equals("bonus")) {
-					// check if user has item.cost tokens
-					int walletBalance = wallet.getInteger("balance");
-					// TODO - check with bonus-credit field
-//					int walletBalance = wallet.getInteger("bonus-credit");
+					// check with bonus-credit field
+					int walletBalance = wallet.getInteger("bonus-credit");
 					int cost = transaction.getInteger("value");
 					if (walletBalance + cost < 0) {
 						System.out.println(logMessage + "insufficient funds for pick up");
-						return;
+						transaction.put("description", "invalid-insufficient-credits");
 					}
 				}
 				performTransaction(walletAddress, transaction);
@@ -756,8 +757,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("balance", bal);
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
-
-						// TODO - initial ranking
 						newWallet.put("ranking", 0);
 
 						// check if profile info
