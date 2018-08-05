@@ -276,11 +276,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				ranking++;
 				int previousRanking = wallet.getInteger("ranking");
 				wallet.put("ranking", ranking);
-				JsonObject query = new JsonObject();
-				query.put("identity", wallet.getJsonObject("identity"));
-				mongoClient.findOneAndReplace(collection, query, wallet, id -> {
-					System.out.println(logMessage + "generateRankings() document updated: " + wallet);
-				});
 
 				// publish update if ranking changed
 				if (previousRanking != ranking) {
@@ -295,6 +290,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					updateBody.put("transactions", wallet.getJsonArray("transactions"));
 					updateBody.put("ranking", ranking);
 					updateMessage.put("body", updateBody);
+
+					// update in Mongo
+					JsonObject query = new JsonObject();
+					query.put("identity", wallet.getJsonObject("identity"));
+					mongoClient.findOneAndReplace(collection, query, wallet, id -> {
+						System.out.println(logMessage + "generateRankings() document updated: " + wallet);
+					});
 
 					// publish transaction in the event bus using the wallet address.
 					String toSendChanges = walletAddress + "/changes";
@@ -755,6 +757,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("identity", identity);
 						newWallet.put("created", new Date().getTime());
 						newWallet.put("balance", bal);
+						// TODO - the same as initial balance?
+						newWallet.put("bonus-credit", bal);
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						newWallet.put("ranking", 0);
