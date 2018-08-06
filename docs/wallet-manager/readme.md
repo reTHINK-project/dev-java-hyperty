@@ -12,6 +12,8 @@ The Wallet Manager hyperty handles Token Wallets on behalf of a user.
   externalFeeds: <Id of External Feeds or platforms to be Setup>
 }
 ```
+* `rankingTimer`: num of milliseconds before recalculating user rankings
+
 
 For each public wallet, a new device and a new sensor is created at the Smart IoT Stub as specified [here](../smart-iot-protostub)
 
@@ -30,7 +32,9 @@ Each wallet is store as a JSON object:
   transactions: <JSON OBject. see below>,
   status: <active,deleted>,
   wallet2bGranted: <public wallet address to be granted everytime there is a new transaction>,
-  profile: <JSON object with personal data about the user>
+  profile: <JSON object with personal data about the user>,
+  ranking: <int of current ranking, starting at 1>,
+  bonus-credit: <credit to be spent in bonus>
 }
 ```
 
@@ -53,7 +57,9 @@ Transaction JSON Object:
   source: <data stream address>,
   date: <ISO 8601 compliant>,
   value: <amount of tokens in the transaction>
-  nonce: < the count of the number of performed mining transactions, starting with 0>
+  nonce: < the count of the number of performed mining transactions, starting with 0>,
+  bonus: <true if bonus transaction, false otherwise>,
+  data: <transaction relative data>
 }
 ```
 
