@@ -27,7 +27,7 @@ import walletManager.WalletManagerHyperty;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
-//@Disabled
+@Disabled
 class CheckInTest {
 
 	private static String userID = "test-userID";
@@ -138,7 +138,7 @@ class CheckInTest {
 			newWallet.put("balance", 0);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
-			newWallet.put("bonus-credit", 0);
+			newWallet.put("bonusCredit", 0);
 			newWallet.put("ranking", 0);
 
 			JsonObject document = new JsonObject(newWallet.toString());

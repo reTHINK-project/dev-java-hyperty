@@ -434,7 +434,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonObject walletInfo = res.result().get(0);
 
 			int currentBalance = walletInfo.getInteger("balance");
-			int bonusCredit = walletInfo.getInteger("bonus-credit");
+			int bonusCredit = walletInfo.getInteger("bonusCredit");
 			JsonObject profile = walletInfo.getJsonObject("profile");
 			int transactionValue = transaction.getInteger("value");
 			if (transaction.getString("source").equals("energy-saving")) {
@@ -448,8 +448,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonArray transactions = walletInfo.getJsonArray("transactions");
 			transactions.add(transaction);
 			if (transaction.getString("source").equals("bonus")) {
-				// update bonus-credit
-				walletInfo.put("bonus-credit", bonusCredit + transactionValue);
+				// update bonusCredit
+				walletInfo.put("bonusCredit", bonusCredit + transactionValue);
 			} else {
 				// update balance
 				walletInfo.put("balance", currentBalance + transactionValue);
@@ -617,8 +617,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				System.out.println(logMessage + "Wallet exists: " + wallet.toString());
 
 				if (transaction.getString("source").equals("bonus")) {
-					// check with bonus-credit field
-					int walletBalance = wallet.getInteger("bonus-credit");
+					// check with bonusCredit field
+					int walletBalance = wallet.getInteger("bonusCredit");
 					int cost = transaction.getInteger("value");
 					if (cost > 0) {
 						transaction.put("value", 0);
@@ -763,8 +763,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("identity", identity);
 						newWallet.put("created", new Date().getTime());
 						newWallet.put("balance", bal);
-						// TODO - the same as initial balance?
-						newWallet.put("bonus-credit", bal);
+						newWallet.put("bonusCredit", bal);
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						newWallet.put("ranking", 0);

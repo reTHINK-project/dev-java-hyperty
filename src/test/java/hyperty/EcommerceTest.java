@@ -34,7 +34,7 @@ class EcommerceTest {
 	private static String changesAddress = userID + "/changes";
 	private static String checkinHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 	private static String shopsInfoStreamAddress = "data://sharing-cities-dsm/shops";
-	private static String bonusInfoStreamAddress = "data://sharing-cities-dsm/";
+	private static String bonusInfoStreamAddress = "data://sharing-cities-dsm/bonus";
 	private static String from = "tester";
 
 	private static String storeID = "test-shopID";
@@ -145,7 +145,7 @@ class EcommerceTest {
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
 			newWallet.put("ranking", 0);
-			newWallet.put("bonus-credit", walletInitialBonusCredit);
+			newWallet.put("bonusCredit", walletInitialBonusCredit);
 
 			JsonObject document = new JsonObject(newWallet.toString());
 
@@ -375,8 +375,8 @@ class EcommerceTest {
 					new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
-				// check bonus-credit
-				int bonusCredit = wallet.getInteger("bonus-credit");
+				// check bonusCredit
+				int bonusCredit = wallet.getInteger("bonusCredit");
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");
@@ -447,8 +447,8 @@ class EcommerceTest {
 					new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
-				// bonus-credit
-				int bonusCredit = wallet.getInteger("bonus-credit");
+				// bonusCredit
+				int bonusCredit = wallet.getInteger("bonusCredit");
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");
@@ -519,8 +519,8 @@ class EcommerceTest {
 					new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
-				// bonus-credit
-				int bonusCredit = wallet.getInteger("bonus-credit");
+				// bonusCredit
+				int bonusCredit = wallet.getInteger("bonusCredit");
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");
@@ -592,8 +592,8 @@ class EcommerceTest {
 					new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
-				// check bonus-credit
-				int bonusCredit = wallet.getInteger("bonus-credit");
+				// check bonusCredit
+				int bonusCredit = wallet.getInteger("bonusCredit");
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");
