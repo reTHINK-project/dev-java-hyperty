@@ -60,7 +60,15 @@ failedTransactionIcon: "https://xpto/failed.gif",
 bonus: true
 ```
 
+**Collecting bonus outcomes**
 
+- valid: transaction is valid
+
+- invalid-insufficient-credits: not enough `wallet.bonus-credit`
+
+- invalid-not-available: current date is outside `start-expires` range
+
+- invalid-failed-constraints: temporal constraint failed (e.g. already collected this bonus the max number of times for the day)
 
 ### Observed Streams
 
