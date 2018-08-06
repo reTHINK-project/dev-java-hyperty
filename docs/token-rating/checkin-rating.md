@@ -18,7 +18,7 @@ The Check-in Rating Hyperty observes user's check-in location and reward with to
 
 ### Persisted Data Model
 
-This Hyperty handles the storage of local shops spots compliant with the [Spot Data Object Model](https://github.com/reTHINK-project/specs/tree/master/datamodel/data-objects/spot). Example
+This Hyperty handles the storage of local shops spots compliant with the [Spot Data Object Model](https://github.com/reTHINK-project/specs/tree/master/datamodel/data-objects/spot) and bonus compliant with the [E-commerce Data Object](https://rethink-project.github.io/specs/datamodel/data-objects/ecommerce/readme/?scroll=2940). Example:
 
 **shops**
 
@@ -40,6 +40,25 @@ opening-hours: {
    }
 location: { degrees-latitude: "", degrees-longitude: "" }
 ```
+**bonus**
+
+```
+id: "myBonus",
+icon: "https://xpto/manel.gif",
+name: "Bonus da Loja do Manel",
+description: "Este bonus pertence à Loja do Manel",
+cost: 10,
+spotID: "myid",
+start: "2018/08/01",
+expires: "2018/08/30",
+constraints: {
+  "period": "day",
+  "times": 2
+}
+successfulTransactionIcon: "https://xpto/success.gif",
+failedTransactionIcon: "https://xpto/failed.gif",
+bonus: true
+```
 
 
 
@@ -52,3 +71,5 @@ location: { degrees-latitude: "", degrees-longitude: "" }
 ### Produced Stream
 
 * shops data: `spot://sharing-cities-dsm/shops`
+
+* bonus data: `spot://sharing-cities-dsm/bonus`
