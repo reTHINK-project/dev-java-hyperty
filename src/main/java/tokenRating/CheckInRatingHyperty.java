@@ -276,7 +276,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		System.out.println(logMessage + " - validatePickUpItem(): " + bonusInfo.toString());
 
 		findRates = new CountDownLatch(1);
-		
+
 		// TODO - check wallet funds
 
 		new Thread(() -> {
@@ -329,16 +329,16 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 						// TODO - hour ?
 					}
 					if (valid) {
+						// invalid-failed-constraints
 						tokenAmount = bonusInfo.getInteger("cost") * -1;
-						persistData(dataSource, user, currentTimestamp, bonusInfo.getString("id"), userRates, null);
 					} else {
 						tokenAmount = 0;
-						persistData(dataSource, user, currentTimestamp, bonusInfo.getString("id"), userRates, null);
 					}
 				} else {
-					// invalid
-					System.out.println("2 - invalid");
+					// invalid-not-available
+					tokenAmount = 1;
 				}
+				persistData(dataSource, user, currentTimestamp, bonusInfo.getString("id"), userRates, null);
 				findRates.countDown();
 			});
 		}).start();

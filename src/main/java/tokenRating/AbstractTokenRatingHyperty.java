@@ -93,7 +93,11 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		} else {
 			if (numTokens == 0) {
 				transaction.put("description", "invalid-failed-constraints");
-			} else {
+			} else if (numTokens == 1) {
+				transaction.put("description", "invalid-not-available");
+			}
+
+			else {
 				transaction.put("description", "valid");
 			}
 			transaction.put("bonus", true);
@@ -117,6 +121,13 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			// add data
 			JsonObject data = new JsonObject();
 			data.put("shopID", msgOriginal.getString("shopID"));
+			transaction.put("data", data);
+		}
+		if (source.equals("bonus")) {
+			// add data
+			JsonObject data = new JsonObject();
+			data.put("shopID", msgOriginal.getString("shopID"));
+			data.put("bonusID", msgOriginal.getString("bonusID"));
 			transaction.put("data", data);
 		}
 		if (source.equals("energy-saving")) {

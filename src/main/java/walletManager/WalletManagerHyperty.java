@@ -620,10 +620,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					// check with bonus-credit field
 					int walletBalance = wallet.getInteger("bonus-credit");
 					int cost = transaction.getInteger("value");
-					if (walletBalance + cost < 0) {
-						System.out.println(logMessage + "insufficient funds for pick up");
-						transaction.put("description", "invalid-insufficient-credits");
+					if (cost > 0) {
+						transaction.put("value", 0);
+					} else {
+						if (walletBalance + cost < 0) {
+							System.out.println(logMessage + "insufficient funds for pick up");
+							transaction.put("description", "invalid-insufficient-credits");
+							transaction.put("value", 0);
+						}
 					}
+
 				}
 				performTransaction(walletAddress, transaction);
 
