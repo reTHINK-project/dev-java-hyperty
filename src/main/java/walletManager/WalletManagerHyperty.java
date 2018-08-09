@@ -281,16 +281,12 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				if (previousRanking != ranking) {
 					// send wallet update
 					String walletAddress = wallet.getString("address");
-					int bonusCredit = wallet.getInteger("bonus-credit");
 					JsonObject updateMessage = new JsonObject();
 					updateMessage.put("type", "update");
 					updateMessage.put("from", url);
 					updateMessage.put("to", walletAddress + "/changes");
 					JsonObject updateBody = new JsonObject();
-					updateBody.put("balance", wallet.getInteger("balance"));
-					updateBody.put("transactions", wallet.getJsonArray("transactions"));
 					updateBody.put("ranking", ranking);
-					updateBody.put("bonus-credit", bonusCredit);
 					updateMessage.put("body", updateBody);
 
 					// update in Mongo
@@ -470,7 +466,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				updateMessage.put("to", walletAddress + "/changes");
 				JsonObject updateBody = new JsonObject();
 				updateBody.put("balance", walletInfo.getInteger("balance"));
-				updateBody.put("transactions", walletInfo.getJsonArray("transactions"));
+				JsonArray currentTransactions = walletInfo.getJsonArray("transactions");
+				// send only the new transaction
+				updateBody.put("transactions", currentTransactions.getJsonObject(currentTransactions.size()-1));
 				updateBody.put("rankings", walletInfo.getInteger("ranking"));
 				updateBody.put("bonus-credit", walletInfo.getInteger("bonus-credit"));
 				updateMessage.put("body", updateBody);
