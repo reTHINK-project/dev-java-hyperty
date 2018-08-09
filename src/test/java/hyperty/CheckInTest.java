@@ -138,7 +138,7 @@ class CheckInTest {
 			newWallet.put("balance", 0);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
-			newWallet.put("bonusCredit", 0);
+			newWallet.put("bonus-credit", 0);
 			newWallet.put("ranking", 0);
 
 			JsonObject document = new JsonObject(newWallet.toString());

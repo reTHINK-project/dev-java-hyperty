@@ -145,7 +145,7 @@ class EcommerceTest {
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
 			newWallet.put("ranking", 0);
-			newWallet.put("bonusCredit", walletInitialBonusCredit);
+			newWallet.put("bonus-credit", walletInitialBonusCredit);
 
 			JsonObject document = new JsonObject(newWallet.toString());
 
@@ -376,7 +376,7 @@ class EcommerceTest {
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
 				// check bonusCredit
-				int bonusCredit = wallet.getInteger("bonusCredit");
+				int bonusCredit = wallet.getInteger("bonus-credit");
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");
@@ -447,8 +447,8 @@ class EcommerceTest {
 					new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
-				// bonusCredit
-				int bonusCredit = wallet.getInteger("bonusCredit");
+				// bonus-credit
+				int bonusCredit = wallet.getInteger("bonus-credit");
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");
@@ -519,8 +519,8 @@ class EcommerceTest {
 					new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
-				// bonusCredit
-				int bonusCredit = wallet.getInteger("bonusCredit");
+				// bonus-credit
+				int bonusCredit = wallet.getInteger("bonus-credit");
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");
@@ -592,8 +592,8 @@ class EcommerceTest {
 					new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0);
-				// check bonusCredit
-				int bonusCredit = wallet.getInteger("bonusCredit");
+				// check bonus-credit
+				int bonusCredit = wallet.getInteger("bonus-credit");
 				assertEquals(walletInitialBonusCredit - itemCost, bonusCredit);
 				// balance
 				int balance = wallet.getInteger("balance");

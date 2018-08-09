@@ -281,6 +281,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				if (previousRanking != ranking) {
 					// send wallet update
 					String walletAddress = wallet.getString("address");
+					int bonusCredit = wallet.getInteger("bonus-credit");
 					JsonObject updateMessage = new JsonObject();
 					updateMessage.put("type", "update");
 					updateMessage.put("from", url);
@@ -289,6 +290,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					updateBody.put("balance", wallet.getInteger("balance"));
 					updateBody.put("transactions", wallet.getJsonArray("transactions"));
 					updateBody.put("ranking", ranking);
+					updateBody.put("bonus-credit", bonusCredit);
 					updateMessage.put("body", updateBody);
 
 					// update in Mongo
@@ -434,7 +436,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonObject walletInfo = res.result().get(0);
 
 			int currentBalance = walletInfo.getInteger("balance");
-			int bonusCredit = walletInfo.getInteger("bonusCredit");
+			int bonusCredit = walletInfo.getInteger("bonus-credit");
 			JsonObject profile = walletInfo.getJsonObject("profile");
 			int transactionValue = transaction.getInteger("value");
 			if (transaction.getString("source").equals("energy-saving")) {
@@ -448,8 +450,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonArray transactions = walletInfo.getJsonArray("transactions");
 			transactions.add(transaction);
 			if (transaction.getString("source").equals("bonus")) {
-				// update bonusCredit
-				walletInfo.put("bonusCredit", bonusCredit + transactionValue);
+				// update bonus-credit
+				walletInfo.put("bonus-credit", bonusCredit + transactionValue);
 			} else {
 				// update balance
 				walletInfo.put("balance", currentBalance + transactionValue);
@@ -470,6 +472,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				updateBody.put("balance", walletInfo.getInteger("balance"));
 				updateBody.put("transactions", walletInfo.getJsonArray("transactions"));
 				updateBody.put("rankings", walletInfo.getInteger("ranking"));
+				updateBody.put("bonus-credit", walletInfo.getInteger("bonus-credit"));
 				updateMessage.put("body", updateBody);
 
 				// publish transaction in the event bus using the wallet address.
@@ -617,8 +620,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				System.out.println(logMessage + "Wallet exists: " + wallet.toString());
 
 				if (transaction.getString("source").equals("bonus")) {
-					// check with bonusCredit field
-					int walletBalance = wallet.getInteger("bonusCredit");
+					// check with bonus-credit field
+					int walletBalance = wallet.getInteger("bonus-credit");
 					int cost = transaction.getInteger("value");
 					if (cost > 0) {
 						transaction.put("value", 0);
@@ -763,7 +766,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("identity", identity);
 						newWallet.put("created", new Date().getTime());
 						newWallet.put("balance", bal);
-						newWallet.put("bonusCredit", bal);
+						newWallet.put("bonus-credit", bal);
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						newWallet.put("ranking", 0);
