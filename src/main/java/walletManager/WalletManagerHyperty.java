@@ -442,6 +442,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				walletInfo.put("profile", profile);
 			}
 
+
 			// store transaction
 			JsonArray transactions = walletInfo.getJsonArray("transactions");
 			transactions.add(transaction);
