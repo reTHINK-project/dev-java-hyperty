@@ -445,11 +445,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// store transaction
 			JsonArray transactions = walletInfo.getJsonArray("transactions");
 			transactions.add(transaction);
-			if (transaction.getString("source").equals("bonus")) {
-				// update bonus-credit
-				walletInfo.put("bonus-credit", bonusCredit + transactionValue);
-			} else {
-				// update balance
+			// update bonus-credit
+			walletInfo.put("bonus-credit", bonusCredit + transactionValue);
+			if (!transaction.getString("source").equals("bonus")) {
 				walletInfo.put("balance", currentBalance + transactionValue);
 			}
 
