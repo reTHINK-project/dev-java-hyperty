@@ -373,15 +373,18 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	}
 
 	/**
-	 * It checks there is wallet for the identity and deletes from the storage.
+	 * It checks there is wallet for the address and deletes from the storage.
 	 * 
 	 * @param msg
 	 */
 	private void walletDelete(JsonObject msg) {
-		System.out.println("Deleting wallet");
+		System.out.println(logMessage + "walletDelete(): " + msg.toString());
+
+		String walletAddress = msg.getJsonObject("body").getString("value");
+		System.out.println(logMessage + "removing wallet for address " + walletAddress);
 
 		JsonObject query = new JsonObject();
-		query.put("identity", msg.getJsonObject("identity"));
+		query.put("address", walletAddress);
 
 		mongoClient.removeDocument(walletsCollection, query, res -> {
 			System.out.println("Wallet removed from DB");
@@ -442,14 +445,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				walletInfo.put("profile", profile);
 			}
 
-
 			// store transaction
 			JsonArray transactions = walletInfo.getJsonArray("transactions");
 			transactions.add(transaction);
 			// update bonus-credit
 			walletInfo.put("bonus-credit", bonusCredit + transactionValue);
 			if (!transaction.getString("source").equals("bonus")) {
-				walletInfo.put("balance", currentBalance + transactionValue); 
+				walletInfo.put("balance", currentBalance + transactionValue);
 			}
 
 			JsonObject document = new JsonObject(walletInfo.toString());
@@ -467,7 +469,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				updateBody.put("balance", walletInfo.getInteger("balance"));
 				JsonArray currentTransactions = walletInfo.getJsonArray("transactions");
 				// send only the new transaction
-				updateBody.put("transactions", currentTransactions.getJsonObject(currentTransactions.size()-1));
+				updateBody.put("transactions", currentTransactions.getJsonObject(currentTransactions.size() - 1));
 				updateBody.put("rankings", walletInfo.getInteger("ranking"));
 				updateBody.put("bonus-credit", walletInfo.getInteger("bonus-credit"));
 				updateMessage.put("body", updateBody);
