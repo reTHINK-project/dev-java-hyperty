@@ -132,10 +132,11 @@ Returns the stored Wallet value.
 ```
 type: delete,
 identity: <compliant with reTHINK identity model>,
+body: { resource: '<wallet address>'},
 from: <wallet observer hyperty address>
 ```
 
-It checks there is wallet for the identity and deletes from the storage.
+It checks there is the wallet address for the identity and deletes from the storage.
 
 A delete info message is sent to `config.observers`.
 
