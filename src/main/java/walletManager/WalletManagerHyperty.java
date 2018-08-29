@@ -274,7 +274,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					continue;
 				}
 				ranking++;
-				int previousRanking = wallet.getInteger("ranking");
+				int previousRanking = -1;
+				if (wallet.containsKey("ranking") && wallet.getInteger("ranking") != null ) {
+					previousRanking = wallet.getInteger("ranking");
+				}
+				 
 				wallet.put("ranking", ranking);
 
 				// publish update if ranking changed
