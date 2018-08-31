@@ -8,7 +8,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import util.DateUtils;
+import util.DateUtilsHelper;
 import walletManager.WalletManagerHyperty;
 
 /**
@@ -162,7 +162,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				JsonObject transaction = new JsonObject();
 				transaction.put("source", "energy-saving");
 				transaction.put("value", aux * 5);
-				transaction.put("date", DateUtils.getCurrentDateAsISO8601());
+				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 				msg.put("transaction", transaction);
 				vertx.eventBus().send("wallet-cause-transfer", msg);
 
@@ -217,7 +217,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			JsonObject transaction = new JsonObject();
 			transaction.put("source", "energy-saving");
 			transaction.put("value", monthlyPoints);
-			transaction.put("date", DateUtils.getCurrentDateAsISO8601());
+			transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 			msg.put("transaction", transaction);
 			vertx.eventBus().send("wallet-cause-transfer", msg);
 

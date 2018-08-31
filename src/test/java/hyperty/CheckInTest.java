@@ -69,6 +69,7 @@ class CheckInTest {
 		config.put("collection", ratesCollection);
 		config.put("db_name", db_name);
 		config.put("mongoHost", mongoHost);
+		
 
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
 		Checkpoint checkpoint = context.checkpoint();
@@ -80,6 +81,7 @@ class CheckInTest {
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
+		configWalletManager.put("rankingTimer", 20000);
 
 		configWalletManager.put("observers", new JsonArray().add(""));
 
@@ -136,6 +138,8 @@ class CheckInTest {
 			newWallet.put("balance", 0);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
+			newWallet.put("bonus-credit", 0);
+			newWallet.put("ranking", 0);
 
 			JsonObject document = new JsonObject(newWallet.toString());
 
@@ -248,7 +252,7 @@ class CheckInTest {
 		});	
 		
 		try {
-			Thread.sleep(10000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

@@ -44,7 +44,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private static String from = "tester";
 	//private String mongoHost = "172.18.0.64";
 	private String mongoHost = "172.20.0.64";
-	//private String mongoHost = "localhost";
+	// private String mongoHost = "localhost";
 	private String SIOTurl = "https://iot.alticelabs.com/api";
 	// private String SIOTurl = "http://10.112.77.148/api";
 	private String pointOfContact = "https://url_contact";
@@ -259,6 +259,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		configWalletManager.put("observers", new JsonArray().add(""));
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
+		configWalletManager.put("rankingTimer", 2000);
 
 		// public wallets
 		String wallet0Address = "school0-wallet";
