@@ -260,7 +260,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private void generateRankings() {
 
-//		System.out.println(logMessage + "generateRankings()");
+		System.out.println(logMessage + "generateRankings()");
 
 		FindOptions findOptions = new FindOptions();
 		findOptions.setSort(new JsonObject().put("balance", -1));
@@ -269,6 +269,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// iterate through all
 			for (JsonObject wallet : res.result()) {
 				// discard public wallets
+				//System.out.println("WALLET GUID->" + wallet.getJsonObject("identity").getJsonObject("userProfile").getString("guid"));
 				if (wallet.getJsonObject("identity").getJsonObject("userProfile").getString("guid")
 						.equals(publicWalletGuid)) {
 					continue;
@@ -278,7 +279,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				if (wallet.containsKey("ranking") && wallet.getInteger("ranking") != null ) {
 					previousRanking = wallet.getInteger("ranking");
 				}
-				 
+
 				wallet.put("ranking", ranking);
 
 				// publish update if ranking changed
@@ -734,101 +735,108 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// check if 200
 			int code = rep.getJsonObject("body").getInteger("code");
 			if (code == 200) {
-				JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid",
-						msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid")));
 
-				mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
+				if (msg.containsKey("identity") && msg.getJsonObject("identity").containsKey("userProfile") && 
+						msg.getJsonObject("identity").getJsonObject("userProfile").containsKey("guid") && 
+						!msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid").equals(null))
+				{
 
-					if (res.result().size() == 0) {
-						System.out.println("no wallet yet, creating");
+					JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid",
+							msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid")));
 
-						String address = generateWalletAddressv2(msg.getJsonObject("identity"));
-						int bal = 0;
-						JsonArray transactions = new JsonArray();
-						JsonObject newTransaction = new JsonObject();
-						JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile")
-								.getJsonObject("info");
-						if (info.containsKey("balance")) {
-							bal = info.getInteger("balance");
+					mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
 
-							newTransaction.put("recipient", address);
-							newTransaction.put("source", "created");
-							newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-							newTransaction.put("value", bal);
-							newTransaction.put("description", "valid");
-							newTransaction.put("nonce", 1);
-							JsonObject data = new JsonObject();
-							data.put("created", "true");
-							newTransaction.put("data", data);
-							transactions.add(newTransaction);
-						}
-						// build wallet document
-						JsonObject newWallet = new JsonObject();
+						if (res.result().size() == 0) {
+							System.out.println("no wallet yet, creating");
 
-						newWallet.put("address", address);
-						newWallet.put("identity", identity);
-						newWallet.put("created", new Date().getTime());
-						newWallet.put("balance", bal);
-						newWallet.put("bonus-credit", bal);
-						newWallet.put("transactions", transactions);
-						newWallet.put("status", "active");
-						newWallet.put("ranking", 0);
+							String address = generateWalletAddressv2(msg.getJsonObject("identity"));
+							int bal = 0;
+							JsonArray transactions = new JsonArray();
+							JsonObject newTransaction = new JsonObject();
+							JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile")
+									.getJsonObject("info");
+							if (info.containsKey("balance")) {
+								bal = info.getInteger("balance");
 
-						// check if profile info
-						JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
-								.getJsonObject("info");
-						System.out.println("[WalletManager] Profile info: " + profileInfo);
-						if (profileInfo != null) {
-							causeID = profileInfo.getString("cause");
-							newWallet.put("profile", profileInfo);
-							newWallet.put(causeWalletAddress, getPublicWalletAddress(causeID));
-						} else {
-							JsonObject response = new JsonObject().put("code", 400).put("reason",
-									"you must provide user info (i.e. cause)");
+								newTransaction.put("recipient", address);
+								newTransaction.put("source", "created");
+								newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+								newTransaction.put("value", bal);
+								newTransaction.put("description", "valid");
+								newTransaction.put("nonce", 1);
+								JsonObject data = new JsonObject();
+								data.put("created", "true");
+								newTransaction.put("data", data);
+								transactions.add(newTransaction);
+							}
+							// build wallet document
+							JsonObject newWallet = new JsonObject();
+
+							newWallet.put("address", address);
+							newWallet.put("identity", identity);
+							newWallet.put("created", new Date().getTime());
+							newWallet.put("balance", bal);
+							newWallet.put("bonus-credit", bal);
+							newWallet.put("transactions", transactions);
+							newWallet.put("status", "active");
+							newWallet.put("ranking", 0);
+
+							// check if profile info
+							JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
+									.getJsonObject("info");
+							System.out.println("[WalletManager] Profile info: " + profileInfo);
+							if (profileInfo != null) {
+								causeID = profileInfo.getString("cause");
+								newWallet.put("profile", profileInfo);
+								newWallet.put(causeWalletAddress, getPublicWalletAddress(causeID));
+							} else {
+								JsonObject response = new JsonObject().put("code", 400).put("reason",
+										"you must provide user info (i.e. cause)");
+								reply2.result().reply(response);
+								return;
+							}
+
+							JsonObject document = new JsonObject(newWallet.toString());
+							mongoClient.save(walletsCollection, document, id -> {
+								System.out.println("[WalletManager] new wallet with ID:" + id);
+								inviteObservers(address, requestsHandler(), readHandler());
+							});
+							JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
+							System.out.println("wallet created, reply" + response.toString());
+
+							if (bal > 0) {
+								transferToPublicWallet(newWallet.getString(causeWalletAddress), newTransaction);
+							}
+
+							/*
+							 * transaction to pubwallet
+							 */
+
 							reply2.result().reply(response);
-							return;
+
+						} else {
+							System.out.println("[WalletManager] wallet already exists...");
+							JsonObject wallet = res.result().get(0);
+							JsonObject response = new JsonObject().put("code", 200).put("wallet", wallet);
+							// check its status
+							switch (wallet.getString("status")) {
+							case "active":
+								System.out.println("... and is active.");
+								break;
+							case "deleted":
+								System.out.println("... and was deleted, activating");
+								changeWalletStatus(wallet, "active");
+								// TODO send error back
+								break;
+
+							default:
+								break;
+							}
+							reply2.result().reply(response);
+
 						}
-
-						JsonObject document = new JsonObject(newWallet.toString());
-						mongoClient.save(walletsCollection, document, id -> {
-							System.out.println("[WalletManager] new wallet with ID:" + id);
-							inviteObservers(address, requestsHandler(), readHandler());
-						});
-						JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
-						System.out.println("wallet created, reply" + response.toString());
-
-						if (bal > 0) {
-							transferToPublicWallet(newWallet.getString(causeWalletAddress), newTransaction);
-						}
-
-						/*
-						 * transaction to pubwallet
-						 */
-
-						reply2.result().reply(response);
-
-					} else {
-						System.out.println("[WalletManager] wallet already exists...");
-						JsonObject wallet = res.result().get(0);
-						JsonObject response = new JsonObject().put("code", 200).put("wallet", wallet);
-						// check its status
-						switch (wallet.getString("status")) {
-						case "active":
-							System.out.println("... and is active.");
-							break;
-						case "deleted":
-							System.out.println("... and was deleted, activating");
-							changeWalletStatus(wallet, "active");
-							// TODO send error back
-							break;
-
-						default:
-							break;
-						}
-						reply2.result().reply(response);
-
-					}
-				});
+					});
+				}
 			}
 		});
 
