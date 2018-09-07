@@ -42,9 +42,9 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	//private String mongoHost = "172.18.0.64";
-	private String mongoHost = "172.20.0.64";
-	// private String mongoHost = "localhost";
+	private String mongoHost = "172.18.0.64";
+	//private String mongoHost = "172.20.0.64";
+	//private String mongoHost = "localhost";
 	private String SIOTurl = "https://iot.alticelabs.com/api";
 	// private String SIOTurl = "http://10.112.77.148/api";
 	private String pointOfContact = "https://url_contact";
@@ -350,10 +350,12 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		if (mongoHost != null) {
 			System.out.println("Setting up Mongo to:" + mongoHost);
+			
+			//JsonArray hosts = new JsonArray().add(new JsonObject().put("host", mongoHost).put("port", 27017)).add(new JsonObject().put("host", mongoHost).put("port", 47017)).add(new JsonObject().put("host", mongoHost).put("port", 57017));
+			//final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
+			
 			final String uri = "mongodb://" + mongoHost + ":27017";
-
 			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
-
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
 		}
 
