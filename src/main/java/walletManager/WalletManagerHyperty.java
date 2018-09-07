@@ -736,13 +736,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private void walletUpdateResource(JsonObject msg, Message<JsonObject> message) {
 		JsonObject body = msg.getJsonObject("body");
 		JsonObject toUpdate = new JsonObject();
-		JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid",msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid")));
+		JsonObject identity = new JsonObject().put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid",msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid"))));
 		toUpdate.put(body.getString("resource"), body.getString("value"));
 		System.out.println("DATA TO UPDATE " + "(msg)" + msg);
 		
 		JsonObject update = new JsonObject().put("$set",toUpdate);
 
-		System.out.println(logMessage + " update it" + update.toString());
+		System.out.println(logMessage + " update it" + update.toString() + "\n on wallet with "+ identity.toString());
 
 		mongoClient.updateCollection(this.collection, identity, update,
 				res -> {
