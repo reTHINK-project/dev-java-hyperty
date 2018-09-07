@@ -131,7 +131,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// check if public wallets already exist
 			JsonObject query = new JsonObject().put("identity",
 					new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
+			System.out.println("TESTING MONGO - 1");
 			mongoClient.find(walletsCollection, query, res -> {
+				System.out.println("TESTING MONGO - 2");
 				JsonArray wallets = new JsonArray(res.result());
 				if (wallets.size() != 0)
 					walletsExist = true;
@@ -260,7 +262,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private void generateRankings() {
 
-		System.out.println(logMessage + "generateRankings()");
+//		System.out.println(logMessage + "generateRankings()");
 
 		FindOptions findOptions = new FindOptions();
 		findOptions.setSort(new JsonObject().put("balance", -1));
@@ -269,7 +271,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// iterate through all
 			for (JsonObject wallet : res.result()) {
 				// discard public wallets
-				//System.out.println("WALLET GUID->" + wallet.getJsonObject("identity").getJsonObject("userProfile").getString("guid"));
 				if (wallet.getJsonObject("identity").getJsonObject("userProfile").getString("guid")
 						.equals(publicWalletGuid)) {
 					continue;
@@ -314,7 +315,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	/**
 	 * Handler for subscription requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> subscriptionHandler() {
@@ -370,6 +371,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				}
 
 				break;
+			case "update":
+				walletUpdateResource(msg, message);
+				break;
 			default:
 				System.out.println("Incorrect message type: " + msg.getString("type"));
 				break;
@@ -379,7 +383,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	/**
 	 * It checks there is wallet for the address and deletes from the storage.
-	 * 
+	 *
 	 * @param msg
 	 */
 	private void walletDelete(JsonObject msg) {
@@ -409,7 +413,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	/**
 	 * Add new transfer to a wallet.
-	 * 
+	 *
 	 * @param msg
 	 */
 	@Override
@@ -669,7 +673,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	/**
 	 * Return wallet address for a user.
-	 * 
+	 *
 	 * @param msg
 	 * @param message
 	 */
@@ -696,7 +700,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	/**
 	 * Return wallet.
-	 * 
+	 *
 	 * @param msg
 	 * @param message
 	 */
@@ -712,12 +716,47 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		});
 
 	}
-
+	
 	String causeID;
 
+	
+	/**
+	 *         let updateMessage = {
+          type: 'forward', to: 'hyperty://sharing-cities-dsm/wallet-manager', from: _this.hypertyURL,
+          identity: _this.identity,
+          body: {
+            type: 'update',
+            from: _this.hypertyURL,
+            resource: source,
+            value: value
+          }
+        };
+	 */
+
+	private void walletUpdateResource(JsonObject msg, Message<JsonObject> message) {
+		JsonObject body = msg.getJsonObject("body");
+		JsonObject toUpdate = new JsonObject();
+		JsonObject identity = new JsonObject().put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid",msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid"))));
+		toUpdate.put(body.getString("resource"), body.getString("value"));
+		System.out.println("DATA TO UPDATE " + "(msg)" + msg);
+		
+		JsonObject update = new JsonObject().put("$set",toUpdate);
+
+		System.out.println(logMessage + " update it" + update.toString() + "\n on wallet with "+ identity.toString());
+
+		mongoClient.updateCollection(this.collection, identity, update,
+				res -> {
+					System.out.println(logMessage +  " result update" + res.succeeded());
+					message.reply(res.succeeded());
+				});
+		
+	}
+	
+	
+	
 	/**
 	 * Create a new wallet.
-	 * 
+	 *
 	 * @param msg
 	 * @param message
 	 */
@@ -735,108 +774,101 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// check if 200
 			int code = rep.getJsonObject("body").getInteger("code");
 			if (code == 200) {
+				JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid",
+						msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid")));
 
-				if (msg.containsKey("identity") && msg.getJsonObject("identity").containsKey("userProfile") && 
-						msg.getJsonObject("identity").getJsonObject("userProfile").containsKey("guid") && 
-						!msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid").equals(null))
-				{
+				mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
 
-					JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid",
-							msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid")));
+					if (res.result().size() == 0) {
+						System.out.println("no wallet yet, creating");
 
-					mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
+						String address = generateWalletAddressv2(msg.getJsonObject("identity"));
+						int bal = 0;
+						JsonArray transactions = new JsonArray();
+						JsonObject newTransaction = new JsonObject();
+						JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile")
+								.getJsonObject("info");
+						if (info.containsKey("balance")) {
+							bal = info.getInteger("balance");
 
-						if (res.result().size() == 0) {
-							System.out.println("no wallet yet, creating");
-
-							String address = generateWalletAddressv2(msg.getJsonObject("identity"));
-							int bal = 0;
-							JsonArray transactions = new JsonArray();
-							JsonObject newTransaction = new JsonObject();
-							JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile")
-									.getJsonObject("info");
-							if (info.containsKey("balance")) {
-								bal = info.getInteger("balance");
-
-								newTransaction.put("recipient", address);
-								newTransaction.put("source", "created");
-								newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-								newTransaction.put("value", bal);
-								newTransaction.put("description", "valid");
-								newTransaction.put("nonce", 1);
-								JsonObject data = new JsonObject();
-								data.put("created", "true");
-								newTransaction.put("data", data);
-								transactions.add(newTransaction);
-							}
-							// build wallet document
-							JsonObject newWallet = new JsonObject();
-
-							newWallet.put("address", address);
-							newWallet.put("identity", identity);
-							newWallet.put("created", new Date().getTime());
-							newWallet.put("balance", bal);
-							newWallet.put("bonus-credit", bal);
-							newWallet.put("transactions", transactions);
-							newWallet.put("status", "active");
-							newWallet.put("ranking", 0);
-
-							// check if profile info
-							JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
-									.getJsonObject("info");
-							System.out.println("[WalletManager] Profile info: " + profileInfo);
-							if (profileInfo != null) {
-								causeID = profileInfo.getString("cause");
-								newWallet.put("profile", profileInfo);
-								newWallet.put(causeWalletAddress, getPublicWalletAddress(causeID));
-							} else {
-								JsonObject response = new JsonObject().put("code", 400).put("reason",
-										"you must provide user info (i.e. cause)");
-								reply2.result().reply(response);
-								return;
-							}
-
-							JsonObject document = new JsonObject(newWallet.toString());
-							mongoClient.save(walletsCollection, document, id -> {
-								System.out.println("[WalletManager] new wallet with ID:" + id);
-								inviteObservers(address, requestsHandler(), readHandler());
-							});
-							JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
-							System.out.println("wallet created, reply" + response.toString());
-
-							if (bal > 0) {
-								transferToPublicWallet(newWallet.getString(causeWalletAddress), newTransaction);
-							}
-
-							/*
-							 * transaction to pubwallet
-							 */
-
-							reply2.result().reply(response);
-
-						} else {
-							System.out.println("[WalletManager] wallet already exists...");
-							JsonObject wallet = res.result().get(0);
-							JsonObject response = new JsonObject().put("code", 200).put("wallet", wallet);
-							// check its status
-							switch (wallet.getString("status")) {
-							case "active":
-								System.out.println("... and is active.");
-								break;
-							case "deleted":
-								System.out.println("... and was deleted, activating");
-								changeWalletStatus(wallet, "active");
-								// TODO send error back
-								break;
-
-							default:
-								break;
-							}
-							reply2.result().reply(response);
-
+							newTransaction.put("recipient", address);
+							newTransaction.put("source", "created");
+							newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+							newTransaction.put("value", bal);
+							newTransaction.put("description", "valid");
+							newTransaction.put("nonce", 1);
+							JsonObject data = new JsonObject();
+							data.put("created", "true");
+							newTransaction.put("data", data);
+							transactions.add(newTransaction);
 						}
-					});
-				}
+						// build wallet document
+						JsonObject newWallet = new JsonObject();
+
+						newWallet.put("address", address);
+						newWallet.put("identity", identity);
+						newWallet.put("created", new Date().getTime());
+						newWallet.put("balance", bal);
+						newWallet.put("bonus-credit", bal);
+						newWallet.put("transactions", transactions);
+						newWallet.put("status", "active");
+						newWallet.put("ranking", 0);
+
+						// check if profile info
+						JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
+								.getJsonObject("info");
+						System.out.println("[WalletManager] Profile info: " + profileInfo);
+						if (profileInfo != null) {
+							causeID = profileInfo.getString("cause");
+							newWallet.put("profile", profileInfo);
+							newWallet.put(causeWalletAddress, getPublicWalletAddress(causeID));
+						} else {
+							JsonObject response = new JsonObject().put("code", 400).put("reason",
+									"you must provide user info (i.e. cause)");
+							reply2.result().reply(response);
+							return;
+						}
+
+						JsonObject document = new JsonObject(newWallet.toString());
+						mongoClient.save(walletsCollection, document, id -> {
+							System.out.println("[WalletManager] new wallet with ID:" + id);
+							inviteObservers(address, requestsHandler(), readHandler());
+						});
+						JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
+						System.out.println("wallet created, reply" + response.toString());
+
+						if (bal > 0) {
+							transferToPublicWallet(newWallet.getString(causeWalletAddress), newTransaction);
+						}
+
+						/*
+						 * transaction to pubwallet
+						 */
+
+						reply2.result().reply(response);
+
+					} else {
+						System.out.println("[WalletManager] wallet already exists...");
+						JsonObject wallet = res.result().get(0);
+						JsonObject response = new JsonObject().put("code", 200).put("wallet", wallet);
+						// check its status
+						switch (wallet.getString("status")) {
+						case "active":
+							System.out.println("... and is active.");
+							break;
+						case "deleted":
+							System.out.println("... and was deleted, activating");
+							changeWalletStatus(wallet, "active");
+							// TODO send error back
+							break;
+
+						default:
+							break;
+						}
+						reply2.result().reply(response);
+
+					}
+				});
 			}
 		});
 
@@ -908,7 +940,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	/**
 	 * Handler for subscription requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> requestsHandler() {
@@ -938,7 +970,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	/**
 	 * Handler for read requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> readHandler() {
@@ -974,7 +1006,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	/**
 	 * The Wallet Address is generated by using some crypto function that uses the
 	 * identity GUID as seed and returned.
-	 * 
+	 *
 	 * @param jsonObject
 	 * @return wallet address
 	 */
