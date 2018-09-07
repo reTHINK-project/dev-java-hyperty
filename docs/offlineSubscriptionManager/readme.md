@@ -2,9 +2,6 @@
 
 Provides functionalities to support data streams synchronisation setup between peers without requiring to have both online simultaneously.
 
-### Configuration:
-
-* `agents`: list of JSON with agent names and associated registration code.
 
 ### Storage
 
