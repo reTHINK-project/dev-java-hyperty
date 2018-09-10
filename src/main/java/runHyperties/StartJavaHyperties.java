@@ -5,6 +5,8 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+
+import hyperty.RegistryHyperty;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
@@ -93,6 +95,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String elearningHypertyURL = "hyperty://sharing-cities-dsm/elearning";
 		String energySavingRatingHypertyURL = "hyperty://sharing-cities-dsm/energy-saving-rating";
 		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
+		String registryHypertyURL = "hyperty://sharing-cities-dsm/registry";
 		// Create Router object
 		Router router = Router.router(vertx);
 
@@ -165,6 +168,21 @@ public class StartJavaHyperties extends AbstractVerticle {
 		 * identityCheckIN.put("status", "created");
 		 */
 
+		// deploy registry 
+		JsonObject configRegistry = new JsonObject();
+		configRegistry.put("url", registryHypertyURL);
+		configRegistry.put("identity", identity);
+		// mongo
+		configRegistry.put("db_name", "test");
+		configRegistry.put("collection", "registry");
+		configRegistry.put("mongoHost", mongoHost);
+		configRegistry.put("checkStatusTimer", 60000);
+
+		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);
+		vertx.deployVerticle(RegistryHyperty.class.getName(), optionsRegistry, res -> {
+		  System.out.println("Registry Result->" + res.result());
+		});
+		
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
 		configCheckIN.put("identity", identity);
