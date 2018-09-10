@@ -48,7 +48,7 @@ class UserActivityTest {
 
 		String streamAddress = "vertx://sharing-cities-dsm/user-activity";
 		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
-		
+
 		JsonObject identity = new JsonObject().put("userProfile",
 				new JsonObject().put("userURL", userID).put("guid", userID));
 		JsonObject configUserActivity = new JsonObject();
@@ -64,6 +64,9 @@ class UserActivityTest {
 		configUserActivity.put("tokens_per_biking_km", 10);
 		configUserActivity.put("tokens_per_bikesharing_km", 10);
 		configUserActivity.put("tokens_per_evehicle_km", 5);
+		// daily distance limits
+		configUserActivity.put("mtWalkPerDay", 20000);
+		configUserActivity.put("mtBikePerDay", 50000);
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", streamAddress);
@@ -82,7 +85,6 @@ class UserActivityTest {
 		configWalletManager.put("observers", new JsonArray().add(""));
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 		configWalletManager.put("rankingTimer", 2000);
-		
 
 		// public wallets
 		String wallet0Address = "school0-wallet";
@@ -206,7 +208,7 @@ class UserActivityTest {
 	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
-		CountDownLatch setupLatch = new CountDownLatch(2);
+		CountDownLatch setupLatch = new CountDownLatch(3);
 
 		// remove from rates
 		JsonObject query = new JsonObject();
@@ -216,11 +218,11 @@ class UserActivityTest {
 		});
 
 		// remove from wallets
-//		query = new JsonObject();
-//		mongoClient.removeDocuments(walletsCollection, query, res -> {
-//			System.out.println("Wallet removed from DB");
-//			setupLatch.countDown();
-//		});
+		query = new JsonObject();
+		mongoClient.removeDocuments(walletsCollection, query, res -> {
+			System.out.println("Wallet removed from DB");
+			setupLatch.countDown();
+		});
 
 		// remove from dataobjects
 		query = new JsonObject();
@@ -239,6 +241,7 @@ class UserActivityTest {
 	}
 
 	@Test
+	@Disabled
 	void sessionWithoutTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session without tokens");
 		JsonObject activityMessage = new JsonObject();
@@ -272,6 +275,7 @@ class UserActivityTest {
 	}
 
 	@Test
+	@Disabled
 	void sessionWithTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session with tokens");
 		JsonObject activityMessage = new JsonObject();
@@ -333,6 +337,59 @@ class UserActivityTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+
+		testContext.completeNow();
+
+	}
+
+	@Test
+	void sessionMax(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("TEST - Session with too big distance");
+		JsonObject activityMessage = new JsonObject();
+
+		activityMessage.put("identity", new JsonObject());
+		activityMessage.put("userID", userID);
+		activityMessage.put("type", "user_biking_context");
+		activityMessage.put("value", 50001);
+		activityMessage.put("source", source);
+		JsonArray toSend = new JsonArray();
+		toSend.add(activityMessage);
+		vertx.eventBus().send(changesAddress, toSend, reply -> {
+			System.out.println("REP: " + reply.toString());
+		});
+
+		// wait for op
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+//		CountDownLatch assertions = new CountDownLatch(1);
+//
+//
+//		new Thread(() -> {
+//
+//			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+//			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
+//				JsonObject walletInfo = res.result().get(0);
+//
+//				// check balance updated
+//				int currentBalance = walletInfo.getInteger("balance");
+//				assertEquals(5, currentBalance);
+//
+//				// check if transaction in transactions array
+//				JsonArray transactions = walletInfo.getJsonArray("transactions");
+//				assertEquals(2, transactions.size());
+//				assertions.countDown();
+//			});
+//		}).start();
+//
+//		try {
+//			assertions.await();
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
 
 		testContext.completeNow();
 
