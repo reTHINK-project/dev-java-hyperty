@@ -12,7 +12,9 @@ The registry handles the registry data collection:
 
 ```javascript
 {
-  <cguid>: { status: "online|offline", lastModified: date}
+  guid: <cguid>,
+  status: "online|offline", 
+  lastModified: long
 }
 ```
 
@@ -24,9 +26,9 @@ The registry handles the registry data collection:
 
 **message:**
 
-```JSON
+```javascript
 {
-type: 'update',
+type: "update",
 body: {
   resource: <cguid>,
   status: "online|offline>"
