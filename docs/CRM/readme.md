@@ -6,7 +6,8 @@ The CRM hyperty manages CRM Agents and forwards tickets to available Agents.
 
 * `agents`: list of JSON with agent names and associated registration code.
 
-`{<code>: {name: '<agent name>'}}`
+`{name: '<agent name>', 
+  code: '<agent code>'}`
 
 ### Storage
 
@@ -14,19 +15,20 @@ The Hyperty handles AgentsPool data collection and associated tickets. The first
 
 ```
 {
-  <agent address>: {
+    address: <address>,
     code: <code>,
     user: <cguid of the user registered with this agent address>,
     tickets: [{
-      <cguid of user that created the ticket>: {
+        user: <cguid of user that created the ticket>
         status: <pending/ongoing/closed>,
         creation: <date>,
         lastModified: <data>,
-        message: <received invitation msg>}
+        message: <received invitation msg>
+        }
     }],
     openedTickets: <int>,
     status: <online/offline>
-  }
+  
 }
 ```
 
