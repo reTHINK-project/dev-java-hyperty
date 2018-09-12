@@ -178,10 +178,11 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("mongoHost", mongoHost);
 		configRegistry.put("checkStatusTimer", 180000);
 
+		/*
 		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);
 		vertx.deployVerticle(RegistryHyperty.class.getName(), optionsRegistry, res -> {
 		  System.out.println("Registry Result->" + res.result());
-		});
+		});*/
 		
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
