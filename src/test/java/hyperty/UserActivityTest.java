@@ -23,7 +23,6 @@ import io.vertx.junit5.VertxTestContext;
 import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
-
 @ExtendWith(VertxExtension.class)
 @Disabled
 class UserActivityTest {
@@ -48,6 +47,8 @@ class UserActivityTest {
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 
 		String streamAddress = "vertx://sharing-cities-dsm/user-activity";
+		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
+
 		JsonObject identity = new JsonObject().put("userProfile",
 				new JsonObject().put("userURL", userID).put("guid", userID));
 		JsonObject configUserActivity = new JsonObject();
@@ -63,6 +64,9 @@ class UserActivityTest {
 		configUserActivity.put("tokens_per_biking_km", 10);
 		configUserActivity.put("tokens_per_bikesharing_km", 10);
 		configUserActivity.put("tokens_per_evehicle_km", 5);
+		// daily distance limits
+		configUserActivity.put("mtWalkPerDay", 20000);
+		configUserActivity.put("mtBikePerDay", 50000);
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", streamAddress);
@@ -79,6 +83,41 @@ class UserActivityTest {
 		configWalletManager.put("mongoHost", mongoHost);
 
 		configWalletManager.put("observers", new JsonArray().add(""));
+		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
+		configWalletManager.put("rankingTimer", 2000);
+
+		// public wallets
+		String wallet0Address = "school0-wallet";
+		String wallet1Address = "school1-wallet";
+		String wallet2Address = "school2-wallet";
+		String school0ID = "user-guid://school-0";
+		String school1ID = "user-guid://school-1";
+		String school2ID = "user-guid://school-2";
+		JsonObject feed0 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet0userID");
+		JsonObject feed1 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet1userID");
+		JsonObject feed2 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet2userID");
+
+		// publicWallets
+		JsonArray publicWallets = new JsonArray();
+		JsonObject walletCause0 = new JsonObject();
+		walletCause0.put("address", wallet0Address);
+		walletCause0.put("identity", school0ID);
+		walletCause0.put("externalFeeds", new JsonArray().add(feed0));
+		publicWallets.add(walletCause0);
+
+		JsonObject walletCause1 = new JsonObject();
+		walletCause1.put("address", wallet1Address);
+		walletCause1.put("identity", school1ID);
+		walletCause1.put("externalFeeds", new JsonArray().add(feed1));
+		publicWallets.add(walletCause1);
+
+		JsonObject walletCause2 = new JsonObject();
+		walletCause2.put("address", wallet2Address);
+		walletCause2.put("identity", school2ID);
+		walletCause2.put("externalFeeds", new JsonArray().add(feed2));
+		publicWallets.add(walletCause2);
+
+		configWalletManager.put("publicWallets", publicWallets);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
 				.setWorker(true);
@@ -133,6 +172,9 @@ class UserActivityTest {
 			newWallet.put("balance", 0);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
+			newWallet.put("ranking", 0);
+			newWallet.put("bonus-credit", 30);
+			newWallet.put("wallet2bGranted", "school0-wallet");
 
 			JsonObject document = new JsonObject(newWallet.toString());
 
@@ -199,12 +241,13 @@ class UserActivityTest {
 	}
 
 	@Test
+	@Disabled
 	void sessionWithoutTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session without tokens");
 		JsonObject activityMessage = new JsonObject();
 		activityMessage.put("identity", new JsonObject());
 		activityMessage.put("userID", userID);
-		activityMessage.put("type", "user_walking_context");
+		activityMessage.put("type", "user_biking_context");
 		activityMessage.put("value", 200);
 		activityMessage.put("source", source);
 		JsonArray toSend = new JsonArray();
@@ -232,13 +275,14 @@ class UserActivityTest {
 	}
 
 	@Test
+	@Disabled
 	void sessionWithTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session with tokens");
 		JsonObject activityMessage = new JsonObject();
 
 		activityMessage.put("identity", new JsonObject());
 		activityMessage.put("userID", userID);
-		activityMessage.put("type", "user_walking_context");
+		activityMessage.put("type", "user_biking_context");
 		activityMessage.put("value", 300);
 		activityMessage.put("source", source);
 		JsonArray toSend = new JsonArray();
@@ -253,7 +297,7 @@ class UserActivityTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+
 		CountDownLatch assertions = new CountDownLatch(2);
 
 		new Thread(() -> {
@@ -267,7 +311,7 @@ class UserActivityTest {
 				assertEquals(true, sessions.getJsonObject(0).getBoolean("processed"));
 				assertEquals(true, sessions.getJsonObject(1).getBoolean("processed"));
 				assertions.countDown();
-				
+
 			});
 		}).start();
 
@@ -293,12 +337,62 @@ class UserActivityTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+
 		testContext.completeNow();
 
-		
-		
-		
+	}
+
+	@Test
+	void sessionMax(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("TEST - Session with too big distance");
+		JsonObject activityMessage = new JsonObject();
+
+		activityMessage.put("identity", new JsonObject());
+		activityMessage.put("userID", userID);
+		activityMessage.put("type", "user_biking_context");
+		activityMessage.put("value", 50001);
+		activityMessage.put("source", source);
+		JsonArray toSend = new JsonArray();
+		toSend.add(activityMessage);
+		vertx.eventBus().send(changesAddress, toSend, reply -> {
+			System.out.println("REP: " + reply.toString());
+		});
+
+		// wait for op
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+//		CountDownLatch assertions = new CountDownLatch(1);
+//
+//
+//		new Thread(() -> {
+//
+//			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+//			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
+//				JsonObject walletInfo = res.result().get(0);
+//
+//				// check balance updated
+//				int currentBalance = walletInfo.getInteger("balance");
+//				assertEquals(5, currentBalance);
+//
+//				// check if transaction in transactions array
+//				JsonArray transactions = walletInfo.getJsonArray("transactions");
+//				assertEquals(2, transactions.size());
+//				assertions.countDown();
+//			});
+//		}).start();
+//
+//		try {
+//			assertions.await();
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+
+		testContext.completeNow();
+
 	}
 
 	void tearDownStream(VertxTestContext testContext, Vertx vertx) {

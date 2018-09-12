@@ -86,6 +86,9 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			} else if (numTokens == -3) {
 				transaction.put("description", "invalid-short-distance");
 				transaction.put("value", 0);
+			} else if (numTokens == -4) {
+				transaction.put("description", "invalid-daily-max-exceeded");
+				transaction.put("value", 0);
 			} else {
 				transaction.put("description", "valid");
 			}

@@ -33,6 +33,15 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	 */
 	private int tokensEvehicleKm;
 
+	/**
+	 * Daily walking limit (meters).
+	 */
+	private int mtWalkPerDay;
+	/**
+	 * Daily biking limit (meters).
+	 */
+	private int mtBikePerDay;
+
 	private CountDownLatch checkinLatch;
 
 	private String dataSource = "user-activity";
@@ -48,6 +57,8 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		tokensBikingKm = config().getInteger("tokens_per_biking_km");
 		tokensBikesharingKm = config().getInteger("tokens_per_bikesharing_km");
 		tokensEvehicleKm = config().getInteger("tokens_per_evehicle_km");
+		mtWalkPerDay = config().getInteger("mtWalkPerDay");
+		mtBikePerDay = config().getInteger("mtBikePerDay");
 	}
 
 	int tokenAmount;
@@ -103,6 +114,8 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		return count;
 	}
 
+	private static int invalidDistance = -4;
+
 	@Override
 	int rate(Object data) {
 
@@ -127,20 +140,44 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		}
 		persistData(dataSource, user, currentTimestamp, "1", null, activityMessage);
 		/*
-		if ((activity.equals("user_walking_context") || activity.equals("user_biking_context"))
-				&& currentSessionDistance < 300) {
-			System.out.println(logMessage + "distance < 300!");
-			return tokenAmount;
-		}
-		*/
+		 * if ((activity.equals("user_walking_context") ||
+		 * activity.equals("user_biking_context")) && currentSessionDistance < 300) {
+		 * System.out.println(logMessage + "distance < 300!"); return tokenAmount; }
+		 */
 
+		// check if distance is invalid
 		// get total distance (unprocessed sessions)
 		int totalDistance = sumSessionsDistance(currentSessionDistance, unprocessed);
+		boolean validDistance = checkValidDistance(activity, currentSessionDistance);
+		if (!validDistance) {
+
+			return invalidDistance;
+		}
+
 		if (checkMinDistance(activity, totalDistance)) {
 			processSessions(unprocessed.add(activityMessage), user);
 			return getTokensForDistance(activity, totalDistance);
 		} else {
 			return tokenAmount;
+		}
+
+	}
+
+	/**
+	 * Check if the current session doesn't exceed the max distance.
+	 * 
+	 * @param activity
+	 * @param currentSessionDistance
+	 * @return
+	 */
+	private boolean checkValidDistance(String activity, int currentSessionDistance) {
+		switch (activity) {
+		case "user_walking_context":
+			return currentSessionDistance <= mtWalkPerDay;
+		case "user_biking_context":
+			return currentSessionDistance <= mtBikePerDay;
+		default:
+			return false;
 		}
 
 	}
@@ -169,7 +206,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 						currentSession.put("processed", true);
 					}
 				}
-				
+
 				// update only corresponding data source
 				mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
 					System.out.println(logMessage + "processSessions: document with ID " + id + " was updated");
@@ -191,8 +228,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	 * Get amount of tokens for distance/activity.
 	 * 
 	 * @param activity
-	 * @param distance
-	 *            in meters
+	 * @param distance in meters
 	 * @return
 	 */
 	private boolean checkMinDistance(String activity, int distance) {
@@ -213,10 +249,8 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	/**
 	 * Get amount of tokens for distance/activity.
 	 * 
-	 * @param activity
-	 *            walking/biking
-	 * @param distance
-	 *            in meters
+	 * @param activity walking/biking
+	 * @param distance in meters
 	 * @return
 	 */
 	private int getTokensForDistance(String activity, int distance) {
