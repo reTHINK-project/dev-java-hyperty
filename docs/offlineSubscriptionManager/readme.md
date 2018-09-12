@@ -9,7 +9,8 @@ The Hyperty handles pendingSubscriptions data collection.
 
 ```
 {
-  <cguid>: {<subscribeMsg>
+  user:<cguid>,
+  message: <subscribeMsg>
 }
 ```
 
