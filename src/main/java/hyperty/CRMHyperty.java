@@ -344,7 +344,7 @@ public class CRMHyperty extends AbstractHyperty {
 		newTickets.add(ticket);
 
 	}
-	
+
 	/**
 	 * Handle ticket update.
 	 * 
@@ -361,8 +361,7 @@ public class CRMHyperty extends AbstractHyperty {
 			JsonArray tickets = agent.getJsonArray("tickets");
 			for (Object entry : tickets) {
 				JsonObject ticketInDB = (JsonObject) entry;
-				if(ticketInDB.getString("id").equals(ticket.getString("id")))
-				{
+				if (ticketInDB.getString("id").equals(ticket.getString("id"))) {
 					System.out.println(logMessage + "handleTicketUpdate() found ticket: " + ticketInDB.toString());
 					ticketInDB.put("status", ticket.getString("status"));
 					// update DB
@@ -371,7 +370,6 @@ public class CRMHyperty extends AbstractHyperty {
 						// ticket is removed from the pendingTickets array
 						pendingTickets.remove(ticket);
 					});
-				});
 				}
 			}
 		});
