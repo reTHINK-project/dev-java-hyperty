@@ -87,7 +87,7 @@ public class RegistryHyperty extends AbstractHyperty {
 	 * Handle requests.
 	 */
 	private void handleRequests() {
-
+		System.out.println("Waiting on ->" + config().getString("url") + "/status");
 		vertx.eventBus().<JsonObject>consumer(config().getString("url") + "/status", message -> {
 			mandatoryFieldsValidator(message);
 			System.out.println(logMessage + "handleRequests(): " + message.body().toString());
@@ -97,7 +97,12 @@ public class RegistryHyperty extends AbstractHyperty {
 			switch (msg.getString("type")) {
 			case "update":
 				if (msg.getJsonObject("body") != null) {
-					updateStatus(msg);
+					updateStatus(msg, message);
+				}
+				break;
+			case "read":
+				if (msg.getJsonObject("body") != null) {
+					retrieveStatus(msg, message);
 				}
 				break;
 
@@ -113,13 +118,14 @@ public class RegistryHyperty extends AbstractHyperty {
 	 * timestamp.
 	 * 
 	 * @param msg
+	 * @param message 
 	 */
-	private void updateStatus(JsonObject msg) {
+	private void updateStatus(JsonObject msg, Message<JsonObject> message) {
 		System.out.println(logMessage + "updateStatus(): " + msg.toString());
 		JsonObject body = msg.getJsonObject("body");
 		String guid = body.getString("resource");
 		String status = body.getString("status");
-		long lastMofidified = body.getLong("lastModified");
+		long lastMofidified = new Date().getTime();;
 
 		// get entry for that cguid
 		CountDownLatch registryLatch = new CountDownLatch(1);
@@ -137,6 +143,8 @@ public class RegistryHyperty extends AbstractHyperty {
 							System.out.println(logMessage + "updateStatus(): registry updated" + document);
 						});
 				registryLatch.countDown();
+				JsonObject response = new JsonObject().put("code",200);
+				message.reply(response);
 			});
 		}).start();
 		try {
@@ -145,6 +153,39 @@ public class RegistryHyperty extends AbstractHyperty {
 			e.printStackTrace();
 		}
 	}
+	
+	
+	
+	
+	private void retrieveStatus(JsonObject msg, Message<JsonObject> message) {
+		System.out.println(logMessage + "updateStatus(): " + msg.toString());
+		JsonObject body = msg.getJsonObject("body");
+		String guid = body.getString("resource");
 
+		// get entry for that cguid
+		CountDownLatch statusLatch = new CountDownLatch(1);
+		// check if no user allocated to this code
+		new Thread(() -> {
+			JsonObject query = new JsonObject().put("guid", guid);
+			mongoClient.find(collection, query, res -> {
+				JsonObject response ;
+				if (res.result().size() > 0) {
+					JsonObject entry = new JsonArray(res.result()).getJsonObject(0);
+					response = new JsonObject().put("code",200).put("value", entry);
+					
+				} else {
+					response = new JsonObject().put("code",404).put("value", new JsonObject());
+				}
+				message.reply(response);
+
+				statusLatch.countDown();
+			});
+		}).start();
+		try {
+			statusLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
 
 }

@@ -44,9 +44,9 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	private String mongoHost = "172.18.0.64";
+	//private String mongoHost = "172.18.0.64";
 	
-	//private String mongoHost = "172.20.0.64";
+	private String mongoHost = "172.20.0.64";
 	//private String mongoHost = "localhost";
 
 	private String SIOTurl = "https://iot.alticelabs.com/api";
@@ -176,12 +176,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("db_name", "test");
 		configRegistry.put("collection", "registry");
 		configRegistry.put("mongoHost", mongoHost);
-		configRegistry.put("checkStatusTimer", 60000);
+		configRegistry.put("checkStatusTimer", 180000);
 
+		/*
 		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);
 		vertx.deployVerticle(RegistryHyperty.class.getName(), optionsRegistry, res -> {
 		  System.out.println("Registry Result->" + res.result());
-		});
+		});*/
 		
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
