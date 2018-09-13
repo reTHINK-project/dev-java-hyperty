@@ -30,7 +30,8 @@ import io.vertx.junit5.VertxTestContext;
  * 4 - change agent 1 status offline -> online <br>
  * 5 - pending ticket is accepted <br>
  * 6 - new ticket (ticketAccepted() and removeTicketInvitation()) <br>
- * 7 - unregister agents
+ * 7 - ticket update (ongoing -> closed) <br>
+ * 8 - unregister agents
  * 
  * @author felgueiras
  *

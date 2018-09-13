@@ -27,6 +27,8 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	public void start() {
 
 		super.start();
+		
+		System.out.println(logMessage + "start() ");
 
 		mainHandler = config().getString("url");
 		registryURL = config().getString("registry");
@@ -79,7 +81,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	}
 
 	/**
-	 * For all live events received it checks if the CGUID is associated to any
+	 * For all online events received it checks if the CGUID is associated to any
 	 * pending subscription and if yes the processPendingSubscription(subscribeMsg)
 	 * function is executed.
 	 * 
@@ -94,6 +96,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 				System.out.println(logMessage + "statusUpdate() reply " + res.result().toString());
 				for (Object obj : res.result()) {
 					JsonObject pendingMessage = (JsonObject) obj;
+					processPendingSubscription(pendingMessage);
 				}
 			});
 		}
