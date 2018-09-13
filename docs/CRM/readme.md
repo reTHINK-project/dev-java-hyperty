@@ -89,6 +89,6 @@ from: <wallet observer hyperty address>
 
 **logic**
 
-It checks there is an Agent for the identity, changing the status to "offline" and moving its pending / opened tickets to other agents.
+It checks there is an Agent for the identity, changing the status to "offline" and moving its opened tickets to other agents.
 
 
