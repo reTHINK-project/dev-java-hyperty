@@ -107,6 +107,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String energySavingRatingHypertyURL = "hyperty://sharing-cities-dsm/energy-saving-rating";
 		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
 		String registryHypertyURL = "hyperty://sharing-cities-dsm/registry";
+		String crmHypertyURL = "hyperty://sharing-cities-dsm/crm";
+		String offlineSubMgrHypertyURL = "hyperty://sharing-cities-dsm/offline-sub-mgr";
 		// Create Router object
 		Router router = Router.router(vertx);
 
@@ -180,6 +182,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		 */
 
 		// deploy registry 
+		String crmStatus = crmHypertyURL + "/status";
+		String offlineSMStatus = offlineSubMgrHypertyURL + "/status";
 		JsonObject configRegistry = new JsonObject();
 		configRegistry.put("url", registryHypertyURL);
 		configRegistry.put("identity", identity);
@@ -188,6 +192,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("collection", "registry");
 		configRegistry.put("mongoHost", mongoHost);
 		configRegistry.put("checkStatusTimer", 180000);
+		configRegistry.put("CRMHypertyStatus", crmStatus);
+		configRegistry.put("offlineSMStatus", offlineSMStatus);
 
 		/*
 		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);

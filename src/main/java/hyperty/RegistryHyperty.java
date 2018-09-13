@@ -29,6 +29,8 @@ public class RegistryHyperty extends AbstractHyperty {
 	 * frequency in seconds to execute checkStatus process.
 	 */
 	int checkStatusTimer;
+	String CRMHypertyStatus;
+	String offlineSMStatus;
 
 	@Override
 	public void start() {
@@ -37,6 +39,9 @@ public class RegistryHyperty extends AbstractHyperty {
 		handleRequests();
 		
 		checkStatusTimer = config().getInteger("checkStatusTimer");
+		CRMHypertyStatus = config().getString("CRMHypertyStatus");
+		offlineSMStatus = config().getString("offlineSMStatus");
+		
 		Timer timer = new Timer();
 		timer.schedule(new CheckStatusTimer(), 0, checkStatusTimer);
 
@@ -76,6 +81,16 @@ public class RegistryHyperty extends AbstractHyperty {
 									entry, id -> {
 										System.out.println(logMessage + "checkStatus() document updated: " + entry);
 									});
+							
+							JsonObject body = new JsonObject();
+							body.put("resource", entry.getString("guid"));
+							body.put("status", "offline");
+							
+							JsonObject updateMessage = new JsonObject().put("type", "update");
+							updateMessage.put("body", body);
+							publish(CRMHypertyStatus, updateMessage);
+							publish(offlineSMStatus, updateMessage);
+							
 					}
 				}
 			}
@@ -142,6 +157,10 @@ public class RegistryHyperty extends AbstractHyperty {
 						document, id -> {
 							System.out.println(logMessage + "updateStatus(): registry updated" + document);
 						});
+				//publish message to crmStatus and offlineSMstatus
+				publish(CRMHypertyStatus, msg);
+				publish(offlineSMStatus, msg);
+				
 				registryLatch.countDown();
 				JsonObject response = new JsonObject().put("code",200);
 				message.reply(response);
