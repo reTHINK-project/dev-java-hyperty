@@ -89,6 +89,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	public void start() throws Exception {
 
+		
+		try {
+			System.out.println("MONGO HOST TEST ->" +System.getenv("MONGOHOST"));
+		} catch(Exception e) {
+			System.out.print("error->" + e.toString());
+		}
+		
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";

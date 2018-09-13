@@ -77,7 +77,7 @@ class RegistryTest {
 			assertEquals(200, statusCode);
 			
 
-			assertNotNull(body.getString("status"));
+			assertNotNull(body.getJsonObject("value"));
 			context.completeNow();
 			
 		});
