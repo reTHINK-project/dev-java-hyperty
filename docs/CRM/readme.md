@@ -70,7 +70,7 @@ Status event message sent by the Vertx Runtime Registry.
 
 **logic**
 
-For all `live` events received it checks if the CGUID is associated to any agent and forwards to it pending tickets. Execute funtion `ticketAccepted` for 200 ok accepting messages.
+For all `online` events received it checks if the CGUID is associated to any agent and forwards to it pending tickets. Execute funtion `ticketAccepted` for 200 ok accepting messages.
 
 
 ### unregistration of Agents
@@ -89,6 +89,6 @@ from: <wallet observer hyperty address>
 
 **logic**
 
-It checks there is an Agent for the identity, changing the status to "inactive" and moving its pending / opened tickets to other agents.
+It checks there is an Agent for the identity, changing the status to "offline" and moving its pending / opened tickets to other agents.
 
 
