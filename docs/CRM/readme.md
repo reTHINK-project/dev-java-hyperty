@@ -20,7 +20,7 @@ The Hyperty handles AgentsPool data collection and associated tickets. The first
     user: <cguid of the user registered with this agent address>,
     tickets: [{
         user: <cguid of user that created the ticket>
-        status: <pending/ongoing/closed>,
+        status: <ongoing/closed>,
         creation: <date>,
         lastModified: <data>,
         message: <received invitation msg>
