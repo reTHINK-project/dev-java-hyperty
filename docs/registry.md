@@ -75,4 +75,24 @@ body: {
   }
 }
 ```
+### create status entry
+
+
+**handler:** <runtime-address> + `/status`.
+
+**message:**
+
+```javascript
+{
+type: "create",
+body: {
+  resource: <cguid>,
+  status: "online|offline>"
+  }
+}
+```
+
+**logic**
+
+It create the status entry with received info.
 
