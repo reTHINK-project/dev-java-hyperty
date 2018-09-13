@@ -11,7 +11,7 @@ The CRM hyperty manages CRM Agents and forwards tickets to available Agents.
 
 ### Storage
 
-The Hyperty handles AgentsPool data collection and associated tickets. The first time the hyperty is executed the collection is initialised based on the `config.agents` info.
+The Hyperty handles the `agents` data collection and associated tickets. The first time the hyperty is executed the collection is initialised based on the `config.agents` info.
 
 ```
 {
@@ -42,7 +42,7 @@ Invitation message sent by Wallet Manager to observers.
 
 **logic:**
 
-It Checks that received `body.code` is in the `config.agents` array and if there is still no user allocated in the AgentsPool, it updates it the new user agent CGUID.
+It Checks that received `body.code` is in the `config.agents` array and if there is still no user allocated in the `agents` collection, it updates it the new user agent CGUID.
 
 ### New Ticket handlers
 
@@ -56,7 +56,7 @@ Standard create message sent to invite Data Object observers.
 
 1- It forwards the message to all agents and add the new ticket to newTickets array.
 
-2- The first agent executes `ticketAccepted` function: the ticket is allocated to the agent in the agentsPool collection, the ticket is removed from the pendingTickets array and a delete message is sent to all remaining invited Agents (todo: specify this new message that should be similar to delete msg used to remove user from chat). 
+2- The first agent executes `ticketAccepted` function: the ticket is allocated to the agent in the  `agents` collection, the ticket is removed from the pendingTickets array and a delete message is sent to all remaining invited Agents (todo: specify this new message that should be similar to delete msg used to remove user from chat). 
 
 3- In case no agent accepts the ticket, ie a timeout message is received for all invited Agents the message is moved from newTickets array to pendingTickets array.
 
