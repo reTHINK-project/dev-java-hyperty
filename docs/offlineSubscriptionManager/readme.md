@@ -38,7 +38,7 @@ Status event message sent by the Vertx Runtime Registry.
 
 **logic**
 
-For all `live` events received it checks if the CGUID is associated to any pending subscription and if yes the `processPendingSubscription(subscribeMsg)` function is executed.
+For all `online` events received it checks if the CGUID is associated to any pending subscription and if yes the `processPendingSubscription(subscribeMsg)` function is executed.
 
 ### `processPendingSubscription(subscribeMsg)` 
 
