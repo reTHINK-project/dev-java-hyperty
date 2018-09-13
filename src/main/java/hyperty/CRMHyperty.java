@@ -149,7 +149,7 @@ public class CRMHyperty extends AbstractHyperty {
 			mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document, id -> {
 				message.reply(new JsonObject().put("agent", agent));
 
-				// TODO - change pending/opened tickets to other agents
+				// TODO - change opened tickets to other agents
 			});
 
 		});
@@ -240,6 +240,7 @@ public class CRMHyperty extends AbstractHyperty {
 	}
 
 	private void changeStatus(String status, JsonObject agent, JsonObject query) {
+		System.out.println(logMessage + " changeStatus(): " + status);
 		agent.put("status", status);
 		JsonObject document = new JsonObject(agent.toString());
 		mongoClient.findOneAndReplace(agentsCollection, query, document, id -> {
@@ -249,7 +250,7 @@ public class CRMHyperty extends AbstractHyperty {
 	}
 
 	/**
-	 * For all live/online events received it checks if the CGUID is associated to
+	 * For all online events received it checks if the CGUID is associated to
 	 * any agent and forwards to it pending tickets. Execute funtion ticketAccepted
 	 * for 200 ok accepting messages.
 	 * 
