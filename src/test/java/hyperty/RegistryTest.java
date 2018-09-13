@@ -29,16 +29,26 @@ class RegistryTest {
 
 	private static String testHypertyURL;
 	private static JsonObject identity;
+	private static String crmHypertyURL = "hyperty://sharing-cities-dsm/crm";
+	private static String offlineSubMgrHypertyURL = "hyperty://sharing-cities-dsm/offline-sub-mgr";
+	private static String crmStatus = crmHypertyURL + "/status";
+	private static String offlineSMStatus = offlineSubMgrHypertyURL + "/status";
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 		
+	
+
+
 		identity  = new JsonObject().put("userProfile", new JsonObject().put("userURL", "user://sharing-cities-dsm/test"));
 		testHypertyURL = "hyperty://sharing-cities-dsm/test";
 		JsonObject config = new JsonObject().put("url", testHypertyURL).put("identity", identity)
 											.put("collection", "registry").put("db_name", "test").put("mongoHost", "localhost")
-											.put("checkStatusTimer", 60000);
+											.put("checkStatusTimer", 60000)
+											.put("CRMHypertyStatus", crmStatus)
+											.put("offlineSMStatus", offlineSMStatus);
 	
+		
 		
 		
 		DeploymentOptions optRegistry = new DeploymentOptions().setConfig(config).setWorker(true);
@@ -63,6 +73,7 @@ class RegistryTest {
 				.put("from", "hyperty://hypertyurlfrom")
 				.put("identity", identity)
 				.put("body", new JsonObject().put("resource", "user-guid://testguid"));
+	
 		
 		
 		String statusUrl = testHypertyURL+"/status";
@@ -86,12 +97,23 @@ class RegistryTest {
 	
 	@Test
 	public void updateGuidStatus(VertxTestContext context, Vertx vertx) {
+		
+		vertx.eventBus().consumer(offlineSMStatus, message -> { 
+			System.out.println("new message on->" + offlineSMStatus);
+			System.out.println("message:" + message.body().toString());
+
+			JsonObject msg = new JsonObject(message.body().toString());
+			String status = msg.getJsonObject("body").getString("status");
+			
+			assertEquals("online", status);
+			context.completeNow();
+		});
+		
 		JsonObject config = new JsonObject().put("type", "update")
 				.put("from", "hyperty://hypertyurlfrom")
 				.put("identity", identity)
 				.put("body", new JsonObject().put("resource", "user-guid://testguid")
-						.put("status", "online")
-						.put("lastModified", 1536657984));
+						.put("status", "online"));
 		
 
 		String statusUrl = testHypertyURL+"/status";
@@ -105,7 +127,7 @@ class RegistryTest {
 			
 			assertEquals(200, statusCode);
 			
-			context.completeNow();
+			context.checkpoint();
 			
 		});
 	}
