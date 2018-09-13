@@ -44,7 +44,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	private String mongoHost = "172.18.0.64";
+	private String mongoHost = "localhost";
 	
 	//private String mongoHost = "172.20.0.64";
 	//private String mongoHost = "localhost";
@@ -91,9 +91,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		
 		try {
-			System.out.println("MONGO HOST TEST ->" +System.getenv("MONGOHOST"));
+			String envHost = System.getenv("MONGOHOST");
+			if (envHost!=null) {
+				mongoHost = System.getenv("MONGOHOST");
+			}
+			
 		} catch(Exception e) {
-			System.out.print("error->" + e.toString());
+			e.printStackTrace();
 		}
 		
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
