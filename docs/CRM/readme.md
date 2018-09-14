@@ -46,7 +46,7 @@ It Checks that received `body.code` is in the `config.agents` array and if there
 
 ### New Ticket handlers
 
-**handlers:** CRM Address + `/agents`.
+**handlers:** CRM Address + `/tickets`.
 
 **message:**
 
@@ -59,6 +59,28 @@ Standard create message sent to invite Data Object observers.
 2- The first agent executes `ticketAccepted` function: the ticket is allocated to the agent in the  `agents` collection, the ticket is removed from the pendingTickets array and a delete message is sent to all remaining invited Agents (todo: specify this new message that should be similar to delete msg used to remove user from chat). 
 
 3- In case no agent accepts the ticket, ie a timeout message is received for all invited Agents the message is moved from newTickets array to pendingTickets array.
+
+### Update Tickets
+
+**handler:** CRM Address + `/tickets`.
+
+**message:**
+
+```javascript
+{
+type: "update",
+identity: <identity>,
+body: {
+  id: <ticket id>,
+  status: "closed",
+  user: <user cguid>
+  }
+}
+```
+
+**logic**
+
+Checks if ticket belongs to user, change its status and update collection.
 
 ### status handler
 
