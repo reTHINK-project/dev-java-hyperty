@@ -60,6 +60,28 @@ Standard create message sent to invite Data Object observers.
 
 3- In case no agent accepts the ticket, ie a timeout message is received for all invited Agents the message is moved from newTickets array to pendingTickets array.
 
+### Update Tickets
+
+**handler:** CRM Address + `/tickets`.
+
+**message:**
+
+```javascript
+{
+type: "update",
+identity: <identity>,
+body: {
+  id: <ticket id>,
+  status: "closed",
+  user: <user cguid>
+  }
+}
+```
+
+**logic**
+
+Checks if ticket belongs to user, change its status and update collection.
+
 ### status handler
 
 **handler:** <runtime>/status.
