@@ -226,13 +226,15 @@ public class RegistryHyperty extends AbstractHyperty {
 				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
 
 				JsonObject response = new JsonObject();
+				JsonObject body = new JsonObject().put("code", 200);
+				response.put("body", body);
 				switch (type) {
 
 				case "create":
 
 					JsonObject msg = new JsonObject(message.body().toString());
 					handleCreationRequest(msg, message);
-
+					message.reply(response);
 					break;
 				default:
 					break;
