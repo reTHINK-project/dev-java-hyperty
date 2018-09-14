@@ -46,7 +46,7 @@ It Checks that received `body.code` is in the `config.agents` array and if there
 
 ### New Ticket handlers
 
-**handlers:** CRM Address + `/agents`.
+**handlers:** CRM Address + `/tickets`.
 
 **message:**
 
