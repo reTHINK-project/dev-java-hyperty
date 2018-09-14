@@ -5,6 +5,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
+import com.mongodb.operation.UserExistsOperation;
+
 import data_objects.DataObjectReporter;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
@@ -31,12 +33,13 @@ public class RegistryHyperty extends AbstractHyperty {
 	int checkStatusTimer;
 	String CRMHypertyStatus;
 	String offlineSMStatus;
+	boolean userExist;
 
 	@Override
 	public void start() {
 
 		super.start();
-		handleRequests();
+		handleRequestsOnStatus();
 		
 		checkStatusTimer = config().getInteger("checkStatusTimer");
 		CRMHypertyStatus = config().getString("CRMHypertyStatus");
@@ -101,7 +104,7 @@ public class RegistryHyperty extends AbstractHyperty {
 	/**
 	 * Handle requests.
 	 */
-	private void handleRequests() {
+	private void handleRequestsOnStatus() {
 		System.out.println("Waiting on ->" + config().getString("url") + "/status");
 		vertx.eventBus().<JsonObject>consumer(config().getString("url") + "/status", message -> {
 			mandatoryFieldsValidator(message);
@@ -206,5 +209,116 @@ public class RegistryHyperty extends AbstractHyperty {
 			e.printStackTrace();
 		}
 	}
+	
+	@Override
+	public Handler<Message<JsonObject>> onMessage() {
+
+		return message -> {
+
+
+			System.out.println(logMessage + "New message -> " + message.body().toString());
+			if (mandatoryFieldsValidator(message)) {
+
+				System.out.println(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
+						+ "\n[Data] " + message.body());
+
+				final String type = new JsonObject(message.body().toString()).getString("type");
+				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
+
+				JsonObject response = new JsonObject();
+				switch (type) {
+
+				case "create":
+
+					JsonObject msg = new JsonObject(message.body().toString());
+					handleCreationRequest(msg, message);
+
+					break;
+				default:
+					break;
+				}
+
+			}
+		};
+		
+}
+	
+	@Override
+	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
+		System.out.println("REGISTRY HANDLE NEW ENTRY->" + msg.toString());
+		if (msg.containsKey("identity")) {
+			final String guid = msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
+			if(!userExists(guid)) {
+				addNewUser(guid);
+				
+			} else {
+				System.out.println("user already exist");
+			}
+		}
+	}
+	
+
+	private boolean userExists(String guid) {
+		userExist = false;
+		
+		CountDownLatch getUserStatus= new CountDownLatch(1);
+
+
+		new Thread(() -> {
+
+			JsonObject query = new JsonObject().put("guid",guid);
+
+			mongoClient.find(this.collection, query, res -> {
+
+				JsonArray users = new JsonArray(res.result());
+				if (users.size() != 0)
+					userExist = true;
+				getUserStatus.countDown();
+			});
+		}).start();
+
+		try {
+			getUserStatus.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		return userExist;
+	}
+	
+	private void addNewUser(String guid) {
+
+		
+		CountDownLatch addUser= new CountDownLatch(1);
+
+
+		new Thread(() -> {
+
+			Long date = new Date().getTime();
+			JsonObject newUser = new JsonObject().put("guid",guid)
+					.put("status", "online")
+					.put("lastModified", date);
+			JsonObject toUpdate = new JsonObject();
+			toUpdate.put("type", "update");
+			
+			mongoClient.save(this.collection, newUser, id -> {
+				System.out.println(logMessage + " new user " + id);
+				newUser.remove("lastModified");
+				toUpdate.put("body", newUser);
+				publish(CRMHypertyStatus, toUpdate);
+				publish(offlineSMStatus, toUpdate);
+				addUser.countDown();
+			});
+
+		}).start();
+
+		try {
+			addUser.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 
 }

@@ -359,7 +359,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * 
 	 * @return
 	 */
-	public DataObjectReporter create(String dataObjectUrl, JsonObject initialData, boolean toInvite,
+	public DataObjectReporter create(JsonObject identity, String dataObjectUrl, JsonObject initialData, boolean toInvite,
 			Handler<Message<JsonObject>> subscriptionHandler, Handler<Message<JsonObject>> readHandler) {
 		/**
 		 * type: "create", from: "dataObjectUrl/subscription", body: { source:
@@ -375,6 +375,13 @@ public class AbstractHyperty extends AbstractVerticle {
 		body.put("schema", this.schemaURL);
 		body.put("value", initialData);
 		toSend.put("body", body);
+		if (identity != null) {
+			toSend.put("identity", identity);
+		}
+		
+		
+		System.out.println("[AbstractHyperty]  data to send to observers->" + toSend.toString());
+		
 		if (toInvite) {
 			System.out.print("inviting: " + observers.toString());
 			Iterator it = observers.getList().iterator();

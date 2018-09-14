@@ -195,11 +195,11 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("CRMHypertyStatus", crmStatus);
 		configRegistry.put("offlineSMStatus", offlineSMStatus);
 
-		/*
+		
 		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);
 		vertx.deployVerticle(RegistryHyperty.class.getName(), optionsRegistry, res -> {
 		  System.out.println("Registry Result->" + res.result());
-		});*/
+		});
 		
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
@@ -297,7 +297,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
 
-		configWalletManager.put("observers", new JsonArray().add(""));
+		configWalletManager.put("observers", new JsonArray().add(registryHypertyURL));
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 		configWalletManager.put("rankingTimer", 2000);
 

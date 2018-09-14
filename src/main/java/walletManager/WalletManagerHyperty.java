@@ -427,10 +427,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		validateTransaction(transaction, walletAddress);
 	}
 
-	public void inviteObservers(String dataObjectUrl, Handler<Message<JsonObject>> subscriptionHandler,
+	public void inviteObservers(JsonObject identity, String dataObjectUrl, Handler<Message<JsonObject>> subscriptionHandler,
 			Handler<Message<JsonObject>> readHandler) {
 		// An invitation is sent to config.observers
-		DataObjectReporter reporter = create(dataObjectUrl, new JsonObject(), true, subscriptionHandler, readHandler);
+		DataObjectReporter reporter = create(identity, dataObjectUrl, new JsonObject(), true, subscriptionHandler, readHandler);
 		reporter.setMongoClient(mongoClient);
 		// pass handler function that will handle subscription events
 		// reporter.setSubscriptionHandler(requestsHandler);
@@ -832,7 +832,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						JsonObject document = new JsonObject(newWallet.toString());
 						mongoClient.save(walletsCollection, document, id -> {
 							System.out.println("[WalletManager] new wallet with ID:" + id);
-							inviteObservers(address, requestsHandler(), readHandler());
+							inviteObservers(msg.getJsonObject("identity"), address, requestsHandler(), readHandler());
 						});
 						JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
 						System.out.println("wallet created, reply" + response.toString());

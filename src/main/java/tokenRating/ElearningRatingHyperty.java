@@ -46,7 +46,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// elearning stream
 		String elearningStreamAddress = streams.getString("elearning");
-		create(elearningStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
+		create(null, elearningStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
 	}
 
 	/**
