@@ -37,7 +37,7 @@ import io.vertx.junit5.VertxTestContext;
 class ChatTest {
 
 	private static String logMessage = "[TEST CRM] ";
-	private static String userID = "user-guid://test-userID";
+	private static String userGuid = "user-guid://user";
 
 	// URLs
 	private static String crmHypertyURL = "hyperty://sharing-cities-dsm/crm";
@@ -50,7 +50,7 @@ class ChatTest {
 
 	private static JsonObject profileInfo = new JsonObject().put("age", 24);
 	private static JsonObject identity = new JsonObject().put("userProfile",
-			new JsonObject().put("userURL", userURL).put("guid", userID).put("info", profileInfo));
+			new JsonObject().put("userURL", userURL).put("guid", userGuid).put("info", profileInfo));
 
 	// MongoDB
 	private static MongoClient mongoClient;
@@ -61,7 +61,7 @@ class ChatTest {
 	private static String subscriptionsCollection = "pendingsubscriptions";
 
 	// agents
-	private static String userGuid = "user-guid://user";
+
 	private static String agent1Code = "agent1Code";
 	private static String agent1Address = "agent1Address";
 	private static String agent2Code = "agent2Code";
@@ -162,26 +162,21 @@ class ChatTest {
 
 	@Test
 //	@Disabled
-	void testSendStatusRegistry(VertxTestContext testContext, Vertx vertx) {
+	void test(VertxTestContext testContext, Vertx vertx) {
 
-		System.out.println(logMessage + " 1 - add Registry entry");
+		System.out.println("\n" + logMessage + " 1 - add Registry entry");
 
-		// TODO - replace this by message
 		CountDownLatch setupLatch = new CountDownLatch(1);
-
 		new Thread(() -> {
 			// add status to registry
-			JsonObject regEntry = new JsonObject();
-			regEntry.put("guid", userGuid);
-			regEntry.put("status", "online");
-			regEntry.put("lastModified", 12345);
-
-			JsonObject document = new JsonObject(regEntry.toString());
-
-			mongoClient.save(registryCollection, document, id -> {
-				System.out.println("New registry entry with ID:" + id);
-				setupLatch.countDown();
-			});
+			JsonObject msg = new JsonObject();
+			msg.put("type", "create");
+			msg.put("identity", identity);
+			msg.put("from", "myself");
+			msg.put("body", new JsonObject().put("source", "hyperty://sharing-cities-dsm/elearning").put("schema", "")
+					.put("value", ""));
+			vertx.eventBus().publish(registryURL, msg);
+			setupLatch.countDown();
 		}).start();
 
 		try {
@@ -190,7 +185,13 @@ class ChatTest {
 			e.printStackTrace();
 		}
 
-		System.out.println(logMessage + " 2 - register agent");
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		System.out.println("\n" + logMessage + " 2 - register agent");
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		msg.put("identity", identity);
@@ -201,8 +202,15 @@ class ChatTest {
 			String user = agentInfo.getString("user");
 			assertEquals(user, userGuid);
 		});
+		
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
-		System.out.println(logMessage + " 3 - update status to offline");
+
+		System.out.println("\n" + logMessage + " 3 - update status to offline");
 		msg = new JsonObject();
 		msg.put("type", "update");
 		msg.put("from", "hyperty://hypertyurlfrom");
@@ -232,7 +240,7 @@ class ChatTest {
 			assertEquals(200, statusCode);
 		});
 
-		System.out.println(logMessage + " 4 - update status to online");
+		System.out.println("\n" + logMessage + " 4 - update status to online");
 		msg = new JsonObject();
 		msg.put("type", "update");
 		msg.put("from", "hyperty://hypertyurlfrom");
@@ -258,24 +266,6 @@ class ChatTest {
 			assertEquals(200, statusCode);
 			testContext.completeNow();
 		});
-
-	}
-
-	static void verifyAgent(String agentCode, CountDownLatch latch) {
-		new Thread(() -> {
-			mongoClient.find(agentsCollection, new JsonObject().put("code", agentCode), res -> {
-				JsonObject agentInfo = res.result().get(0);
-				int openedTickets = agentInfo.getInteger("openedTickets");
-				String status = agentInfo.getString("status");
-				String user = agentInfo.getString("user");
-				JsonArray tickets = agentInfo.getJsonArray("tickets");
-				assertEquals(0, openedTickets);
-				assertEquals(0, tickets.size());
-				assertEquals("offline", status);
-				assertEquals("", user);
-				latch.countDown();
-			});
-		}).start();
 	}
 
 	static void makeMongoConnection(Vertx vertx) {
