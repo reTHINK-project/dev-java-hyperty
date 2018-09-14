@@ -84,7 +84,7 @@ Checks if ticket belongs to user, change its status and update collection.
 
 ### status handler
 
-**handler:** CRM Address + /status.
+**handler:** CRM Address + `/status`.
 
 **message:**
 
