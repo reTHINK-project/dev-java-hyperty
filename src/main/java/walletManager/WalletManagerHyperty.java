@@ -459,7 +459,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			transactions.add(transaction);
 			// update bonus-credit
 			walletInfo.put("bonus-credit", bonusCredit + transactionValue);
-			if (!transaction.getString("source").equals("bonus")) {
+			if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 				walletInfo.put("balance", currentBalance + transactionValue);
 			}
 
@@ -642,6 +642,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					}
 
 				}
+
 				performTransaction(walletAddress, transaction);
 
 				String publicWalletAddress = wallet.getString(causeWalletAddress);
