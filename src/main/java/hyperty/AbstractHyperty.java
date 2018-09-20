@@ -58,15 +58,24 @@ public class AbstractHyperty extends AbstractVerticle {
 		if (mongoHost != null) {
 			System.out.println("Setting up Mongo to:" + this.url);
 			
-			JsonObject objMongo = new JsonObject().put("host", mongoHost).put("port", 27017);
-
 			
-			JsonArray hosts = new JsonArray().add(new JsonObject().put("host", "192.168.89.95").put("port", 27017)).add(new JsonObject().put("host", "192.168.89.96").put("port", 27017));
+			JsonArray hosts = new JsonArray();
+			
+			String [] hostsEnv = mongoHost.split(",");
+			
+			for (int i = 0; i < hostsEnv.length ; i++) {
+				hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", 27017));
+				System.out.println(hostsEnv[i]);
+			}
+			
+			
+		
+			//JsonArray hosts = new JsonArray().add(new JsonObject().put("host", "192.168.89.95").put("port", 27017)).add(new JsonObject().put("host", "192.168.89.96").put("port", 27017));
 			final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", this.database).put("hosts", hosts);
 
 			//final String uri = "mongodb://" + mongoHost + ":27017";
 			//final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
-			
+			System.out.println("Setting up Mongo with cfg on ABS:" +  mongoconfig.toString());
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
 		}
 
