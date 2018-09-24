@@ -25,6 +25,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String collection;
 	protected String database;
 	protected String mongoHost;
+	protected String mongoPorts;
 	protected String schemaURL;
 	protected EventBus eb;
 	protected MongoClient mongoClient = null;
@@ -48,6 +49,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.collection = config().getString("collection");
 		this.database = config().getString("db_name");
 		this.mongoHost = config().getString("mongoHost");
+		this.mongoPorts = config().getString("mongoPorts");
 		this.schemaURL = config().getString("schemaURL");
 		this.observers = config().getJsonArray("observers");
 		this.siotStubUrl = config().getString("siot_stub_url");
@@ -55,28 +57,33 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 
-		if (mongoHost != null) {
+		if (mongoHost != null && mongoPorts != null) {
 			System.out.println("Setting up Mongo to:" + this.url);
 			
+			System.out.println("Setting up Mongo to:" + this.mongoHost);
 			
 			JsonArray hosts = new JsonArray();
 			
 			String [] hostsEnv = mongoHost.split(",");
+			String [] portsEnv = mongoPorts.split(",");
 			
 			for (int i = 0; i < hostsEnv.length ; i++) {
-				hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", 27017));
-				System.out.println(hostsEnv[i]);
+				hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", Integer.parseInt(portsEnv[i])));
+				System.out.println("added to config:" + hostsEnv[i] + ":" + portsEnv[i]);
 			}
 			
+			//final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
 			
-		
-			//JsonArray hosts = new JsonArray().add(new JsonObject().put("host", "192.168.89.95").put("port", 27017)).add(new JsonObject().put("host", "192.168.89.96").put("port", 27017));
-			final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", this.database).put("hosts", hosts);
-
-			//final String uri = "mongodb://" + mongoHost + ":27017";
-			//final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
+			
+			final String uri = "mongodb://" + mongoHost + ":27017";
+			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
 			System.out.println("Setting up Mongo with cfg on ABS:" +  mongoconfig.toString());
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
+			
+			
+			
+			
+
 		}
 
 	}

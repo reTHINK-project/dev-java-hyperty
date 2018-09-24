@@ -6,6 +6,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import hyperty.CRMHyperty;
 import hyperty.RegistryHyperty;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
@@ -44,7 +45,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
 	private static String from = "tester";
-	private String mongoHost = "localhost";
+	private String mongoHosts = "localhost,localhost,localhost";
+	private String mongoPorts = "27017,47017,57017";
 	
 	//private String mongoHost = "172.20.0.64";
 	//private String mongoHost = "localhost";
@@ -91,9 +93,11 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		
 		try {
-			String envHost = System.getenv("MONGOHOST");
-			if (envHost!=null) {
-				mongoHost = System.getenv("MONGOHOST");
+			String envHosts = System.getenv("MONGOHOSTS");
+			String envPorts = System.getenv("MONGOPORTS");
+			if (envHosts!=null && envPorts!=null) {
+				mongoHosts = System.getenv("MONGOHOSTS");
+				mongoPorts = System.getenv("MONGOPORTS");
 			}
 			
 		} catch(Exception e) {
@@ -190,7 +194,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// mongo
 		configRegistry.put("db_name", "test");
 		configRegistry.put("collection", "registry");
-		configRegistry.put("mongoHost", mongoHost);
+		configRegistry.put("mongoHost", mongoHosts);
+		configRegistry.put("mongoPorts", mongoPorts);
 		configRegistry.put("checkStatusTimer", 180000);
 		configRegistry.put("CRMHypertyStatus", crmStatus);
 		configRegistry.put("offlineSMStatus", offlineSMStatus);
@@ -201,14 +206,43 @@ public class StartJavaHyperties extends AbstractVerticle {
 		  System.out.println("Registry Result->" + res.result());
 		});
 		
+		//deploy CRM
+		JsonObject configCRM = new JsonObject();
+		configCRM.put("url", crmHypertyURL);
+		configCRM.put("identity", identity);
+		// mongo
+		configCRM.put("db_name", "test");
+		configCRM.put("collection", "registry");
+		configCRM.put("mongoHost", mongoHosts);
+		configCRM.put("mongoPorts", mongoPorts);
+		
+		String agent1Code = "agent1Code";
+	    String agent1Address = "agent1Address";
+	    String agent2Code = "agent2Code";
+	    String agent2Address = "agent2Address";
+	    JsonArray agents = new JsonArray();
+        JsonObject agent1 = new JsonObject().put("address", agent1Address).put("code", agent1Code);
+        JsonObject agent2 = new JsonObject().put("address", agent2Address).put("code", agent2Code);
+        agents.add(agent1);
+        agents.add(agent2);
+        configCRM.put("agents", agents);
+		
+		
+		DeploymentOptions optionsCRM = new DeploymentOptions().setConfig(configCRM).setWorker(true);
+		vertx.deployVerticle(CRMHyperty.class.getName(), optionsCRM, res -> {
+		  System.out.println("Registry Result->" + res.result());
+		});
+		
+		
+		//deply checkIN
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
 		configCheckIN.put("identity", identity);
 		// mongo
 		configCheckIN.put("db_name", "test");
 		configCheckIN.put("collection", "rates");
-		configCheckIN.put("mongoHost", mongoHost);
-
+		configCheckIN.put("mongoHost", mongoHosts);
+		configCheckIN.put("mongoPorts", mongoPorts);
 		configCheckIN.put("tokens_per_checkin", 10);
 		configCheckIN.put("checkin_radius", 500);
 		configCheckIN.put("min_frequency", 1);
@@ -231,8 +265,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// mongo
 		configUserActivity.put("db_name", "test");
 		configUserActivity.put("collection", "rates");
-		configUserActivity.put("mongoHost", mongoHost);
-
+		configUserActivity.put("mongoHost", mongoHosts);
+		configUserActivity.put("mongoPorts", mongoPorts);
 		configUserActivity.put("tokens_per_walking_km", 10);
 		configUserActivity.put("tokens_per_biking_km", 10);
 		configUserActivity.put("tokens_per_bikesharing_km", 10);
@@ -256,8 +290,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// mongo
 		configElearning.put("db_name", "test");
 		configElearning.put("collection", "rates");
-		configElearning.put("mongoHost", mongoHost);
-
+		configElearning.put("mongoHost", mongoHosts);
+		configElearning.put("mongoPorts", mongoPorts);
 		configElearning.put("tokens_per_completed_quiz", 50);
 		configElearning.put("tokens_per_correct_answer", 5);
 		configElearning.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
@@ -279,8 +313,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// mongo
 		configEnergySaving.put("collection", "rates");
 		configEnergySaving.put("db_name", "test");
-		configEnergySaving.put("mongoHost", mongoHost);
-
+		configEnergySaving.put("mongoHost", mongoHosts);
+		configEnergySaving.put("mongoPorts", mongoPorts);
 		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(true);
 		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsEnergy, res -> {
 			System.out.println("EnergySavingRatingHyperty Result->" + res.result());
@@ -295,8 +329,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("identity", identity);
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
-		configWalletManager.put("mongoHost", mongoHost);
-
+		configWalletManager.put("mongoHost", mongoHosts);
+		configWalletManager.put("mongoPorts", mongoPorts);
 		configWalletManager.put("observers", new JsonArray().add(registryHypertyURL));
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 		configWalletManager.put("rankingTimer", 2000);
@@ -346,7 +380,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configSmartIotStub.put("url", smartIotProtostubUrl);
 		configSmartIotStub.put("db_name", "test");
 		configSmartIotStub.put("collection", "siotdevices");
-		configSmartIotStub.put("mongoHost", mongoHost);
+		configSmartIotStub.put("mongoHost", mongoHosts);
+		configSmartIotStub.put("mongoPorts", mongoPorts);
 		configSmartIotStub.put("smart_iot_url", SIOTurl);
 		configSmartIotStub.put("point_of_contact", pointOfContact);
 
@@ -388,25 +423,30 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		server.listen(9091);
 
-		if (mongoHost != null) {
-			System.out.println("Setting up Mongo to:" + mongoHost);
+		if (mongoHosts != null && mongoPorts != null ) {
+			System.out.println("Setting up Mongo to:" + mongoHosts);
 			
 			JsonArray hosts = new JsonArray();
 			
-			String [] hostsEnv = mongoHost.split(",");
+			String [] hostsEnv = mongoHosts.split(",");
+			String [] portsEnv = mongoPorts.split(",");
 			
 			for (int i = 0; i < hostsEnv.length ; i++) {
-				hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", 27017));
-				System.out.println(hostsEnv[i]);
+				hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", Integer.parseInt(portsEnv[i])));
+				System.out.println("added to config:" + hostsEnv[i] + ":" + portsEnv[i]);
 			}
 			
-			final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
+			//final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
 			
-			//final String uri = "mongodb://" + mongoHost + ":27017";
-			//final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
+			
+			final String uri = "mongodb://" + mongoHost + ":27017";
+			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
+			
 			
 			System.out.println("Setting up Mongo with cfg on START:" +  mongoconfig.toString());
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
+			
+			
 		}
 
 	}
