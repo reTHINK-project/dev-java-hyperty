@@ -160,9 +160,9 @@ public class CRMHyperty extends AbstractHyperty {
 	 */
 	@Override
 	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
-		JsonObject body = msg.getJsonObject("body");
-		System.out.println(logMessage + "handleAgentRegistration(): " + body.toString());
+		System.out.println(logMessage + "handleAgentRegistration(): " + msg.toString());
 		String code = msg.getJsonObject("identity").getJsonObject("userProfile").getJsonObject("info").getString("code");
+		String guid = msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 		CountDownLatch latch = new CountDownLatch(1);
 
 		if (configContainsCode(code)) {
@@ -173,7 +173,7 @@ public class CRMHyperty extends AbstractHyperty {
 					JsonArray results = new JsonArray(res.result());
 					JsonObject agent = results.getJsonObject(0);
 					if (agent.getString("user").equals("")) {
-						agent.put("user", body.getString("user"));
+						agent.put("user", guid);
 						JsonObject document = new JsonObject(agent.toString());
 						mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document,
 								id -> {
