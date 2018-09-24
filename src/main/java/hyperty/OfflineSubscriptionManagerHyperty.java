@@ -19,7 +19,6 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	private String subscriptionsCollection = "pendingsubscriptions";
 
 	// handler URLs
-	private static String mainHandler;
 	private static String statusHandler;
 	private static String registryURL;
 
@@ -30,7 +29,6 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		
 		System.out.println(logMessage + "start() ");
 
-		mainHandler = config().getString("url");
 		registryURL = config().getString("registry");
 		statusHandler = config().getString("url") + "/status";
 
