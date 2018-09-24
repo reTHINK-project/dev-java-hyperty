@@ -2,6 +2,7 @@ package hyperty;
 
 import java.util.concurrent.CountDownLatch;
 
+import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -18,7 +19,6 @@ public class CRMHyperty extends AbstractHyperty {
 	private String agentsCollection = "agents";
 
 	// handler URLs
-	private static String agentRegistrationHandler;
 	private static String ticketsHandler;
 	private static String statusHandler;
 
@@ -33,11 +33,9 @@ public class CRMHyperty extends AbstractHyperty {
 
 		super.start();
 
-		agentRegistrationHandler = config().getString("url") + "/agents";
 		ticketsHandler = config().getString("url") + "/tickets";
 		statusHandler = config().getString("url") + "/status";
 
-		handleAgentRequests();
 		handleTicketRequests();
 		handleStatusRequests();
 
@@ -97,14 +95,11 @@ public class CRMHyperty extends AbstractHyperty {
 
 	}
 
-	/**
-	 * Handle "agent" requests.
-	 */
-	private void handleAgentRequests() {
+	@Override
+	public Handler<Message<JsonObject>> onMessage() {
 
-		System.out.println(logMessage + "handleAgentRequests() in " + agentRegistrationHandler);
+		return message -> {
 
-		vertx.eventBus().<JsonObject>consumer(agentRegistrationHandler, message -> {
 			mandatoryFieldsValidator(message);
 
 			System.out.println(logMessage + "handleAgentRequests(): " + message.body().toString());
@@ -124,7 +119,7 @@ public class CRMHyperty extends AbstractHyperty {
 				System.out.println("Incorrect message type: " + msg.getString("type"));
 				break;
 			}
-		});
+		};
 	}
 
 	/**
@@ -250,9 +245,9 @@ public class CRMHyperty extends AbstractHyperty {
 	}
 
 	/**
-	 * For all online events received it checks if the CGUID is associated to
-	 * any agent and forwards to it pending tickets. Execute funtion ticketAccepted
-	 * for 200 ok accepting messages.
+	 * For all online events received it checks if the CGUID is associated to any
+	 * agent and forwards to it pending tickets. Execute funtion ticketAccepted for
+	 * 200 ok accepting messages.
 	 * 
 	 * @param status - status message
 	 */
@@ -338,6 +333,7 @@ public class CRMHyperty extends AbstractHyperty {
 	private void handleNewTicket(JsonObject msg) {
 		JsonObject ticket = msg.getJsonObject("body").getJsonObject("ticket");
 		ticket.put("status", "pending");
+		ticket.put("user", msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid"));
 		System.out.println(logMessage + "handleNewTicket(): " + ticket.toString());
 
 		// forward the message to all agents and add the new ticket to newTickets array.
@@ -402,7 +398,6 @@ public class CRMHyperty extends AbstractHyperty {
 		mongoClient.find(agentsCollection, query, res -> {
 			JsonArray results = new JsonArray(res.result());
 			JsonObject agent = results.getJsonObject(0);
-			// TODO - status: when is it closed?
 			JsonArray tickets = agent.getJsonArray("tickets");
 			ticket.put("status", "ongoing");
 			tickets.add(ticket);
