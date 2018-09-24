@@ -162,7 +162,7 @@ public class CRMHyperty extends AbstractHyperty {
 	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
 		JsonObject body = msg.getJsonObject("body");
 		System.out.println(logMessage + "handleAgentRegistration(): " + body.toString());
-		String code = body.getString("code");
+		String code = msg.getJsonObject("identity").getJsonObject("userProfile").getJsonObject("info").getString("code");
 		CountDownLatch latch = new CountDownLatch(1);
 
 		if (configContainsCode(code)) {
@@ -205,6 +205,7 @@ public class CRMHyperty extends AbstractHyperty {
 	}
 
 	private boolean configContainsCode(String code) {
+		System.out.println(logMessage + "configContainsCode(): " + code);
 		for (Object entry : agentsConfig) {
 			JsonObject agent = (JsonObject) entry;
 			if (agent.getString("code").equals(code))
