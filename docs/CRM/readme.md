@@ -6,7 +6,7 @@ The CRM hyperty manages CRM Agents and forwards tickets to available Agents.
 
 * `agents`: list of JSON with agent names and associated registration code.
 
-`{name: '<agent name>', 
+`{address: '<agent address>', 
   code: '<agent code>'}`
 
 ### Storage
