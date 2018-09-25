@@ -840,26 +840,29 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						 */
 
 						String agentCode = profileInfo.getString("code");
-						if (!agentCode.equals("")) {
+						if (agentCode != null) {
 							System.out.println(logMessage + "validating code with CRM");
 							CountDownLatch validateCause = new CountDownLatch(1);
 
-							JsonObject validationMessage = new JsonObject();
-							validationMessage.put("from", url);
-							validationMessage.put("identity", identity);
-							validationMessage.put("type", "forward");
-							validationMessage.put("code", agentCode);
-							String crmAddress = config().getString("crm");
-							send(crmAddress + "/agents", validationMessage, reply -> {
-								System.out
-										.println(logMessage + "validation result: " + reply.result().body().toString());
-								boolean valid = new JsonObject(reply.result().body().toString()).getBoolean("valid");
-								if (valid) {
-									response.put("crm", crmAddress);
-								}
-								response.put("valid", valid);
-								validateCause.countDown();
-							});
+							new Thread(() -> {
+								JsonObject validationMessage = new JsonObject();
+								validationMessage.put("from", url);
+								validationMessage.put("identity", identity);
+								validationMessage.put("type", "forward");
+								validationMessage.put("code", agentCode);
+								String crmAddress = config().getString("crm");
+								send(crmAddress + "/agents", validationMessage, reply -> {
+									System.out.println(
+											logMessage + "validation result: " + reply.result().body().toString());
+									boolean valid = new JsonObject(reply.result().body().toString())
+											.getBoolean("valid");
+									if (valid) {
+										response.put("crm", crmAddress);
+									}
+									response.put("valid", valid);
+									validateCause.countDown();
+								});
+							}).start();
 
 							try {
 								validateCause.await();
