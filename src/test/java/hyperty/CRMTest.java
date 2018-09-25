@@ -40,25 +40,25 @@ import io.vertx.junit5.VertxTestContext;
 @Disabled
 class CRMTest {
 
+	private static String logMessage = "[TEST CRM] ";
+
+	// MongoDB
 	private static String mongoHost = "localhost";
 	private static String dbName = "test";
 	private static String userID = "user-guid://test-userID";
+	private static MongoClient mongoClient;
+	private static String agentsCollection = "agents";
 
 	// URLs
 	private static String crmHypertyURL = "hyperty://sharing-cities-dsm/crm";
-	private static String crmHypertyURLAgents = "hyperty://sharing-cities-dsm/crm/agents";
 	private static String crmHypertyURLTickets = "hyperty://sharing-cities-dsm/crm/tickets";
 	private static String crmHypertyURLStatus = "hyperty://sharing-cities-dsm/crm/status";
+	private static String crmHypertyURLAgentValidation = "hyperty://sharing-cities-dsm/crm/agents";
 	private static String userURL = "user://sharing-cities-dsm/location-identity";
 
 	private static JsonObject profileInfo = new JsonObject().put("age", 24);
 	private static JsonObject identity = new JsonObject().put("userProfile",
 			new JsonObject().put("userURL", userURL).put("guid", userID).put("info", profileInfo));
-
-	// MongoDB
-	private static MongoClient mongoClient;
-	private static String db_name = dbName;
-	private static String agentsCollection = "agents";
 
 	// agents
 	private static String userGuid1 = "cguid1";
@@ -77,9 +77,10 @@ class CRMTest {
 		config.put("identity", identity);
 
 		// mongo
-		config.put("db_name", "test");
+		config.put("db_name", dbName);
 		config.put("collection", agentsCollection);
 		config.put("mongoHost", mongoHost);
+		config.put("mongoPorts","27017");
 
 		// agents
 		JsonArray agents = new JsonArray();
@@ -126,8 +127,46 @@ class CRMTest {
 		}
 	}
 
+	@Test
+	@Disabled
+	void mainTest(VertxTestContext testContext, Vertx vertx) {
+
+		System.out.println("\n" + logMessage + "1 - new ticket (not accepted)");
+
+		JsonObject msg = new JsonObject();
+		msg.put("type", "create");
+		msg.put("identity", identity);
+		msg.put("from", "myself");
+		JsonObject ticket = new JsonObject();
+		ticket.put("creation", new Date().getTime());
+		ticket.put("user", userGuid1);
+		ticket.put("id", "0");
+		ticket.put("lastModified", new Date().getTime());
+		ticket.put("message", "Preciso de ajuda na app.");
+		msg.put("body", new JsonObject().put("ticket", ticket));
+		vertx.eventBus().send(crmHypertyURLTickets, msg);
+
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		CountDownLatch latch = new CountDownLatch(2);
+		verifyAgent(agent1Code, latch);
+		verifyAgent(agent2Code, latch);
+
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		mainTest2(testContext, vertx);
+	}
+
 	void mainTest2(VertxTestContext testContext, Vertx vertx) {
-		System.out.println(logMessage + "2 - agent registration");
+		System.out.println("\n" + logMessage + "2 - agent registration");
 
 		vertx.eventBus().consumer(agent1Address, message -> {
 			JsonObject reply = new JsonObject().put("body", new JsonObject().put("code", 200));
@@ -145,7 +184,7 @@ class CRMTest {
 		msg.put("identity", identity);
 		msg.put("from", "myself");
 		msg.put("body", new JsonObject().put("code", agent2Code).put("user", userGuid2));
-		vertx.eventBus().send(crmHypertyURLAgents, msg, res -> {
+		vertx.eventBus().send(crmHypertyURL, msg, res -> {
 			JsonObject agentInfo = ((JsonObject) res.result().body()).getJsonObject("agent");
 			String user = agentInfo.getString("user");
 			assertEquals(user, userGuid2);
@@ -157,12 +196,12 @@ class CRMTest {
 		msg.put("identity", identity);
 		msg.put("from", "myself");
 		msg.put("body", new JsonObject().put("code", agent1Code).put("user", userGuid1));
-		vertx.eventBus().send(crmHypertyURLAgents, msg, res -> {
+		vertx.eventBus().send(crmHypertyURL, msg, res -> {
 			JsonObject agentInfo = ((JsonObject) res.result().body()).getJsonObject("agent");
 			String user = agentInfo.getString("user");
 			assertEquals(user, userGuid1);
 
-			System.out.println(logMessage + "3 - agent 1 offline -> online");
+			System.out.println("\n" + logMessage + "3 - agent 1 offline -> online");
 
 			JsonObject msg2 = new JsonObject();
 			msg2.put("type", "update");
@@ -193,13 +232,14 @@ class CRMTest {
 	}
 
 	@Test
+	@Disabled
 	void testRegistrationWrongCode(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		msg.put("identity", identity);
 		msg.put("from", "myself");
 		msg.put("body", new JsonObject().put("code", codeWrong).put("user", userGuid1));
-		vertx.eventBus().send(crmHypertyURLAgents, msg, res -> {
+		vertx.eventBus().send(crmHypertyURL, msg, res -> {
 			JsonObject response = (JsonObject) res.result().body();
 			System.out.println("Received reply from agents hyperty: " + response.toString());
 			int code = response.getInteger("code");
@@ -207,10 +247,42 @@ class CRMTest {
 			testContext.completeNow();
 		});
 	}
+	
+	@Test
+	void testValidAgentCode(VertxTestContext testContext, Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", "forward");
+		msg.put("identity", identity);
+		msg.put("from", "myself");
+		msg.put("code", agent1Code);
+		vertx.eventBus().send(crmHypertyURLAgentValidation, msg, res -> {
+			JsonObject response = (JsonObject) res.result().body();
+			System.out.println("Received reply from agent validation: " + response.toString());
+			boolean valid = response.getBoolean("valid");
+			assertEquals(valid, true);
+			testContext.completeNow();
+		});
+	}
+	
+	@Test
+	void testInvalidAgentCode(VertxTestContext testContext, Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", "forward");
+		msg.put("identity", identity);
+		msg.put("from", "myself");
+		msg.put("code", "wrongCode");
+		vertx.eventBus().send(crmHypertyURLAgentValidation, msg, res -> {
+			JsonObject response = (JsonObject) res.result().body();
+			System.out.println("Received reply from agent validation: " + response.toString());
+			boolean valid = response.getBoolean("valid");
+			assertEquals(valid, false);
+			testContext.completeNow();
+		});
+	}
 
 	void mainTest3(VertxTestContext testContext, Vertx vertx) {
 
-		System.out.println(logMessage + "4 - new ticket");
+		System.out.println("\n" + logMessage + "4 - new ticket");
 		MessageConsumer<Object> consumer1 = vertx.eventBus().consumer(agent1Address, message -> {
 			JsonObject reply = new JsonObject().put("body", new JsonObject().put("code", 200));
 			message.reply(reply);
@@ -255,13 +327,12 @@ class CRMTest {
 	}
 
 	private void mainTest4(VertxTestContext testContext, Vertx vertx) {
-		System.out.println(logMessage + "ticket update (ongoing -> closed)");
+		System.out.println("\n" + logMessage + "5 - ticket update (ongoing -> closed)");
 		JsonObject msg = new JsonObject();
 		msg.put("type", "update");
 		msg.put("identity", identity);
 		msg.put("from", "myself");
 		JsonObject ticket = new JsonObject();
-		ticket.put("creation", new Date().getTime());
 		ticket.put("user", userGuid1);
 		ticket.put("status", "closed");
 		ticket.put("id", "0");
@@ -272,60 +343,21 @@ class CRMTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
-		System.out.println(logMessage + "unregister agent");
+
+		System.out.println("\n" + logMessage + "6 - unregister agent");
 		// unregister agent 1
 		msg = new JsonObject();
 		msg.put("type", "delete");
 		msg.put("identity", identity);
 		msg.put("from", "myself");
 		msg.put("body", new JsonObject().put("code", agent1Code).put("user", userGuid2));
-		vertx.eventBus().send(crmHypertyURLAgents, msg, res -> {
+		vertx.eventBus().send(crmHypertyURL, msg, res -> {
 			JsonObject agentInfo = ((JsonObject) res.result().body()).getJsonObject("agent");
 			String user = agentInfo.getString("user");
 			assertEquals(user, "");
 			testContext.completeNow();
 		});
 
-	}
-
-	private static String logMessage = "[TEST CRM] ";
-
-	@Test
-	void mainTest(VertxTestContext testContext, Vertx vertx) {
-
-		System.out.println(logMessage + "1 - new ticket (not accepted)");
-
-		JsonObject msg = new JsonObject();
-		msg.put("type", "create");
-		msg.put("identity", identity);
-		msg.put("from", "myself");
-		JsonObject ticket = new JsonObject();
-		ticket.put("creation", new Date().getTime());
-		ticket.put("user", userGuid1);
-		ticket.put("id", "0");
-		ticket.put("lastModified", new Date().getTime());
-		ticket.put("message", "Preciso de ajuda na app.");
-		msg.put("body", new JsonObject().put("ticket", ticket));
-		vertx.eventBus().send(crmHypertyURLTickets, msg);
-
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-		CountDownLatch latch = new CountDownLatch(2);
-		verifyAgent(agent1Code, latch);
-		verifyAgent(agent2Code, latch);
-
-		try {
-			latch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-		mainTest2(testContext, vertx);
 	}
 
 	static void verifyAgent(String agentCode, CountDownLatch latch) {
@@ -351,8 +383,8 @@ class CRMTest {
 
 		final JsonObject mongoconfig = new JsonObject();
 		mongoconfig.put("connection_string", uri);
-		mongoconfig.put("db_name", db_name);
-		mongoconfig.put("database", db_name);
+		mongoconfig.put("db_name", dbName);
+		mongoconfig.put("database", dbName);
 		mongoconfig.put("collection", agentsCollection);
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}

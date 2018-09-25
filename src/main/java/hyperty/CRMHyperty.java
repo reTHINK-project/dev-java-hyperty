@@ -16,11 +16,12 @@ import io.vertx.core.json.JsonObject;
 public class CRMHyperty extends AbstractHyperty {
 
 	private static final String logMessage = "[CRM] ";
-	private String agentsCollection = "agents";
+	private static final String agentsCollection = "agents";
 
 	// handler URLs
 	private static String ticketsHandler;
 	private static String statusHandler;
+	private static String agentValidationHandler;
 
 	// ticket arrays
 	private static JsonArray newTickets = new JsonArray();
@@ -35,14 +36,33 @@ public class CRMHyperty extends AbstractHyperty {
 
 		ticketsHandler = config().getString("url") + "/tickets";
 		statusHandler = config().getString("url") + "/status";
+		agentValidationHandler = config().getString("url") + "/agents";
 
 		handleTicketRequests();
 		handleStatusRequests();
+		handleAgentValidationRequests();
 
 		agentsConfig = config().getJsonArray("agents");
 		if (agentsConfig != null) {
 			createAgents(agentsConfig);
 		}
+
+	}
+
+	/**
+	 * Validate agent codes
+	 */
+	private void handleAgentValidationRequests() {
+
+		vertx.eventBus().<JsonObject>consumer(agentValidationHandler, message -> {
+			mandatoryFieldsValidator(message);
+			System.out.println(logMessage + "handleAgentValidationRequests(): " + message.body().toString());
+			JsonObject msg = new JsonObject(message.body().toString());
+
+			JsonObject replyMessage = new JsonObject(message.body().toString());
+			replyMessage.put("valid", configContainsCode(msg.getString("code")));
+			message.reply(replyMessage);
+		});
 
 	}
 
@@ -161,7 +181,8 @@ public class CRMHyperty extends AbstractHyperty {
 	@Override
 	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
 		System.out.println(logMessage + "handleAgentRegistration(): " + msg.toString());
-		String code = msg.getJsonObject("identity").getJsonObject("userProfile").getJsonObject("info").getString("code");
+		String code = msg.getJsonObject("identity").getJsonObject("userProfile").getJsonObject("info")
+				.getString("code");
 		String guid = msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 		CountDownLatch latch = new CountDownLatch(1);
 

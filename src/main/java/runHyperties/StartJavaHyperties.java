@@ -332,6 +332,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("mongoHost", mongoHosts);
 		configWalletManager.put("mongoPorts", mongoPorts);
 		configWalletManager.put("observers", new JsonArray().add(registryHypertyURL));
+		configWalletManager.put("crm", crmHypertyURL);
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 		configWalletManager.put("rankingTimer", 2000);
 
