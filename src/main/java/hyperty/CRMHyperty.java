@@ -90,7 +90,7 @@ public class CRMHyperty extends AbstractHyperty {
 						// set identity
 						JsonObject newAgent = new JsonObject();
 						newAgent.put("code", agentJson.getString("code"));
-						newAgent.put("address", agentJson.getString("address"));
+						newAgent.put("address", "");
 						newAgent.put("user", "");
 						newAgent.put("openedTickets", 0);
 						newAgent.put("tickets", new JsonArray());
@@ -194,7 +194,9 @@ public class CRMHyperty extends AbstractHyperty {
 					JsonArray results = new JsonArray(res.result());
 					JsonObject agent = results.getJsonObject(0);
 					if (agent.getString("user").equals("")) {
+						// update agent's associated user guid and address
 						agent.put("user", guid);
+						agent.put("address", msg.getString("from"));
 						JsonObject document = new JsonObject(agent.toString());
 						mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document,
 								id -> {
