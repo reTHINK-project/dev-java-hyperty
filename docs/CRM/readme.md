@@ -53,7 +53,7 @@ Standard create message sent to invite Data Object observers.
 
 **logic**
 
-1- It forwards the message to all agents and add the new ticket to newTickets array.
+1- It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and add the new ticket to newTickets array.
 
 2- The first agent executes `ticketAccepted` function: the ticket is allocated to the agent in the  `agents` collection, the ticket is removed from the pendingTickets array and a delete message is sent to all remaining invited Agents (todo: specify this new message that should be similar to delete msg used to remove user from chat). 
 
