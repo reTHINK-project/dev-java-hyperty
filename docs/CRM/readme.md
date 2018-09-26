@@ -4,10 +4,9 @@ The CRM hyperty manages CRM Agents and forwards tickets to available Agents.
 
 ### Configuration:
 
-* `agents`: list of JSON with agent address and associated registration code.
+* `agents`: list of JSON with agent registration codes.
 
-`{address: '<agent address>', 
-  code: '<agent code>'}`
+`{code: '<agent code>'}`
 
 ### Storage
 
@@ -15,7 +14,7 @@ The Hyperty handles the `agents` data collection and associated tickets. The fir
 
 ```
 {
-    address: <address>,
+    address: <adress of the user registered as agent>,
     code: <code>,
     user: <cguid of the user registered with this agent address>,
     tickets: [{
@@ -42,7 +41,7 @@ Invitation message sent by Wallet Manager to observers.
 
 **logic:**
 
-It Checks that received `body.code` is in the `config.agents` array and if there is still no user allocated in the `agents` collection, it updates it the new user agent CGUID.
+It Checks that received `body.code` is in the `config.agents` array and if there is still no user allocated in the `agents` collection, it updates it the new user agent CGUID and its address.
 
 ### New Ticket handlers
 
