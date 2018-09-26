@@ -14,7 +14,7 @@ The Hyperty handles the `agents` data collection and associated tickets. The fir
 
 ```
 {
-    address: <adress of the user registered as agent>,
+    address: <url of agent's Group Chat Manager hyperty>,
     code: <code>,
     user: <cguid of the user registered with this agent address>,
     tickets: [{
