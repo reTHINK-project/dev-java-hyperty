@@ -49,7 +49,7 @@ It Checks that received `body.code` is in the `config.agents` array and if there
 
 **message:**
 
-Standard create message sent to invite Data Object observers.
+Standard create message sent to [invite Data Object observers](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#observer-invitation).
 
 **logic**
 
