@@ -455,8 +455,10 @@ public class CRMHyperty extends AbstractHyperty {
 				for (Object entry : results) {
 					JsonObject agent = (JsonObject) entry;
 					String address = agent.getString("address");
+					String guid = agent.getString("user");
 					String code = agent.getString("code");
-					send(address, message, reply -> {
+					message.put("to", address);
+					send(guid, message, reply -> {
 						JsonObject body = reply.result().body().getJsonObject("body");
 						if (body.getInteger("code") == 200) {
 							if (!agentHasAcceptedTicket) {
