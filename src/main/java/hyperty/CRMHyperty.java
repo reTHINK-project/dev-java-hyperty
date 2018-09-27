@@ -36,7 +36,7 @@ public class CRMHyperty extends AbstractHyperty {
 
 		ticketsHandler = config().getString("url") + "/tickets";
 		statusHandler = config().getString("url") + "/status";
-		agentValidationHandler = config().getString("url") + "/agents";
+		agentValidationHandler = "resolve-role";
 
 		handleTicketRequests();
 		handleStatusRequests();
@@ -49,6 +49,8 @@ public class CRMHyperty extends AbstractHyperty {
 
 	}
 
+	boolean validRegistration;
+
 	/**
 	 * Validate agent codes
 	 */
@@ -57,13 +59,31 @@ public class CRMHyperty extends AbstractHyperty {
 		vertx.eventBus().<JsonObject>consumer(agentValidationHandler, message -> {
 			mandatoryFieldsValidator(message);
 			System.out.println(logMessage + "handleAgentValidationRequests(): " + message.body().toString());
-			JsonObject msg = new JsonObject(message.body().toString());
-
+			validRegistration = false;
+			String code = new JsonObject(message.body().toString()).getString("code");
 			JsonObject replyMessage = new JsonObject(message.body().toString());
-			replyMessage.put("valid", configContainsCode(msg.getString("code")));
+			if (configContainsCode(code)) {
+				// check if this code is already associated with user
+				CountDownLatch agentsLatch = new CountDownLatch(1);
+				new Thread(() -> {
+					JsonObject query = new JsonObject().put("code", code).put("user", new JsonObject().put("$ne", ""));
+					mongoClient.find(agentsCollection, query, res -> {
+						JsonArray results = new JsonArray(res.result());
+						if (results.size() == 0) {
+							validRegistration = true;
+						}
+						agentsLatch.countDown();
+					});
+				}).start();
+				try {
+					agentsLatch.await();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			replyMessage.put("valid", validRegistration);
 			message.reply(replyMessage);
 		});
-
 	}
 
 	boolean walletsExist;

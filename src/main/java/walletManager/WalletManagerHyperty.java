@@ -851,7 +851,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								validationMessage.put("type", "forward");
 								validationMessage.put("code", agentCode);
 								String crmAddress = config().getString("crm");
-								send(crmAddress + "/agents", validationMessage, reply -> {
+								send("resolve-role", validationMessage, reply -> {
 									System.out.println(
 											logMessage + "validation result: " + reply.result().body().toString());
 									boolean valid = new JsonObject(reply.result().body().toString())
