@@ -74,9 +74,11 @@ public class AbstractHyperty extends AbstractVerticle {
 			
 			//final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
 			
-			
+			mongoHost = "localhost";
 			final String uri = "mongodb://" + mongoHost + ":27017";
 			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
+			
+			
 			System.out.println("Setting up Mongo with cfg on ABS:" +  mongoconfig.toString());
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
 			

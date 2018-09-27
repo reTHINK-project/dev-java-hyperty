@@ -20,7 +20,7 @@ The Hyperty handles the `agents` data collection and associated tickets. The fir
     tickets: [{
         user: <cguid of user that created the ticket>
         status: <ongoing/closed>,
-        creation: <date>,
+        created: <date>,
         lastModified: <data>,
         message: <received invitation msg>
         }

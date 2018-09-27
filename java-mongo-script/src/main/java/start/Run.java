@@ -108,19 +108,22 @@ public class Run extends AbstractVerticle {
 			}
 			
 			BufferedWriter writer = new BufferedWriter(new FileWriter("resultFile"));
+			BufferedWriter writerCSV = new BufferedWriter(new FileWriter("report.csv"));
 			System.out.println("***Report Result***");
 			writer.write("*******************************\n");
 			writer.write("*        Report Result        *\n");
 			writer.write("*******************************\n");
+			writerCSV.write("Code,Value\n");
 			for (String code: report.keySet()){
 				String toWrite = code + ": " + report.get(code) + "\n";
 	            System.out.println(toWrite);
-	            
+	            writerCSV.write(code + "," + report.get(code) + "\n");
 	            writer.write(String.format("* %-20s | %-5s*\n", code, report.get(code)));
 	            //writer.write(toWrite);
 			} 
 			writer.write("*******************************\n");
 			writer.close();
+			writerCSV.close();
 			vertx.close();
 
 			
