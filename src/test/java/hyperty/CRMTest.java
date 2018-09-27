@@ -53,7 +53,7 @@ class CRMTest {
 	private static String crmHypertyURL = "hyperty://sharing-cities-dsm/crm";
 	private static String crmHypertyURLTickets = "hyperty://sharing-cities-dsm/crm/tickets";
 	private static String crmHypertyURLStatus = "hyperty://sharing-cities-dsm/crm/status";
-	private static String crmHypertyURLAgentValidation = "hyperty://sharing-cities-dsm/crm/agents";
+	private static String crmHypertyURLAgentValidation = "resolve-role";
 	private static String userURL = "user://sharing-cities-dsm/location-identity";
 
 	private static JsonObject profileInfo = new JsonObject().put("age", 24);

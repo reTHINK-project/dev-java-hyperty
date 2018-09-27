@@ -36,7 +36,7 @@ public class CRMHyperty extends AbstractHyperty {
 
 		ticketsHandler = config().getString("url") + "/tickets";
 		statusHandler = config().getString("url") + "/status";
-		agentValidationHandler = config().getString("url") + "/agents";
+		agentValidationHandler = "resolve-role";
 
 		handleTicketRequests();
 		handleStatusRequests();
