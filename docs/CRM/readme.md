@@ -14,7 +14,7 @@ The Hyperty handles the `agents` data collection and associated tickets. The fir
 
 ```
 {
-    address: <adress of the user registered as agent>,
+    address: <url of agent's Group Chat Manager hyperty>,
     code: <code>,
     user: <cguid of the user registered with this agent address>,
     tickets: [{
@@ -49,11 +49,11 @@ It Checks that received `body.code` is in the `config.agents` array and if there
 
 **message:**
 
-Standard create message sent to invite Data Object observers.
+Standard create message sent to [invite Data Object observers](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#observer-invitation).
 
 **logic**
 
-1- It forwards the message to all agents and add the new ticket to newTickets array.
+1- It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and add the new ticket to newTickets array.
 
 2- The first agent executes `ticketAccepted` function: the ticket is allocated to the agent in the  `agents` collection, the ticket is removed from the pendingTickets array and a delete message is sent to all remaining invited Agents (todo: specify this new message that should be similar to delete msg used to remove user from chat). 
 
