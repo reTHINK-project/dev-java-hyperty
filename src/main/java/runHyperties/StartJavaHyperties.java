@@ -439,7 +439,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 			
 			//final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
 			
-			
+			String mongoHost = "localhost";
 			final String uri = "mongodb://" + mongoHost + ":27017";
 			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
 			
