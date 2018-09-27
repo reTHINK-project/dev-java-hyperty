@@ -88,6 +88,8 @@ public class CRMHyperty extends AbstractHyperty {
 
 	boolean walletsExist;
 
+	boolean areThereAgents = false;
+
 	/**
 	 * Create agents.
 	 * 
@@ -95,10 +97,33 @@ public class CRMHyperty extends AbstractHyperty {
 	 */
 	public void createAgents(JsonArray agentsConfig) {
 
+		System.out.println(logMessage + "createAgents(): " + agentsConfig.toString());
+		areThereAgents = false;
+
 		CountDownLatch agentsLatch = new CountDownLatch(1);
 		walletsExist = false;
 
-		System.out.println(logMessage + "createAgents(): " + agentsConfig.toString());
+		CountDownLatch checkAgentsLatch = new CountDownLatch(1);
+
+		new Thread(() -> {
+			mongoClient.find(agentsCollection, new JsonObject(), res -> {
+				JsonArray results = new JsonArray(res.result());
+				if (results.size() != 0) {
+					areThereAgents = true;
+				}
+				checkAgentsLatch.countDown();
+			});
+		}).start();
+		try {
+			checkAgentsLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		System.out.println(logMessage + "areThereAgents(): " + areThereAgents);
+		if (areThereAgents) {
+			return;
+		}
 
 		for (Object agent : agentsConfig) {
 			JsonObject agentJson = (JsonObject) agent;
@@ -375,10 +400,15 @@ public class CRMHyperty extends AbstractHyperty {
 	 * @param msg - ticket message
 	 */
 	private void handleNewTicket(JsonObject msg) {
-		JsonObject ticket = msg.getJsonObject("body").getJsonObject("ticket");
+		System.out.println(logMessage + "handleNewTicket()");
+		JsonObject value = msg.getJsonObject("body").getJsonObject("value");
+		JsonObject ticket = new JsonObject();
+		ticket.put("message", value.getString("name"));
+		ticket.put("created", value.getString("created"));
+		ticket.put("lastModified", value.getString("lastModified"));
 		ticket.put("status", "pending");
-		ticket.put("user", msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid"));
-		System.out.println(logMessage + "handleNewTicket(): " + ticket.toString());
+		ticket.put("user",
+				msg.getJsonObject("body").getJsonObject("identity").getJsonObject("userProfile").getString("guid"));
 
 		// forward the message to all agents and add the new ticket to newTickets array.
 		forwardMessage(msg, ticket);
@@ -463,7 +493,7 @@ public class CRMHyperty extends AbstractHyperty {
 	 * @param ticket
 	 */
 	private void forwardMessage(JsonObject message, JsonObject ticket) {
-		System.out.println(logMessage + "forwardMessage(): " + message.toString());
+		System.out.println(logMessage + "forwardMessage(): ");
 
 		agentHasAcceptedTicket = false;
 
@@ -479,13 +509,16 @@ public class CRMHyperty extends AbstractHyperty {
 					String code = agent.getString("code");
 					message.put("to", address);
 					send(guid, message, reply -> {
-						JsonObject body = reply.result().body().getJsonObject("body");
-						if (body.getInteger("code") == 200) {
-							if (!agentHasAcceptedTicket) {
-								// first agent to accept ticket
-								agentHasAcceptedTicket = true;
-								ticketAccepted(ticket, code);
-								removeTicketInvitation(ticket, code);
+						System.out.println(logMessage + "forwardMessage() reply: " + reply.result());
+						if (reply.result() != null) {
+							JsonObject body = reply.result().body().getJsonObject("body");
+							if (body.getInteger("code") == 200) {
+								if (!agentHasAcceptedTicket) {
+									// first agent to accept ticket
+									agentHasAcceptedTicket = true;
+									ticketAccepted(ticket, code);
+									removeTicketInvitation(ticket, code);
+								}
 							}
 						}
 					});

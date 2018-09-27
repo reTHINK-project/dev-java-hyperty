@@ -249,6 +249,7 @@ class CRMTest {
 	}
 
 	@Test
+	@Disabled
 	void testValidAgentCode(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "forward");
@@ -267,7 +268,7 @@ class CRMTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+
 		// change in Mongo
 		JsonObject query = new JsonObject().put("code", agent1Code);
 		mongoClient.find(agentsCollection, query, res -> {
@@ -276,7 +277,7 @@ class CRMTest {
 			agent.put("user", "123");
 			agent.put("status", "online");
 			JsonObject document = new JsonObject(agent.toString());
-			mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", agent1Code), document, id -> {				
+			mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", agent1Code), document, id -> {
 			});
 
 		});
@@ -303,6 +304,30 @@ class CRMTest {
 	}
 
 	@Test
+	void testAddTicket(VertxTestContext testContext, Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", "create");
+		msg.put("from", "myself");
+		JsonObject body = new JsonObject();
+		JsonObject value = new JsonObject();
+		value.put("name", "topic");
+		value.put("created", new Date().getTime()+"");
+		value.put("lastModified", new Date().getTime()+"");
+		body.put("value", value);
+		body.put("identity", identity);
+		msg.put("body", body);
+
+		vertx.eventBus().send(crmHypertyURLTickets, msg);
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		testContext.completeNow();
+	}
+
+	@Test
+	@Disabled
 	void testInvalidAgentCode(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "forward");
