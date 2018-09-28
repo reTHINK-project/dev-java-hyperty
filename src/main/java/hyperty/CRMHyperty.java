@@ -1,6 +1,7 @@
 package hyperty;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
@@ -496,50 +497,53 @@ public class CRMHyperty extends AbstractHyperty {
 		System.out.println(logMessage + "forwardMessage(): ");
 
 		agentHasAcceptedTicket = false;
-
 		JsonObject query = new JsonObject().put("user", new JsonObject().put("$ne", ""));
-		CountDownLatch latch = new CountDownLatch(1);
-		new Thread(() -> {
-			mongoClient.find(agentsCollection, query, res -> {
-				JsonArray results = new JsonArray(res.result());
+		mongoClient.find(agentsCollection, query, res -> {
+			JsonArray results = new JsonArray(res.result());
+			int expected = results.size();
+			System.out.println(logMessage + "forwardMessage() to " + expected + " agents");
+			vertx.executeBlocking(future -> {
+				CountDownLatch repliesLatch = new CountDownLatch(expected);
 				for (Object entry : results) {
 					JsonObject agent = (JsonObject) entry;
 					String address = agent.getString("address");
 					String guid = agent.getString("user");
 					String code = agent.getString("code");
 					message.put("to", address);
-					send(guid, message, reply -> {
-						System.out.println(logMessage + "forwardMessage() reply: " + reply.result());
-						if (reply.result() != null) {
-							JsonObject body = reply.result().body().getJsonObject("body");
-							if (body.getInteger("code") == 200) {
-								if (!agentHasAcceptedTicket) {
-									// first agent to accept ticket
-									agentHasAcceptedTicket = true;
-									ticketAccepted(ticket, code);
-									removeTicketInvitation(ticket, code);
+					new Thread(() -> {
+						send(guid, message, reply -> {
+							System.out.println(
+									logMessage + "forwardMessage() to address <" + guid + "> reply: " + reply.result());
+							if (reply.result() != null) {
+								JsonObject body = reply.result().body().getJsonObject("body");
+								if (body.getInteger("code") == 200) {
+									if (!agentHasAcceptedTicket) {
+										// first agent to accept ticket
+										agentHasAcceptedTicket = true;
+										ticketAccepted(ticket, code);
+										removeTicketInvitation(ticket, code);
+									}
 								}
 							}
-						}
-					});
+							repliesLatch.countDown();
+						});
+					}).start();
+					try {
+						repliesLatch.await(10L, TimeUnit.SECONDS);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
-				latch.countDown();
+				future.complete();
+			}, reply -> {
+				System.out.println(logMessage + "forwardMessage() finished");
 			});
-		}).start();
-		try {
-			latch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+
+		});
 
 		if (!agentHasAcceptedTicket) {
-			/**
-			 * In case no agent accepts the ticket, ie a timeout message is received for all
-			 * invited Agents:
-			 */
 			ticketNotAccepted(ticket);
 		}
-
 	}
 
 	/**
@@ -555,13 +559,14 @@ public class CRMHyperty extends AbstractHyperty {
 			for (Object entry : results) {
 				JsonObject agent = (JsonObject) entry;
 				String code = agent.getString("code");
-				if (!code.equals(acceptingAgentCode)) {
-					String address = agent.getString("address");
+				String guid = agent.getString("user");
+				if (!code.equals(acceptingAgentCode) && !guid.equals("")) {
 					// TODO - specify delete message format
 					JsonObject msg = new JsonObject();
 					msg.put("body", ticket);
 					msg.put("type", "delete");
-					send(address, msg, reply -> {
+					send(guid, msg, reply -> {
+						System.out.println(logMessage + "removeTicketInvitation() reply: " + reply.result());
 						JsonObject body = reply.result().body().getJsonObject("body");
 						if (body.getInteger("code") == 200) {
 
