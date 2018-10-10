@@ -1,6 +1,7 @@
 package hyperty;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -17,7 +18,7 @@ public class BonusScript extends AbstractVerticle {
 	private String mongoPorts = "27017";
 	private MongoClient mongoClient = null;
 	private static String bonusCollection = "bonus";
-	
+
 	private CountDownLatch findWalletByCause;
 	private JsonArray walletsFound;
 	private static String winningCause = "";
@@ -38,8 +39,6 @@ public class BonusScript extends AbstractVerticle {
 //		});
 
 	}
-	
-	
 
 	public void start() throws Exception {
 
@@ -117,16 +116,23 @@ public class BonusScript extends AbstractVerticle {
 			}
 
 			System.out.println("Winner:" + winningCause + ", with " + mostTokens + " points!");
-			
+
 			// update bonus
 			JsonObject query = new JsonObject().put("id", config().getString("bonusID"));
 			mongoClient.find(bonusCollection, query, res -> {
 				JsonArray bonuses = new JsonArray(res.result());
 				JsonObject bonus = bonuses.getJsonObject(0);
-				String start = new SimpleDateFormat("yyyy/MM/dd").format(new Date());
+				Date currentDate = new Date();
+				SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd");
+				String start = format.format(currentDate);
+				// expires date
+				int noOfDays = 7;
+				Calendar calendar = Calendar.getInstance();
+				calendar.setTime(currentDate);
+				calendar.add(Calendar.DAY_OF_YEAR, noOfDays);
+				String expires = format.format(calendar.getTime());
 				bonus.put("start", start);
-				// TODO - expires date
-				bonus.put("expires", "");
+				bonus.put("expires", expires);
 				bonus.put("cause", winningCause);
 				JsonObject document = new JsonObject(bonus.toString());
 				mongoClient.findOneAndReplace(bonusCollection, query, document, id -> {
@@ -140,6 +146,7 @@ public class BonusScript extends AbstractVerticle {
 
 	/**
 	 * Get wallets for users of a certain cause.
+	 * 
 	 * @param cause
 	 * @return
 	 */

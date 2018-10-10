@@ -3,6 +3,8 @@ package hyperty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
@@ -200,6 +202,17 @@ class BonusTest {
 			JsonObject bonus = bonuses.getJsonObject(0);
 			assertEquals(cause1ID, bonus.getString("cause"));
 			assertEquals(0, (int) bonus.getInteger("cost"));
+			Date currentDate = new Date();
+			SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd");
+			String start = format.format(new Date());
+			// expires date
+			int noOfDays = 7;
+			Calendar calendar = Calendar.getInstance();
+			calendar.setTime(currentDate);
+			calendar.add(Calendar.DAY_OF_YEAR, noOfDays);
+			String expires = format.format(calendar.getTime());
+			assertEquals(start, bonus.getString("start"));
+			assertEquals(expires, bonus.getString("expires"));
 			context.completeNow();
 		});
 	}
