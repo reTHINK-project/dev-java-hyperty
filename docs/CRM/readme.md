@@ -31,6 +31,18 @@ The Hyperty handles the `agents` data collection and associated tickets. The fir
 }
 ```
 
+### resolve-role handler
+
+**handlers:** /resolve-role
+
+**message:**
+
+Message containing agent code.
+
+**logic:**
+
+It Checks that received `code` is in the `config.agents` array and if there is still no user allocated in the `agents` collection, it returns `role: "agent"`, otherwise returns `role: "user"`.
+
 ### Agent Registration handler
 
 **handlers:** CRM Address.
