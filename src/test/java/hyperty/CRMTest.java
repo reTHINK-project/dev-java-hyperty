@@ -142,7 +142,7 @@ class CRMTest {
 	}
 
 	@Test
-//	@Disabled
+	@Disabled
 	void mainTest(VertxTestContext testContext, Vertx vertx) {
 		
 		// add agent 0 handler (accept)
@@ -309,7 +309,7 @@ class CRMTest {
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void testValidAgentCode(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "forward");
@@ -319,47 +319,48 @@ class CRMTest {
 		vertx.eventBus().send(crmHypertyURLAgentValidation, msg, res -> {
 			JsonObject response = (JsonObject) res.result().body();
 			System.out.println("Received reply from agent validation: " + response.toString());
-			boolean valid = response.getBoolean("valid");
-			assertEquals(valid, true);
-		});
-
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-		// change in Mongo
-		JsonObject query = new JsonObject().put("code", agent1Code);
-		mongoClient.find(agentsCollection, query, res -> {
-			JsonArray results = new JsonArray(res.result());
-			JsonObject agent = results.getJsonObject(0);
-			agent.put("user", "123");
-			agent.put("status", "online");
-			JsonObject document = new JsonObject(agent.toString());
-			mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", agent1Code), document, id -> {
-			});
-
-		});
-
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		// check code which was taken
-		msg = new JsonObject();
-		msg.put("type", "forward");
-		msg.put("identity", identity);
-		msg.put("from", "myself");
-		msg.put("code", agent1Code);
-		vertx.eventBus().send(crmHypertyURLAgentValidation, msg, res -> {
-			JsonObject response = (JsonObject) res.result().body();
-			System.out.println("Received reply from agent validation: " + response.toString());
-			boolean valid = response.getBoolean("valid");
-			assertEquals(valid, false);
+			String role = response.getString("role");
+			assertEquals(role, "agent");
 			testContext.completeNow();
 		});
+
+//		try {
+//			Thread.sleep(2000);
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+//
+//		// change in Mongo
+//		JsonObject query = new JsonObject().put("code", agent1Code);
+//		mongoClient.find(agentsCollection, query, res -> {
+//			JsonArray results = new JsonArray(res.result());
+//			JsonObject agent = results.getJsonObject(0);
+//			agent.put("user", "123");
+//			agent.put("status", "online");
+//			JsonObject document = new JsonObject(agent.toString());
+//			mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", agent1Code), document, id -> {
+//			});
+//
+//		});
+//
+//		try {
+//			Thread.sleep(2000);
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+//		// check code which was taken
+//		msg = new JsonObject();
+//		msg.put("type", "forward");
+//		msg.put("identity", identity);
+//		msg.put("from", "myself");
+//		msg.put("code", agent1Code);
+//		vertx.eventBus().send(crmHypertyURLAgentValidation, msg, res -> {
+//			JsonObject response = (JsonObject) res.result().body();
+//			System.out.println("Received reply from agent validation: " + response.toString());
+//			boolean valid = response.getBoolean("valid");
+//			assertEquals(valid, false);
+//			testContext.completeNow();
+//		});
 
 	}
 

@@ -839,9 +839,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						 * transaction to pubwallet
 						 */
 
-						String agentCode = profileInfo.getString("code");
-						if (agentCode != null) {
-							System.out.println(logMessage + "validating code with CRM");
+						String roleCode = profileInfo.getString("code");
+						if (roleCode != null) {
+							System.out.println(logMessage + "resolving role for code " + roleCode);
 							CountDownLatch validateCause = new CountDownLatch(1);
 
 							new Thread(() -> {
@@ -849,17 +849,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								validationMessage.put("from", url);
 								validationMessage.put("identity", identity);
 								validationMessage.put("type", "forward");
-								validationMessage.put("code", agentCode);
-								String crmAddress = config().getString("crm");
+								validationMessage.put("code", roleCode);
 								send("resolve-role", validationMessage, reply -> {
 									System.out.println(
-											logMessage + "validation result: " + reply.result().body().toString());
-									boolean valid = new JsonObject(reply.result().body().toString())
-											.getBoolean("valid");
-									if (valid) {
-										response.put("crm", crmAddress);
-									}
-									response.put("valid", valid);
+											logMessage + "role validation result: " + reply.result().body().toString());
+									String role = new JsonObject(reply.result().body().toString())
+											.getString("role");
+									response.put("role", role);
 									validateCause.countDown();
 								});
 							}).start();

@@ -50,7 +50,7 @@ public class CRMHyperty extends AbstractHyperty {
 
 	}
 
-	boolean validRegistration;
+	boolean isAgent;
 
 	/**
 	 * Validate agent codes
@@ -60,18 +60,18 @@ public class CRMHyperty extends AbstractHyperty {
 		vertx.eventBus().<JsonObject>consumer(agentValidationHandler, message -> {
 			mandatoryFieldsValidator(message);
 			System.out.println(logMessage + "handleAgentValidationRequests(): " + message.body().toString());
-			validRegistration = false;
+			isAgent = false;
 			String code = new JsonObject(message.body().toString()).getString("code");
 			JsonObject replyMessage = new JsonObject(message.body().toString());
 			if (configContainsCode(code)) {
-				// check if this code is already associated with user
+				// check if this code is already associated with an user
 				CountDownLatch agentsLatch = new CountDownLatch(1);
 				new Thread(() -> {
 					JsonObject query = new JsonObject().put("code", code).put("user", new JsonObject().put("$ne", ""));
 					mongoClient.find(agentsCollection, query, res -> {
 						JsonArray results = new JsonArray(res.result());
 						if (results.size() == 0) {
-							validRegistration = true;
+							isAgent = true;
 						}
 						agentsLatch.countDown();
 					});
@@ -82,7 +82,7 @@ public class CRMHyperty extends AbstractHyperty {
 					e.printStackTrace();
 				}
 			}
-			replyMessage.put("valid", validRegistration);
+			replyMessage.put("role", isAgent ? "agent" : "user");
 			message.reply(replyMessage);
 		});
 	}
