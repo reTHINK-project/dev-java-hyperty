@@ -835,10 +835,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							transferToPublicWallet(newWallet.getString(causeWalletAddress), newTransaction);
 						}
 
-						/*
-						 * transaction to pubwallet
-						 */
-
 						String roleCode = profileInfo.getString("code");
 						if (roleCode != null) {
 							System.out.println(logMessage + "resolving role for code " + roleCode);
@@ -850,11 +846,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								validationMessage.put("identity", identity);
 								validationMessage.put("type", "forward");
 								validationMessage.put("code", roleCode);
+								// TODO - replace with publish
 								send("resolve-role", validationMessage, reply -> {
 									System.out.println(
 											logMessage + "role validation result: " + reply.result().body().toString());
-									String role = new JsonObject(reply.result().body().toString())
-											.getString("role");
+									String role = new JsonObject(reply.result().body().toString()).getString("role");
 									response.put("role", role);
 									validateCause.countDown();
 								});
