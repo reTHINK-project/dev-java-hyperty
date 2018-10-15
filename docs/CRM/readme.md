@@ -19,7 +19,7 @@ The Hyperty handles the `agents` data collection and associated tickets. The fir
     user: <cguid of the user registered with this agent address>,
     tickets: [{
         user: <cguid of user that created the ticket>
-        status: <ongoing/closed>,
+        status: <new/ongoing/closed>,
         created: <date>,
         lastModified: <data>,
         message: <received invitation msg>
@@ -57,7 +57,7 @@ It Checks that received `body.code` is in the `config.agents` array and if there
 
 ### New Ticket handlers
 
-**handlers:** CRM Address + `/tickets`.
+**handler:** CRM Address + `/tickets`.
 
 **message:**
 
@@ -65,11 +65,9 @@ Standard create message sent to [invite Data Object observers](https://github.co
 
 **logic**
 
-1- It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and add the new ticket to newTickets array.
+It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and add the new ticket to newTickets array.
 
-2- The first agent executes `ticketAccepted` function: the ticket is allocated to the agent in the  `agents` collection, the ticket is removed from the pendingTickets array and a delete message is sent to all remaining invited Agents (todo: specify this new message that should be similar to delete msg used to remove user from chat). 
-
-3- In case no agent accepts the ticket, ie a timeout message is received for all invited Agents the message is moved from newTickets array to pendingTickets array.
+There is a timer to process newTickets array running every X seconds (eg 300 secs) to move new Tickets to pendingTickets array, in case no agent accepts new tickets ie if `timeNow - createdData > x`.
 
 ### Update Tickets
 
@@ -80,18 +78,29 @@ Standard create message sent to [invite Data Object observers](https://github.co
 ```javascript
 {
 type: "update",
+from: "user hyperty url",
 identity: <identity>,
 body: {
-  id: <ticket id>,
-  status: "closed",
-  user: <user cguid>
+  status: "new-participant|closed",
+  participant: <hyperty-url>
   }
 }
 ```
 
 **logic**
 
-Checks if ticket belongs to user, change its status and update collection.
+`status: "new-participant"`: checks the ticket is still in the newTickets array or pendingTickets arrays and belongs to the user then it executes the `ticketAccepted` function. Otherwise, the message is ignored.
+
+**`ticketAccepted` function:** the ticket is allocated to the agent in the  `agents` collection, the ticket is removed from the pendingTickets or newTickets array and a delete message is sent to all remaining invited Agents. The delete message is similar to this [one](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#delete-data-object-requested-by-reporter):
+
+```javascript
+"type" : "delete",
+"from" : "CRM Address",
+"to"   : "Agente Hyperty URL",
+"body" : { "resource" : "<ObjectURL>" }
+```
+
+`status: "closed"`: Checks if ticket belongs to user, change its status to closed and update collection.
 
 ### status handler
 
