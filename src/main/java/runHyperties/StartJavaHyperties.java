@@ -44,22 +44,19 @@ import walletManager.WalletManagerHyperty;
 public class StartJavaHyperties extends AbstractVerticle {
 
 	int toTest;
-	private static String from = "tester";
-	private String mongoHosts = "localhost,localhost,localhost";
-	private String mongoPorts = "27017,47017,57017";
-	
-	//private String mongoHost = "172.20.0.64";
-	//private String mongoHost = "localhost";
+
+	private String mongoHosts = "localhost";
+	private String mongoPorts = "27017";
+	private String mongoCluster = "NO";
 
 	private String SIOTurl = "https://iot.alticelabs.com/api";
-	// private String SIOTurl = "http://10.112.77.148/api";
 	private String pointOfContact = "https://url_contact";
 	private MongoClient mongoClient = null;
 	private CountDownLatch findDOUrl;
 
 	public static void main(String[] args) {
 
-		// Vertx.clusteredVertx(options, res -> {
+
 		Consumer<Vertx> runner = vertx -> {
 			StartJavaHyperties startHyperties = new StartJavaHyperties();
 			vertx.deployVerticle(startHyperties);
@@ -95,9 +92,15 @@ public class StartJavaHyperties extends AbstractVerticle {
 		try {
 			String envHosts = System.getenv("MONGOHOSTS");
 			String envPorts = System.getenv("MONGOPORTS");
-			if (envHosts!=null && envPorts!=null) {
+			String envCluster = System.getenv("MONGO_CLUSTER");
+			System.out.println("ENV VARIABLES ??");
+			if (envHosts!=null && envPorts!=null && envCluster!=null) {
+				
+				
 				mongoHosts = System.getenv("MONGOHOSTS");
 				mongoPorts = System.getenv("MONGOPORTS");
+				mongoCluster = System.getenv("MONGO_CLUSTER");
+				System.out.println("ENV VARIABLES\n" + mongoHosts + "\n" + mongoPorts + "\n" + mongoCluster );
 			}
 			
 		} catch(Exception e) {
@@ -195,6 +198,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("db_name", "test");
 		configRegistry.put("collection", "registry");
 		configRegistry.put("mongoHost", mongoHosts);
+		configRegistry.put("mongoCluster", mongoCluster);
 		configRegistry.put("mongoPorts", mongoPorts);
 		configRegistry.put("checkStatusTimer", 180000);
 		configRegistry.put("CRMHypertyStatus", crmStatus);
@@ -214,7 +218,9 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCRM.put("db_name", "test");
 		configCRM.put("collection", "registry");
 		configCRM.put("mongoHost", mongoHosts);
+		configCRM.put("mongoCluster", mongoCluster);
 		configCRM.put("mongoPorts", mongoPorts);
+		configCRM.put("checkTicketsTimer", 2000);
 		
 		String agent1Code = "agent1Code";
 	    String agent1Address = "agent1Address";
@@ -244,6 +250,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCheckIN.put("collection", "rates");
 		configCheckIN.put("mongoHost", mongoHosts);
 		configCheckIN.put("mongoPorts", mongoPorts);
+		configCheckIN.put("mongoCluster", mongoCluster);
 		configCheckIN.put("tokens_per_checkin", 10);
 		configCheckIN.put("checkin_radius", 500);
 		configCheckIN.put("min_frequency", 1);
@@ -267,6 +274,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configUserActivity.put("db_name", "test");
 		configUserActivity.put("collection", "rates");
 		configUserActivity.put("mongoHost", mongoHosts);
+		configUserActivity.put("mongoCluster", mongoCluster);
 		configUserActivity.put("mongoPorts", mongoPorts);
 		configUserActivity.put("tokens_per_walking_km", 10);
 		configUserActivity.put("tokens_per_biking_km", 10);
@@ -293,6 +301,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configElearning.put("collection", "rates");
 		configElearning.put("mongoHost", mongoHosts);
 		configElearning.put("mongoPorts", mongoPorts);
+		configElearning.put("mongoCluster", mongoCluster);
 		configElearning.put("tokens_per_completed_quiz", 50);
 		configElearning.put("tokens_per_correct_answer", 5);
 		configElearning.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
@@ -316,6 +325,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configEnergySaving.put("db_name", "test");
 		configEnergySaving.put("mongoHost", mongoHosts);
 		configEnergySaving.put("mongoPorts", mongoPorts);
+		configEnergySaving.put("mongoCluster", mongoCluster);
 		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(true);
 		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsEnergy, res -> {
 			System.out.println("EnergySavingRatingHyperty Result->" + res.result());
@@ -332,6 +342,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHosts);
 		configWalletManager.put("mongoPorts", mongoPorts);
+		configWalletManager.put("mongoCluster", mongoCluster);
 		configWalletManager.put("observers", new JsonArray().add(registryHypertyURL));
 		configWalletManager.put("crm", crmHypertyURL);
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
@@ -384,6 +395,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configSmartIotStub.put("collection", "siotdevices");
 		configSmartIotStub.put("mongoHost", mongoHosts);
 		configSmartIotStub.put("mongoPorts", mongoPorts);
+		configSmartIotStub.put("mongoCluster", mongoCluster);
 		configSmartIotStub.put("smart_iot_url", SIOTurl);
 		configSmartIotStub.put("point_of_contact", pointOfContact);
 
@@ -425,25 +437,31 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		server.listen(9091);
 
-		if (mongoHosts != null && mongoPorts != null ) {
-			System.out.println("Setting up Mongo to:" + mongoHosts);
+		if (mongoHosts != null && mongoPorts != null && mongoCluster != null ) {
+			System.out.println("Setting up Mongo to:" + mongoHosts + " cluster:" + mongoCluster);
 			
-			JsonArray hosts = new JsonArray();
+
+			JsonObject mongoconfig = null;
 			
-			String [] hostsEnv = mongoHosts.split(",");
-			String [] portsEnv = mongoPorts.split(",");
-			
-			for (int i = 0; i < hostsEnv.length ; i++) {
-				hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", Integer.parseInt(portsEnv[i])));
-				System.out.println("added to config:" + hostsEnv[i] + ":" + portsEnv[i]);
+			if (mongoCluster.equals("NO")) {
+				
+				final String uri = "mongodb://" + mongoHosts + ":27017";
+				mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
+				
+			} else {
+				JsonArray hosts = new JsonArray();
+				
+				String [] hostsEnv = mongoHosts.split(",");
+				String [] portsEnv = mongoPorts.split(",");
+				
+				for (int i = 0; i < hostsEnv.length ; i++) {
+					hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", Integer.parseInt(portsEnv[i])));
+					System.out.println("added to config:" + hostsEnv[i] + ":" + portsEnv[i]);
+				}
+				
+				mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
+				
 			}
-			
-			//final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
-			
-			String mongoHost = "localhost";
-			final String uri = "mongodb://" + mongoHost + ":27017";
-			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
-			
 			
 			System.out.println("Setting up Mongo with cfg on START:" +  mongoconfig.toString());
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
