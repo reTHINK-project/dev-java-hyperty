@@ -12,23 +12,31 @@ The CRM hyperty manages CRM Agents and forwards tickets to available Agents.
 
 The Hyperty handles the `agents` data collection and associated tickets. The first time the hyperty is executed the collection is initialised based on the `config.agents` info.
 
+**Agents Collection**
+
 ```
 {
     address: <url of agent's Group Chat Manager hyperty>,
     code: <code>,
     user: <cguid of the user registered with this agent address>,
-    tickets: [{
-        user: <cguid of user that created the ticket>
-        status: <ongoing/closed>,
-        created: <date>,
-        lastModified: <data>,
-        message: <received invitation msg>
-        }
-    }],
+    tickets: [<ticketUrl>],
     openedTickets: <int>,
     status: <online/offline>
-  
 }
+```
+
+**Tickets Collection**
+
+```
+    {
+        url: <data object url>,
+        user: <cguid of user that created the ticket>,
+        status: <new (still not accepted)|pending|ongoing (accepted by agent)/closed>,
+        created: <date>,
+        lastModified: <data>,
+        message: <received invitation msg>,
+        agent: <cguid>
+    }
 ```
 
 ### resolve-role handler
@@ -57,7 +65,7 @@ It Checks that received `body.code` is in the `config.agents` array and if there
 
 ### New Ticket handlers
 
-**handlers:** CRM Address + `/tickets`.
+**handler:** CRM Address + `/tickets`.
 
 **message:**
 
@@ -65,11 +73,9 @@ Standard create message sent to [invite Data Object observers](https://github.co
 
 **logic**
 
-1- It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and add the new ticket to newTickets array.
+It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and adds the new ticket to the `tickets` collection (status: new).
 
-2- The first agent executes `ticketAccepted` function: the ticket is allocated to the agent in the  `agents` collection, the ticket is removed from the pendingTickets array and a delete message is sent to all remaining invited Agents (todo: specify this new message that should be similar to delete msg used to remove user from chat). 
-
-3- In case no agent accepts the ticket, ie a timeout message is received for all invited Agents the message is moved from newTickets array to pendingTickets array.
+There is a timer to process `new` tickets running every X seconds (eg 300 secs) to change their status to `pending`, in case no agent accepts new tickets ie if `timeNow - createdData > x`.
 
 ### Update Tickets
 
@@ -80,18 +86,29 @@ Standard create message sent to [invite Data Object observers](https://github.co
 ```javascript
 {
 type: "update",
+from: "object url",
 identity: <identity>,
 body: {
-  id: <ticket id>,
-  status: "closed",
-  user: <user cguid>
+  status: "new-participant|closed",
+  participant: <hyperty-url>
   }
 }
 ```
 
 **logic**
 
-Checks if ticket belongs to user, change its status and update collection.
+`status: "new-participant"`: checks the ticket is still in the `new` or `pending` status and belongs to the user then it executes the `ticketAccepted` function. Otherwise, the message is ignored.
+
+**`ticketAccepted` function:** the ticket is associated to the agent, its status changed to `ongoing` and a delete message is sent to all remaining invited Agents. The delete message is similar to this [one](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#delete-data-object-requested-by-reporter):
+
+```javascript
+"type" : "delete",
+"from" : "CRM Address",
+"to"   : "Agente Hyperty URL",
+"body" : { "resource" : "<ObjectURL>" }
+```
+
+`status: "closed"`: Checks if ticket belongs to user, change its status to closed and update collection.
 
 ### status handler
 
