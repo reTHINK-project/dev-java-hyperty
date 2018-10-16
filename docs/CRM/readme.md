@@ -78,7 +78,7 @@ There is a timer to process newTickets array running every X seconds (eg 300 sec
 ```javascript
 {
 type: "update",
-from: "user hyperty url",
+from: "object url",
 identity: <identity>,
 body: {
   status: "new-participant|closed",
