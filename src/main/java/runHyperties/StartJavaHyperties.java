@@ -226,6 +226,7 @@ public class StartJavaHyperties extends AbstractVerticle {
         agents.add(agent1);
         agents.add(agent2);
         configCRM.put("agents", agents);
+        configCRM.put("checkTicketsTimer", 2000);
 		
 		
 		DeploymentOptions optionsCRM = new DeploymentOptions().setConfig(configCRM).setWorker(true);
