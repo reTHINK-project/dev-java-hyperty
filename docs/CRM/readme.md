@@ -12,23 +12,31 @@ The CRM hyperty manages CRM Agents and forwards tickets to available Agents.
 
 The Hyperty handles the `agents` data collection and associated tickets. The first time the hyperty is executed the collection is initialised based on the `config.agents` info.
 
+**Agents Collection**
+
 ```
 {
     address: <url of agent's Group Chat Manager hyperty>,
     code: <code>,
     user: <cguid of the user registered with this agent address>,
-    tickets: [{
-        user: <cguid of user that created the ticket>
-        status: <new (still not accepted)/ongoing (accepted by agent)/closed>,
-        created: <date>,
-        lastModified: <data>,
-        message: <received invitation msg>
-        }
-    }],
+    tickets: [<ticketUrl>],
     openedTickets: <int>,
     status: <online/offline>
-  
 }
+```
+
+**Tickets Collection**
+
+```
+    {
+        url: <data object url>,
+        user: <cguid of user that created the ticket>,
+        status: <new (still not accepted)|pending|ongoing (accepted by agent)/closed>,
+        created: <date>,
+        lastModified: <data>,
+        message: <received invitation msg>,
+        agent: <cguid>
+    }
 ```
 
 ### resolve-role handler
