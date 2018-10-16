@@ -73,9 +73,9 @@ Standard create message sent to [invite Data Object observers](https://github.co
 
 **logic**
 
-It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and add the new ticket to newTickets array.
+It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and adds the new ticket to the `tickets` collection (status: new).
 
-There is a timer to process newTickets array running every X seconds (eg 300 secs) to move new Tickets to pendingTickets array, in case no agent accepts new tickets ie if `timeNow - createdData > x`.
+There is a timer to process `new` tickets running every X seconds (eg 300 secs) to change their status to `pending`, in case no agent accepts new tickets ie if `timeNow - createdData > x`.
 
 ### Update Tickets
 
@@ -97,9 +97,9 @@ body: {
 
 **logic**
 
-`status: "new-participant"`: checks the ticket is still in the newTickets array or pendingTickets arrays and belongs to the user then it executes the `ticketAccepted` function. Otherwise, the message is ignored.
+`status: "new-participant"`: checks the ticket is still in the `new` or `pending` status and belongs to the user then it executes the `ticketAccepted` function. Otherwise, the message is ignored.
 
-**`ticketAccepted` function:** the ticket is allocated to the agent in the  `agents` collection, the ticket is removed from the pendingTickets or newTickets array and a delete message is sent to all remaining invited Agents. The delete message is similar to this [one](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#delete-data-object-requested-by-reporter):
+**`ticketAccepted` function:** the ticket is associated to the agent, its status changed to `ongoing` and a delete message is sent to all remaining invited Agents. The delete message is similar to this [one](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#delete-data-object-requested-by-reporter):
 
 ```javascript
 "type" : "delete",

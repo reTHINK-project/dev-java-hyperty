@@ -26,6 +26,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String database;
 	protected String mongoHost;
 	protected String mongoPorts;
+	protected String mongoCluster;
 	protected String schemaURL;
 	protected EventBus eb;
 	protected MongoClient mongoClient = null;
@@ -50,6 +51,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.database = config().getString("db_name");
 		this.mongoHost = config().getString("mongoHost");
 		this.mongoPorts = config().getString("mongoPorts");
+		this.mongoCluster = config().getString("mongoCluster");
 		this.schemaURL = config().getString("schemaURL");
 		this.observers = config().getJsonArray("observers");
 		this.siotStubUrl = config().getString("siot_stub_url");
@@ -57,11 +59,15 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 
-		if (mongoHost != null && mongoPorts != null) {
+		if (mongoHost != null && mongoPorts != null && mongoCluster != null) {
 			System.out.println("Setting up Mongo to:" + this.url);
 			
 			System.out.println("Setting up Mongo to:" + this.mongoHost);
 			
+			System.out.println("Setting up Mongo to:" + this.mongoCluster);
+			
+			
+			/*
 			JsonArray hosts = new JsonArray();
 			
 			String [] hostsEnv = mongoHost.split(",");
@@ -77,14 +83,32 @@ public class AbstractHyperty extends AbstractVerticle {
 			mongoHost = "localhost";
 			final String uri = "mongodb://" + mongoHost + ":27017";
 			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
+			*/
 			
+			JsonObject mongoconfig = null;
+			
+			if (mongoCluster.equals("NO")) {
+				
+				final String uri = "mongodb://" + mongoHost + ":27017";
+				mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
+				
+			} else {
+				JsonArray hosts = new JsonArray();
+				
+				String [] hostsEnv = mongoHost.split(",");
+				String [] portsEnv = mongoPorts.split(",");
+				
+				for (int i = 0; i < hostsEnv.length ; i++) {
+					hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", Integer.parseInt(portsEnv[i])));
+					System.out.println("added to config:" + hostsEnv[i] + ":" + portsEnv[i]);
+				}
+				
+				mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
+				
+			}	
 			
 			System.out.println("Setting up Mongo with cfg on ABS:" +  mongoconfig.toString());
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
-			
-			
-			
-			
 
 		}
 
@@ -153,6 +177,7 @@ public class AbstractHyperty extends AbstractVerticle {
 					break;
 				case "create":
 					if (from.contains("/subscription")) {
+						System.out.println("TO INVITE");
 						onNotification(new JsonObject(message.body().toString()));
 					} else {
 						JsonObject msg = new JsonObject(message.body().toString());
