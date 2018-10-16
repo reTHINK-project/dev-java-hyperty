@@ -1,5 +1,8 @@
 package hyperty;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
@@ -84,12 +87,19 @@ public class CRMHyperty extends AbstractHyperty {
 		JsonObject newTicketsQuery = new JsonObject().put("status", ticketNew);
 		mongoClient.find(ticketsCollection, newTicketsQuery, res -> {
 			JsonArray results = new JsonArray(res.result());
-			System.out.printf(logMessage + "checkNewTickets(): %d available\n", results.size());
+//			System.out.printf(logMessage + "checkNewTickets(): %d available\n", results.size());
 
 			for (Object entry : results) {
 				JsonObject ticket = (JsonObject) entry;
 				long currentTime = new Date().getTime();
-				long creationTime = new Date(Long.parseLong(ticket.getString("created"))).getTime();
+				DateFormat df1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+				long creationTime = 0;
+				try {
+					Date result1 = df1.parse(ticket.getString("created"));
+					creationTime = result1.getTime();
+				} catch (ParseException e) {
+					e.printStackTrace();
+				}
 				if (currentTime - creationTime > checkTicketsTimer) {
 					System.out.println(logMessage + "checkNewTickets(): not accepted");
 					JsonObject ticketQuery = new JsonObject().put("url",

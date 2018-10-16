@@ -3,7 +3,9 @@ package hyperty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
@@ -309,6 +311,14 @@ class CRMTest {
 	}
 
 	private void createTicket(Vertx vertx) {
+		
+		Date date = new Date();
+		TimeZone tz = TimeZone.getTimeZone("UTC");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+		sdf.setTimeZone(tz);
+		String timeISO = sdf.format(date);
+		System.out.println(timeISO);
+		
 		// new ticket
 		JsonObject msg = new JsonObject();
 		msg = new JsonObject();
@@ -317,8 +327,8 @@ class CRMTest {
 		JsonObject body = new JsonObject();
 		JsonObject value = new JsonObject();
 		value.put("name", "topic-question");
-		value.put("created", new Date().getTime() + "");
-		value.put("lastModified", new Date().getTime() + "");
+		value.put("created", timeISO);
+		value.put("lastModified", timeISO);
 		body.put("value", value);
 		body.put("identity", identity);
 		msg.put("body", body);
