@@ -97,6 +97,7 @@ class CRMTest {
 		config.put("collection", agentsCollection);
 		config.put("mongoHost", mongoHost);
 		config.put("mongoPorts", "27017");
+		config.put("mongoCluster", "NO");
 
 		// agents
 		JsonArray agents = new JsonArray();

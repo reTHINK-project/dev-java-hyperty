@@ -439,8 +439,8 @@ public class CRMHyperty extends AbstractHyperty {
 	 */
 	private void handleTicketRequests() {
 		vertx.eventBus().<JsonObject>consumer(ticketsHandler, message -> {
-			mandatoryFieldsValidator(message);
 			System.out.println(logMessage + "handleTicketRequests(): " + message.body().toString());
+			mandatoryFieldsValidator(message);
 
 			JsonObject msg = new JsonObject(message.body().toString());
 
@@ -491,6 +491,7 @@ public class CRMHyperty extends AbstractHyperty {
 	 * @param msg - ticket message
 	 */
 	private void handleTicketUpdate(JsonObject msg) {
+		System.out.println(logMessage + "handleTicketUpdate(): " + msg.toString());
 		String status = msg.getJsonObject("body").getString("status");
 		switch (status) {
 		case newParticipant:
@@ -546,6 +547,8 @@ public class CRMHyperty extends AbstractHyperty {
 		JsonObject query = new JsonObject().put("url", msgobjectURL);
 		mongoClient.find(ticketsCollection, query, res -> {
 			JsonArray results = new JsonArray(res.result());
+			if (results.size() == 0)
+				return;
 			JsonObject ticket = results.getJsonObject(0);
 			ticket.put("status", ticketClosed);
 			JsonObject document = new JsonObject(ticket.toString());

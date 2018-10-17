@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -45,8 +46,10 @@ class OfflineSubscriptionManagerTest {
 
 	// URLs
 	private static String offlineSubMgrHypertyURL = "hyperty://sharing-cities-dsm/offline-sub-mgr";
+	private static String urlSubscription = "hyperty://sharing-cities-dsm/offline-sub-mgr/subscription";
 	private static String registryURL = "hyperty://sharing-cities-dsm/registry";
 	private static String offlineSubMgrURLStatus = "hyperty://sharing-cities-dsm/offline-sub-mgr/status";
+	private static String urlRegister = "hyperty://sharing-cities-dsm/offline-sub-mgr/register";
 	private static String userURL = "user://sharing-cities-dsm/location-identity";
 
 	private static JsonObject profileInfo = new JsonObject().put("age", 24);
@@ -55,20 +58,22 @@ class OfflineSubscriptionManagerTest {
 
 	// MongoDB
 	private static MongoClient mongoClient;
-	private static String db_name = dbName;
-	private static String collection = "pendingsubscriptions";
+	private static String pendingSubscriptions = "pendingSubscriptions";
+	private static String dataObjectsRegistry = "dataObjectsRegistry";
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
 
 		JsonObject config = new JsonObject().put("url", offlineSubMgrHypertyURL);
 		config.put("identity", identity);
+		config.put("registry", registryURL);
 
 		// mongo
 		config.put("db_name", "test");
-		config.put("collection", collection);
+		config.put("collection", pendingSubscriptions);
 		config.put("mongoHost", mongoHost);
-		config.put("registry", registryURL);
+		config.put("mongoPorts", "27017");
+		config.put("mongoCluster", "NO");
 
 		// deploy
 		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(true);
@@ -93,9 +98,12 @@ class OfflineSubscriptionManagerTest {
 	static void cleanDB(VertxTestContext testContext, Vertx vertx) {
 		System.out.println(logMessage + "cleanDB()");
 
-		CountDownLatch setupLatch = new CountDownLatch(1);
+		CountDownLatch setupLatch = new CountDownLatch(2);
 		JsonObject query = new JsonObject();
-		mongoClient.removeDocuments(collection, query, res -> {
+		mongoClient.removeDocuments(pendingSubscriptions, query, res -> {
+			setupLatch.countDown();
+		});
+		mongoClient.removeDocuments(dataObjectsRegistry, query, res -> {
 			setupLatch.countDown();
 		});
 
@@ -107,21 +115,15 @@ class OfflineSubscriptionManagerTest {
 		}
 	}
 
-	private static String to = "observer/subscription";
-	
+	private static String subscriptionURL = "observer/subscription";
+
 	@Test
 //	@Disabled
-	void testStatusHandler(VertxTestContext testContext, Vertx vertx) {
+	void statusTest(VertxTestContext testContext, Vertx vertx) {
 
-		System.out.println(logMessage + "testStatusHandler()");
+		System.out.println(logMessage + "statusTest()");
 
-		JsonObject msg = new JsonObject();
-		msg.put("type", "update");
-		JsonObject body = new JsonObject();
-		body.put("resource", userID);
-		body.put("status", "online");
-		msg.put("body", body);
-		vertx.eventBus().send(offlineSubMgrURLStatus, msg);
+		sendStatusMessage(vertx);
 
 		try {
 			Thread.sleep(2000);
@@ -131,7 +133,7 @@ class OfflineSubscriptionManagerTest {
 
 		CountDownLatch latch = new CountDownLatch(1);
 		new Thread(() -> {
-			mongoClient.find(collection, new JsonObject(), res -> {
+			mongoClient.find(pendingSubscriptions, new JsonObject(), res -> {
 				assertEquals(0, res.result().size());
 				latch.countDown();
 			});
@@ -146,24 +148,97 @@ class OfflineSubscriptionManagerTest {
 
 	}
 
+	private void sendStatusMessage(Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", "update");
+		JsonObject body = new JsonObject();
+		body.put("resource", userID);
+		body.put("status", "online");
+		msg.put("body", body);
+		vertx.eventBus().send(offlineSubMgrURLStatus, msg);
+	}
+
+	CountDownLatch latch;
+
 	@Test
 	@Disabled
-	void testSubscriptionOnline(VertxTestContext testContext, Vertx vertx) {
+	void dataObjectTest(VertxTestContext testContext, Vertx vertx) {
+		System.out.println(logMessage + "dataObjectTest: 1 - Registration ");
 
-		System.out.println(logMessage + "testSubscriptionOnline()");
+		try {
+			sendDOCreationMessage(vertx);
+			Thread.sleep(1000);
+			latch = new CountDownLatch(1);
+			new Thread(() -> {
+				mongoClient.find(dataObjectsRegistry, new JsonObject(), res -> {
+					assertEquals(1, res.result().size());
+					latch.countDown();
+				});
+			}).start();
+			latch.await();
 
-		addMessageConsumers(vertx, "online");
+			testContext.completeNow();
 
+			System.out.println(logMessage + "dataObjectTest: 2 - Unregistration ");
+
+			sendDODeleteMessage(vertx);
+			Thread.sleep(1000);
+			latch = new CountDownLatch(1);
+			new Thread(() -> {
+				mongoClient.find(dataObjectsRegistry, new JsonObject(), res -> {
+					assertEquals(0, res.result().size());
+					latch.countDown();
+				});
+			}).start();
+			latch.await();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		testContext.completeNow();
+	}
+
+	private void sendDODeleteMessage(Vertx vertx) {
 		JsonObject msg = new JsonObject();
-		msg.put("type", "subscribe");
+		msg.put("type", "delete");
 		msg.put("identity", identity);
 		msg.put("id", "1");
-		msg.put("from", "hyperty-runtime://<observer-sp-domain>/<hyperty-observer-runtime-instance-identifier>/sm");
-		msg.put("to", to);
+		msg.put("from", "hyperty://<sp-domain>/<hyperty-instance-identifier>");
+		msg.put("to", "hyperty-runtime://<sp-domain>/<hyperty-runtime-instance-identifier>/sm");
 		JsonObject body = new JsonObject();
-		body.put("source", "hyperty://<observer-sp-domain>/<hyperty-observer-instance-identifier>");
+		body.put("resource", "hyperty://<observer-sp-domain>/<hyperty-observer-instance-identifier>");
 		msg.put("body", body);
-		vertx.eventBus().send(offlineSubMgrHypertyURL, msg);
+		vertx.eventBus().send(urlRegister, msg);
+	}
+
+	private void sendDOCreationMessage(Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", "create");
+		msg.put("identity", identity);
+		msg.put("id", "1");
+		msg.put("from", "hyperty://<sp-domain>/<hyperty-instance-identifier>");
+		msg.put("to", "hyperty-runtime://<sp-domain>/<hyperty-runtime-instance-identifier>/sm");
+		JsonObject body = new JsonObject();
+		body.put("resource", "hyperty://<observer-sp-domain>/<hyperty-observer-instance-identifier>");
+		body.put("value", new JsonObject());
+		msg.put("body", body);
+		vertx.eventBus().send(urlRegister, msg);
+	}
+
+	@Test
+	@Disabled
+	void subscriptionOnline(VertxTestContext testContext, Vertx vertx) {
+
+		System.out.println(logMessage + "subscriptionOnline()");
+		sendDOCreationMessage(vertx);
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		addMessageConsumers(vertx, "online");
+		sendSubscriptionMessage(vertx);
 
 		try {
 			Thread.sleep(2000);
@@ -173,7 +248,7 @@ class OfflineSubscriptionManagerTest {
 
 		CountDownLatch latch = new CountDownLatch(1);
 		new Thread(() -> {
-			mongoClient.find(collection, new JsonObject(), res -> {
+			mongoClient.find(pendingSubscriptions, new JsonObject(), res -> {
 				assertEquals(0, res.result().size());
 				latch.countDown();
 			});
@@ -189,24 +264,34 @@ class OfflineSubscriptionManagerTest {
 
 	}
 
-	@Test
-//	@Disabled
-	void testSubscriptionOffline(VertxTestContext testContext, Vertx vertx) {
-
-		System.out.println(logMessage + "testSubscriptionOffline()");
-
-		addMessageConsumers(vertx, "offline");
-
+	private void sendSubscriptionMessage(Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "subscribe");
 		msg.put("identity", identity);
 		msg.put("id", "1");
 		msg.put("from", "hyperty-runtime://<observer-sp-domain>/<hyperty-observer-runtime-instance-identifier>/sm");
-		msg.put("to", to);
+		msg.put("to", subscriptionURL);
 		JsonObject body = new JsonObject();
 		body.put("source", "hyperty://<observer-sp-domain>/<hyperty-observer-instance-identifier>");
 		msg.put("body", body);
-		vertx.eventBus().send(offlineSubMgrHypertyURL, msg);
+		vertx.eventBus().send(urlSubscription, msg);
+
+	}
+
+	@Test
+	@Disabled
+	void subscriptionOffline(VertxTestContext testContext, Vertx vertx) {
+
+		System.out.println(logMessage + "subscriptionOffline()");
+		sendDOCreationMessage(vertx);
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		addMessageConsumers(vertx, "offline");
+		sendSubscriptionMessage(vertx);
 
 		try {
 			Thread.sleep(2000);
@@ -216,7 +301,7 @@ class OfflineSubscriptionManagerTest {
 
 		CountDownLatch latch = new CountDownLatch(1);
 		new Thread(() -> {
-			mongoClient.find(collection, new JsonObject(), res -> {
+			mongoClient.find(pendingSubscriptions, new JsonObject(), res -> {
 				assertEquals(1, res.result().size());
 				latch.countDown();
 			});
@@ -238,9 +323,9 @@ class OfflineSubscriptionManagerTest {
 
 		final JsonObject mongoconfig = new JsonObject();
 		mongoconfig.put("connection_string", uri);
-		mongoconfig.put("db_name", db_name);
-		mongoconfig.put("database", db_name);
-		mongoconfig.put("collection", collection);
+		mongoconfig.put("db_name", dbName);
+		mongoconfig.put("database", dbName);
+		mongoconfig.put("collection", pendingSubscriptions);
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
@@ -249,9 +334,14 @@ class OfflineSubscriptionManagerTest {
 
 	void addMessageConsumers(Vertx vertx, String status) {
 		// to handler
-		consumer1 = vertx.eventBus().consumer(to, message -> {
-			JsonObject reply = new JsonObject().put("body", new JsonObject().put("code", 200));
-			message.reply(reply);
+		consumer1 = vertx.eventBus().consumer(subscriptionURL, message -> {
+			System.out.println(logMessage + "replying");
+			JsonObject body = new JsonObject().put("code", 200).put("value", new JsonObject());
+			JsonObject msg = new JsonObject().put("body", body);
+			msg.put("type", "response");
+			msg.put("from", subscriptionURL);
+			msg.put("to", "hyperty-runtime://<observer-sp-domain>/<hyperty-observer-runtime-instance-identifier>/sm");
+			message.reply(msg);
 		});
 
 		// registry handler
