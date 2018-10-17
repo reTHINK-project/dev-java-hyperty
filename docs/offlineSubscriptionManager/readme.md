@@ -16,18 +16,42 @@ The Hyperty handles two collections:
 }
 ```
 
-**pendingSubscriptionReplies data collection**
+**dataObjects data collection**
 
 ```
 {
   user:<cguid>,
-  message: <subscribeReplyMsg>
+  message: <inviteMsg>
 }
 ```
 
+### Data Object Registration handler
+
+**handlers:** <Hyperty Address>/register.
+
+**message:**
+
+Forward of [Invite Message](https://rethink-project.github.io/specs/messages/data-sync-messages/#observer-subscription-request-sent-to-data-object-subscription-handler) message sent by runtime sync manager DataObjectReporter when DO is created in case offline exists.
+
+**logic:**
+
+Stores message at dataObjects data collection and it replies with 200 OK.
+
+### Data Object Unregistration handler
+
+**handlers:** <Hyperty Address>/register.
+
+**message:**
+
+Forward of [Delete Message](https://rethink-project.github.io/specs/messages/data-sync-messages/#observer-subscription-request-sent-to-data-object-subscription-handler) message sent by runtime sync manager.
+
+**logic:**
+
+Removes data object message from dataObjects data collection and it replies with 200 OK.
+
 ### Subscription handler
 
-**handlers:** Hyperty Address.
+**handlers:** Hyperty Address /subscription.
 
 **message:**
 
@@ -35,7 +59,7 @@ Forward of [Subscribe](https://rethink-project.github.io/specs/messages/data-syn
 
 **logic:**
 
-1- It replies with 200 OK.
+1- It queries the Data Objects collection for the data object URL to be subscribed (message.body.to.<objectUrl>/subscrition), and replies with 200 OK where `reply.body.value = foundDataObject.message.body`.
 
 2- Queries the registry about cguid status.
 
@@ -51,23 +75,10 @@ Status event message sent by the Vertx Runtime Registry.
 
 **logic**
 
-For all `online` events received it checks if the CGUID is associated to
-
-1- any pending subscription at pendingSubscriptionReplies collection and if yes the `processPendingSubscription(subscribeMsg)` function is executed
-
-2- any pending subscription reply at pendingSubscriptionReplies collection and if yes the `processPendingSubscriptionReply(subscribeReply)` function is executed
+For all `online` events received it checks if the CGUID is associated to any pending subscription at pendingSubscriptionReplies collection and if yes the `processPendingSubscription(subscribeMsg)` function is executed
 
 
 ### `processPendingSubscription(subscribeMsg)` 
 
-Subscribe message is forwarded to `subscribeMsg.to` and in case a 200 Ok response is received it executes:
+Subscribe message is forwarded to `subscribeMsg.to` and in case a 200 Ok response is received it executes the `subscribeMsg` is removed from pendingSubscription collection.
 
-1- the `subscribeMsg` is removed from pendingSubscription collection.
-
-2- Queries the registry about cguid status.
-
-3- If online it executes the `processPendingSubscriptionReply(subscribeReply)` otherwise it stores it in the pendingSubscriptionReplies collection.
-
-### `processPendingSubscriptionReply(subscribeReply)` 
-
-Reply message is forwarded to `subscribeReply.to` and the `subscribeReply` is removed from pendingSubscriptionReplies collection.
