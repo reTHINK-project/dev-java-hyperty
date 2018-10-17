@@ -16,7 +16,7 @@ The Hyperty handles two collections:
 }
 ```
 
-**dataObjects data collection**
+**dataObjectsRegistry data collection**
 
 ```
 {
@@ -31,11 +31,11 @@ The Hyperty handles two collections:
 
 **message:**
 
-Forward of [Invite Message](https://rethink-project.github.io/specs/messages/data-sync-messages/#observer-subscription-request-sent-to-data-object-subscription-handler) message sent by runtime sync manager DataObjectReporter when DO is created in case offline exists.
+Forward of [Data Object Creation Message](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#hyperty-data-object-creation) message sent by runtime sync manager.
 
 **logic:**
 
-Stores message at dataObjects data collection and it replies with 200 OK.
+Stores message at dataObjectsRegistry data collection and it replies with 200 OK.
 
 ### Data Object Unregistration handler
 
@@ -43,11 +43,11 @@ Stores message at dataObjects data collection and it replies with 200 OK.
 
 **message:**
 
-Forward of [Delete Message](https://rethink-project.github.io/specs/messages/data-sync-messages/#observer-subscription-request-sent-to-data-object-subscription-handler) message sent by runtime sync manager.
+Forward of [Data Object Delete Message](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#delete-data-object-requested-by-reporter) message sent by runtime sync manager.
 
 **logic:**
 
-Removes data object message from dataObjects data collection and it replies with 200 OK.
+Removes data object message from dataObjectsRegistry data collection and it replies with 200 OK.
 
 ### Subscription handler
 
@@ -55,11 +55,11 @@ Removes data object message from dataObjects data collection and it replies with
 
 **message:**
 
-Forward of [Subscribe](https://rethink-project.github.io/specs/messages/data-sync-messages/#observer-subscription-request-sent-to-data-object-subscription-handler) message sent by runtime sync manager as specified at .
+Forward of [Subscribe](https://rethink-project.github.io/specs/messages/data-sync-messages/#observer-subscription-request-sent-to-data-object-subscription-handler) message sent by runtime sync manager.
 
 **logic:**
 
-1- It queries the Data Objects collection for the data object URL to be subscribed (message.body.to.<objectUrl>/subscrition), and replies with 200 OK where `reply.body.value = foundDataObject.message.body`.
+1- It queries the Data Objects Registry collection for the data object URL to be subscribed (`message.body.body.resource`), and replies with 200 OK where `reply.body.value = message.body.body.value`.
 
 2- Queries the registry about cguid status.
 
