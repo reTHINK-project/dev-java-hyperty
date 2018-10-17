@@ -1,6 +1,8 @@
 ## CRM Hyperty
 
-The CRM hyperty manages CRM Agents and forwards tickets to available Agents.
+The CRM hyperty manages CRM Agents, forwards tickets to available Agents.
+
+It also provides functionalities to support data streams synchronisation setup between Agents and Users without requiring to have both online simultaneously.
 
 ### Configuration:
 
@@ -38,6 +40,16 @@ The Hyperty handles the `agents` data collection and associated tickets. The fir
         agent: <cguid>
     }
 ```
+
+**pendingSubscriptions data collection**
+
+```
+{
+  user:<cguid>,
+  message: <subscribeMsg>
+}
+```
+
 
 ### resolve-role handler
 
@@ -140,5 +152,4 @@ from: <wallet observer hyperty address>
 **logic**
 
 It checks there is an Agent for the identity, changing the status to "offline" and moving its opened tickets to other agents.
-
 
