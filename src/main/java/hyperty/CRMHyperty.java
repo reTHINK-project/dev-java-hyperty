@@ -581,11 +581,11 @@ public class CRMHyperty extends AbstractHyperty {
 	private void ticketUpdateNewParticipant(JsonObject msg) {
 		System.out.println(logMessage + "ticketUpdateNewParticipant(): " + msg);
 		String msgobjectURL = msg.getString("from");
-		String participantHYpertyURL = msg.getJsonObject("body").getString("participant");
-		String agentCode = getCodeForAgent(participantHYpertyURL);
+		String participantHypertyURL = msg.getJsonObject("body").getString("participant");
+		String agentCode = getCodeForAgent(participantHypertyURL);
 		if (agentCode.equals("")) {
 			// agent code not registered
-			System.out.println(logMessage + "ticketUpdateNewParticipant(): no agent for user " + participantHYpertyURL);
+			System.out.println(logMessage + "ticketUpdateNewParticipant(): no agent for user " + participantHypertyURL);
 			return;
 		}
 
@@ -611,7 +611,7 @@ public class CRMHyperty extends AbstractHyperty {
 
 		CountDownLatch getCodeForAgent = new CountDownLatch(1);
 		new Thread(() -> {
-			JsonObject query = new JsonObject().put("user", agentHypertyURL);
+			JsonObject query = new JsonObject().put("address", agentHypertyURL);
 			mongoClient.find(agentsCollection, query, res -> {
 				JsonArray results = new JsonArray(res.result());
 				if (results.size() > 0) {
