@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import hyperty.CRMHyperty;
+import hyperty.OfflineSubscriptionManagerHyperty;
 import hyperty.RegistryHyperty;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
@@ -56,7 +57,6 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	public static void main(String[] args) {
 
-
 		Consumer<Vertx> runner = vertx -> {
 			StartJavaHyperties startHyperties = new StartJavaHyperties();
 			vertx.deployVerticle(startHyperties);
@@ -88,25 +88,23 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	public void start() throws Exception {
 
-		
 		try {
 			String envHosts = System.getenv("MONGOHOSTS");
 			String envPorts = System.getenv("MONGOPORTS");
 			String envCluster = System.getenv("MONGO_CLUSTER");
 			System.out.println("ENV VARIABLES ??");
-			if (envHosts!=null && envPorts!=null && envCluster!=null) {
-				
-				
+			if (envHosts != null && envPorts != null && envCluster != null) {
+
 				mongoHosts = System.getenv("MONGOHOSTS");
 				mongoPorts = System.getenv("MONGOPORTS");
 				mongoCluster = System.getenv("MONGO_CLUSTER");
-				System.out.println("ENV VARIABLES\n" + mongoHosts + "\n" + mongoPorts + "\n" + mongoCluster );
+				System.out.println("ENV VARIABLES\n" + mongoHosts + "\n" + mongoPorts + "\n" + mongoCluster);
 			}
-			
-		} catch(Exception e) {
+
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
@@ -188,7 +186,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		 * identityCheckIN.put("status", "created");
 		 */
 
-		// deploy registry 
+		// deploy registry
 		String crmStatus = crmHypertyURL + "/status";
 		String offlineSMStatus = offlineSubMgrHypertyURL + "/status";
 		JsonObject configRegistry = new JsonObject();
@@ -204,13 +202,29 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("CRMHypertyStatus", crmStatus);
 		configRegistry.put("offlineSMStatus", offlineSMStatus);
 
-		
 		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);
 		vertx.deployVerticle(RegistryHyperty.class.getName(), optionsRegistry, res -> {
-		  System.out.println("Registry Result->" + res.result());
+			System.out.println("Registry Result->" + res.result());
 		});
-		
-		//deploy CRM
+
+		// deploy OfflineSubscriptionManager
+		JsonObject configOfflineSubMgr = new JsonObject();
+		configOfflineSubMgr.put("url", offlineSubMgrHypertyURL);
+		configOfflineSubMgr.put("registry", registryHypertyURL);
+		configOfflineSubMgr.put("identity", identity);
+		// mongo
+		configOfflineSubMgr.put("db_name", "test");
+		configOfflineSubMgr.put("collection", "registry");
+		configOfflineSubMgr.put("mongoHost", mongoHosts);
+		configOfflineSubMgr.put("mongoCluster", mongoCluster);
+		configOfflineSubMgr.put("mongoPorts", mongoPorts);
+
+		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr).setWorker(true);
+		vertx.deployVerticle(OfflineSubscriptionManagerHyperty.class.getName(), optionsOfflineSubMgr, res -> {
+			System.out.println("OfflineSubscriptionManager Result->" + res.result());
+		});
+
+		// deploy CRM
 		JsonObject configCRM = new JsonObject();
 		configCRM.put("url", crmHypertyURL);
 		configCRM.put("identity", identity);
@@ -221,27 +235,25 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCRM.put("mongoCluster", mongoCluster);
 		configCRM.put("mongoPorts", mongoPorts);
 		configCRM.put("checkTicketsTimer", 2000);
-		
+
 		String agent1Code = "agent1Code";
-	    String agent1Address = "agent1Address";
-	    String agent2Code = "agent2Code";
-	    String agent2Address = "agent2Address";
-	    JsonArray agents = new JsonArray();
-        JsonObject agent1 = new JsonObject().put("address", agent1Address).put("code", agent1Code);
-        JsonObject agent2 = new JsonObject().put("address", agent2Address).put("code", agent2Code);
-        agents.add(agent1);
-        agents.add(agent2);
-        configCRM.put("agents", agents);
-        configCRM.put("checkTicketsTimer", 2000);
-		
-		
+		String agent1Address = "agent1Address";
+		String agent2Code = "agent2Code";
+		String agent2Address = "agent2Address";
+		JsonArray agents = new JsonArray();
+		JsonObject agent1 = new JsonObject().put("address", agent1Address).put("code", agent1Code);
+		JsonObject agent2 = new JsonObject().put("address", agent2Address).put("code", agent2Code);
+		agents.add(agent1);
+		agents.add(agent2);
+		configCRM.put("agents", agents);
+		configCRM.put("checkTicketsTimer", 2000);
+
 		DeploymentOptions optionsCRM = new DeploymentOptions().setConfig(configCRM).setWorker(true);
 		vertx.deployVerticle(CRMHyperty.class.getName(), optionsCRM, res -> {
-		  System.out.println("Registry Result->" + res.result());
+			System.out.println("Registry Result->" + res.result());
 		});
-		
-		
-		//deply checkIN
+
+		// deply checkIN
 		JsonObject configCheckIN = new JsonObject();
 		configCheckIN.put("url", checkINHypertyURL);
 		configCheckIN.put("identity", identity);
@@ -372,13 +384,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 		walletCause1.put("identity", school1ID);
 		walletCause1.put("externalFeeds", new JsonArray().add(feed1));
 		publicWallets.add(walletCause1);
-		
+
 		JsonObject walletCause2 = new JsonObject();
 		walletCause2.put("address", wallet2Address);
 		walletCause2.put("identity", school2ID);
 		walletCause2.put("externalFeeds", new JsonArray().add(feed2));
 		publicWallets.add(walletCause2);
-		
+
 		configWalletManager.put("publicWallets", publicWallets);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
@@ -437,36 +449,35 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		server.listen(9091);
 
-		if (mongoHosts != null && mongoPorts != null && mongoCluster != null ) {
+		if (mongoHosts != null && mongoPorts != null && mongoCluster != null) {
 			System.out.println("Setting up Mongo to:" + mongoHosts + " cluster:" + mongoCluster);
-			
 
 			JsonObject mongoconfig = null;
-			
+
 			if (mongoCluster.equals("NO")) {
-				
+
 				final String uri = "mongodb://" + mongoHosts + ":27017";
 				mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
-				
+
 			} else {
 				JsonArray hosts = new JsonArray();
-				
-				String [] hostsEnv = mongoHosts.split(",");
-				String [] portsEnv = mongoPorts.split(",");
-				
-				for (int i = 0; i < hostsEnv.length ; i++) {
+
+				String[] hostsEnv = mongoHosts.split(",");
+				String[] portsEnv = mongoPorts.split(",");
+
+				for (int i = 0; i < hostsEnv.length; i++) {
 					hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", Integer.parseInt(portsEnv[i])));
 					System.out.println("added to config:" + hostsEnv[i] + ":" + portsEnv[i]);
 				}
-				
-				mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
-				
+
+				mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts",
+						hosts);
+
 			}
-			
-			System.out.println("Setting up Mongo with cfg on START:" +  mongoconfig.toString());
+
+			System.out.println("Setting up Mongo with cfg on START:" + mongoconfig.toString());
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
-			
-			
+
 		}
 
 	}
@@ -483,16 +494,14 @@ public class StartJavaHyperties extends AbstractVerticle {
 			for (x = 0; x < values.size(); x++) {
 				JsonObject currentObj = values.getJsonObject(x);
 				String value = currentObj.getString("data");
-				
+
 				JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value));
-				JsonObject valueObject = new JsonObject().put("type", "POWER")
-														.put("value", valueData);
-				
+				JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+
 				JsonArray valuesArray = new JsonArray().add(valueObject);
-				
-				JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE")
-															.put("values", valuesArray);
-				
+
+				JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuesArray);
+
 				String objURL = findStream(currentObj.getString("streamId"));
 				System.out.println("publishin on " + objURL + "/changes");
 
