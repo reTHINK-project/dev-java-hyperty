@@ -302,26 +302,25 @@ public class CRMHyperty extends AbstractHyperty {
 				mongoClient.find(agentsCollection, query, res -> {
 					JsonArray results = new JsonArray(res.result());
 					JsonObject agent = results.getJsonObject(0);
-					if (agent.getString("user").equals("")) {
-						// update agent's associated user guid and address
-						agent.put("user", guid);
-						agent.put("status", "online");
-						agent.put("address", msg.getString("from"));
-						JsonObject document = new JsonObject(agent.toString());
-						mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document,
-								id -> {
-									System.out.println(
-											logMessage + "handleAgentRegistration(): agent updated " + document);
-									message.reply(new JsonObject().put("agent", agent));
-									latch.countDown();
-								});
-					} else {
-						JsonObject response = new JsonObject().put("code", 400).put("reason",
-								"agent is already allocated with user");
-						message.reply(response);
-						latch.countDown();
-
-					}
+//					if (agent.getString("user").equals("")) {
+					// update agent's associated user guid and address
+					agent.put("user", guid);
+					agent.put("status", "online");
+					agent.put("address", msg.getString("from"));
+					JsonObject document = new JsonObject(agent.toString());
+					mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document,
+							id -> {
+								System.out.println(logMessage + "handleAgentRegistration(): agent updated " + document);
+								message.reply(new JsonObject().put("agent", agent));
+								latch.countDown();
+							});
+//					} else {
+//						JsonObject response = new JsonObject().put("code", 400).put("reason",
+//								"agent is already allocated with user");
+//						message.reply(response);
+//						latch.countDown();
+//
+//					}
 
 				});
 			}).start();
