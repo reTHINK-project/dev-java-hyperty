@@ -67,7 +67,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	private void handleDORequests() {
 
 		vertx.eventBus().<JsonObject>consumer(registerHandler, message -> {
-			mandatoryFieldsValidator(message);
+			//mandatoryFieldsValidator(message);
 			JsonObject msg = new JsonObject(message.body().toString());
 			System.out.println(logMessage + "handleDORequests(): " + msg);
 
@@ -96,7 +96,8 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	private void dataObjectRegister(Message<JsonObject> message, JsonObject msg) {
 		storeMessageInDB(msg, dataObjectsRegistry);
 		JsonObject response = new JsonObject().put("code", 200);
-		message.reply(response);
+		JsonObject responseOK = new JsonObject().put("body", response);
+		message.reply(responseOK);
 	}
 
 	/**
@@ -199,7 +200,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	private void storeMessageInDB(JsonObject msg, String collection) {
 		JsonObject saveInDB = new JsonObject();
 		saveInDB.put("message", msg);
-		saveInDB.put("user", msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid"));
+		saveInDB.put("user", msg.getJsonObject("body").getJsonObject("body").getJsonObject("identity").getString("guid"));
 		JsonObject document = new JsonObject(saveInDB.toString());
 		mongoClient.save(collection, document, id -> {
 			System.out.println(logMessage + "storeMessage(): " + document);
