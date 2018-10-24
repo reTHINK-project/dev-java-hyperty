@@ -272,7 +272,7 @@ public class CRMHyperty extends AbstractHyperty {
 			agent.put("status", "offline");
 			JsonObject document = new JsonObject(agent.toString());
 			mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document, id -> {
-				message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent)));
+				message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
 
 				// TODO - change opened tickets to other agents
 			});
