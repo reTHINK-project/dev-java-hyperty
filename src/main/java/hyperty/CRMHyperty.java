@@ -312,7 +312,7 @@ public class CRMHyperty extends AbstractHyperty {
 					mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document,
 							id -> {
 								System.out.println(logMessage + "handleAgentRegistration(): agent updated " + document);
-								message.reply(new JsonObject().put("agent", agent));
+								message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
 								latch.countDown();
 							});
 //					} else {
