@@ -127,23 +127,24 @@ public class CRMHyperty extends AbstractHyperty {
 			String code = new JsonObject(message.body().toString()).getString("code");
 			JsonObject replyMessage = new JsonObject(message.body().toString());
 			if (configContainsCode(code)) {
+				isAgent = true;
 				// check if this code is already associated with an user
-				CountDownLatch agentsLatch = new CountDownLatch(1);
-				new Thread(() -> {
-					JsonObject query = new JsonObject().put("code", code).put("user", new JsonObject().put("$ne", ""));
-					mongoClient.find(agentsCollection, query, res -> {
-						JsonArray results = new JsonArray(res.result());
-						if (results.size() == 0) {
-							isAgent = true;
-						}
-						agentsLatch.countDown();
-					});
-				}).start();
-				try {
-					agentsLatch.await();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+//				CountDownLatch agentsLatch = new CountDownLatch(1);
+//				new Thread(() -> {
+//					JsonObject query = new JsonObject().put("code", code).put("user", new JsonObject().put("$ne", ""));
+//					mongoClient.find(agentsCollection, query, res -> {
+//						JsonArray results = new JsonArray(res.result());
+//						if (results.size() == 0) {
+//							isAgent = true;
+//						}
+//						agentsLatch.countDown();
+//					});
+//				}).start();
+//				try {
+//					agentsLatch.await();
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
 			}
 			replyMessage.put("role", isAgent ? "agent" : "user");
 			message.reply(replyMessage);
