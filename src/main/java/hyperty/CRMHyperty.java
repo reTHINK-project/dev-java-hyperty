@@ -332,7 +332,8 @@ public class CRMHyperty extends AbstractHyperty {
 			}
 		} else {
 			JsonObject response = new JsonObject().put("code", 400).put("reason", "there is no agent for that code");
-			message.reply(response);
+			JsonObject responseMsg = new JsonObject().put("body", response);
+			message.reply(responseMsg);
 		}
 
 	}
