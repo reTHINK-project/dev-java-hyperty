@@ -65,11 +65,11 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// shops stream
 		String shopsStreamAddress = streams.getString("shops");
-		create(shopsStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
+		create(null, shopsStreamAddress, new JsonObject(), false, subscriptionHandler(), readHandler());
 
 		// bonus stream
 		String bonusStreamAddress = streams.getString("bonus");
-		create(bonusStreamAddress, new JsonObject(), false, subscriptionHandlerBonus(), readHandlerBonus());
+		create(null, bonusStreamAddress, new JsonObject(), false, subscriptionHandlerBonus(), readHandlerBonus());
 	}
 
 	/**

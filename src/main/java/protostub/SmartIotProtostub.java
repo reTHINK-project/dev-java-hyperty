@@ -17,6 +17,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import util.DateUtilsHelper;
 
 public class SmartIotProtostub extends AbstractVerticle {
 
@@ -401,7 +402,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		JsonObject responseBodyOK = new JsonObject().put("code", 200);
 
 		if (guid != null) {
-			System.out.println("{{SmartIOTProtostub}} search Device of guid->" + guid);
+			System.out.println("{{SmartIOTProtostub}}creationRequest search Device of guid->" + guid);
 			final JsonObject body = messageToCreate.getJsonObject("body");
 			final String thirdPtyUserId = body.containsKey("platformUID") ? body.getString("platformUID") : null;
 			final String thirdPtyPlatformId = body.containsKey("platformID") ? body.getString("platformID") : null;
@@ -468,6 +469,10 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 					}
 				}
+				
+				fillRates(guid);
+				
+				
 			}
 
 			message.reply(responseDenied);
@@ -488,6 +493,101 @@ public class SmartIotProtostub extends AbstractVerticle {
 		 * 
 		 */
 
+	}
+
+	private void fillRates(String guid) {
+		CountDownLatch fillRatesLatch = new CountDownLatch(1);
+		new Thread(() -> {
+
+			mongoClient.find("rates", new JsonObject().put("user", guid), resultRates -> {
+				if (resultRates.result().size() == 1) {
+					JsonObject rates = resultRates.result().get(0);
+					
+					
+					
+					
+					JsonArray energyArray = rates.getJsonArray("energy-saving");
+					System.out.println("energy rates size->" + energyArray.size());
+					if (energyArray.size() == 0 ) {
+						JsonObject transaction = new JsonObject();
+						transaction.put("recipient", guid.split("//")[1]);
+						transaction.put("source", "energy-saving");
+						transaction.put("date", "2018-09-30T00:00Z");
+						transaction.put("value", 0);
+						transaction.put("description", "valid");
+						transaction.put("bonus", false);
+						transaction.put("nonce", 1);
+						transaction.put("data", new JsonObject().put("percentage", "0"));
+						
+							String walletAddress = guid.split("//")[1].split("-")[0] + guid.split("//")[1].split("-")[1] + "-wallet";
+							JsonObject query = new JsonObject().put("identity",
+									new JsonObject().put("userProfile", new JsonObject().put("guid", "user-guid://public-wallets")));
+							// get wallets document
+							mongoClient.find("wallets", query, res -> {
+								JsonObject result = res.result().get(0);
+								JsonArray wallets = result.getJsonArray("wallets");
+								System.out.println("updatePublicWalletBalance(): gofind" + walletAddress);
+								// create wallets
+								for (Object pWallet : wallets) {
+									// get wallet with that address
+									JsonObject wallet = (JsonObject) pWallet;
+									
+									if (wallet.getString("address").equals(walletAddress)) {
+										System.out.println("updatePublicWalletBalance(): wallet" + wallet);
+										JsonArray transactions = wallet.getJsonArray("transactions");
+										
+										
+										
+										
+										
+										
+										transactions.add(transaction);
+										
+										System.out.println("transaction->" + transaction.toString());
+									
+
+									}
+								}
+								
+								mongoClient.findOneAndReplace("wallets", query, result, id -> {
+									System.out.println("[siot] Transaction added to public wallet");
+
+								});
+							});		
+											
+							JsonArray energyrates = rates.getJsonArray("energy-saving");
+							energyrates.add(transaction);
+							
+							mongoClient.findOneAndReplace("rates", new JsonObject().put("user", guid), rates, id -> {
+								System.out.println("[siot] Transaction added to rates");
+
+							});
+							
+					} else {
+						System.out.println("[siot] Transaction already exist on rates");
+					}
+					
+					
+					
+					
+					
+					
+					fillRatesLatch.countDown();
+					
+					
+				} else {
+					fillRatesLatch.countDown();
+				}
+
+			});
+		}).start();
+
+		try {
+			fillRatesLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 	private void inviteHyperty(String thirdPtyUserId, String thirdPtyPlatformId, JsonObject identity, String streamID,

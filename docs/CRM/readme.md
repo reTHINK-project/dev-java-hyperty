@@ -1,36 +1,69 @@
 ## CRM Hyperty
 
-The CRM hyperty manages CRM Agents and forwards tickets to available Agents.
+The CRM hyperty manages CRM Agents, forwards tickets to available Agents.
+
+It also provides functionalities to support data streams synchronisation setup between Agents and Users without requiring to have both online simultaneously.
 
 ### Configuration:
 
-* `agents`: list of JSON with agent address and associated registration code.
 
-`{address: '<agent adddress>', 
-  code: '<agent code>'}`
+* `agents`: list of JSON with agent registration codes.
+
+`{code: '<agent code>'}`
+
 
 ### Storage
 
-The Hyperty handles AgentsPool data collection and associated tickets. The first time the hyperty is executed the collection is initialised based on the `config.agents` info.
+The Hyperty handles the `agents` data collection and associated tickets. The first time the hyperty is executed the collection is initialised based on the `config.agents` info.
+
+**Agents Collection**
 
 ```
 {
-    address: <address>,
+    address: <url of agent's Group Chat Manager hyperty>,
     code: <code>,
     user: <cguid of the user registered with this agent address>,
-    tickets: [{
-        user: <cguid of user that created the ticket>
-        status: <pending/ongoing/closed>,
-        creation: <date>,
-        lastModified: <data>,
-        message: <received invitation msg>
-        }
-    }],
+    tickets: [<ticketUrl>],
     openedTickets: <int>,
     status: <online/offline>
-  
 }
 ```
+
+**Tickets Collection**
+
+```
+    {
+        url: <data object url>,
+        user: <cguid of user that created the ticket>,
+        status: <new (still not accepted)|pending|ongoing (accepted by agent)/closed>,
+        created: <date>,
+        lastModified: <data>,
+        message: <received invitation msg>,
+        agent: <cguid>
+    }
+```
+
+**pendingSubscriptions data collection**
+
+```
+{
+  user:<cguid>,
+  message: <subscribeMsg>
+}
+```
+
+
+### resolve-role handler
+
+**handlers:** /resolve-role
+
+**message:**
+
+Message containing agent code.
+
+**logic:**
+
+It Checks that received `code` is in the `config.agents` array and if there is still no user allocated in the `agents` collection, it returns `role: "agent"`, otherwise returns `role: "user"`.
 
 ### Agent Registration handler
 
@@ -42,27 +75,58 @@ Invitation message sent by Wallet Manager to observers.
 
 **logic:**
 
-It Checks that received `body.code` is in the `config.agents` array and if there is still no user allocated in the AgentsPool, it updates it the new user agent CGUID.
+It Checks that received `body.code` is in the `config.agents` array and if there is still no user allocated in the `agents` collection, it updates it the new user agent CGUID and its address.
 
 ### New Ticket handlers
 
-**handlers:** CRM Address + `/agents`.
+**handler:** CRM Address + `/tickets`.
 
 **message:**
 
-Standard create message sent to invite Data Object observers.
+Standard create message sent to [invite Data Object observers](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#observer-invitation).
 
 **logic**
 
-1- It forwards the message to all agents and add the new ticket to newTickets array.
+It forwards the message to all agents (`msg.to = <agent address>` and `eb.send(<cguid>, msg)` ) and adds the new ticket to the `tickets` collection (status: new).
 
-2- The first agent executes `ticketAccepted` function: the ticket is allocated to the agent in the agentsPool collection, the ticket is removed from the pendingTickets array and a delete message is sent to all remaining invited Agents (todo: specify this new message that should be similar to delete msg used to remove user from chat). 
+There is a timer to process `new` tickets running every X seconds (eg 300 secs) to change their status to `pending`, in case no agent accepts new tickets ie if `timeNow - createdData > x`.
 
-3- In case no agent accepts the ticket, ie a timeout message is received for all invited Agents the message is moved from newTickets array to pendingTickets array.
+### Update Tickets
+
+**handler:** CRM Address + `/tickets`.
+
+**message:**
+
+```javascript
+{
+type: "update",
+from: "object url",
+identity: <identity>,
+body: {
+  status: "new-participant|closed",
+  participant: <hyperty-url>
+  }
+}
+```
+
+**logic**
+
+`status: "new-participant"`: checks the ticket is still in the `new` or `pending` status and belongs to the user then it executes the `ticketAccepted` function. Otherwise, the message is ignored.
+
+**`ticketAccepted` function:** the ticket is associated to the agent, its status changed to `ongoing` and a delete message is sent to all remaining invited Agents. The delete message is similar to this [one](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#delete-data-object-requested-by-reporter):
+
+```javascript
+"type" : "delete",
+"from" : "CRM Address",
+"to"   : "Agente Hyperty URL",
+"body" : { "resource" : "<ObjectURL>" }
+```
+
+`status: "closed"`: Checks if ticket belongs to user, change its status to closed and update collection.
 
 ### status handler
 
-**handler:** <runtime>/status.
+**handler:** CRM Address + `/status`.
 
 **message:**
 
@@ -70,7 +134,7 @@ Status event message sent by the Vertx Runtime Registry.
 
 **logic**
 
-For all `live` events received it checks if the CGUID is associated to any agent and forwards to it pending tickets. Execute funtion `ticketAccepted` for 200 ok accepting messages.
+For all `online` events received it checks if the CGUID is associated to any agent and forwards to it pending tickets. Execute funtion `ticketAccepted` for 200 ok accepting messages.
 
 
 ### unregistration of Agents
@@ -89,6 +153,5 @@ from: <wallet observer hyperty address>
 
 **logic**
 
-It checks there is an Agent for the identity, changing the status to "inactive" and moving its pending / opened tickets to other agents.
-
+It checks there is an Agent for the identity, changing the status to "offline" and moving its opened tickets to other agents.
 

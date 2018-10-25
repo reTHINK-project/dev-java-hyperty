@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 import data_objects.DataObjectReporter;
 import hyperty.AbstractHyperty;
+import hyperty.CRMHyperty;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
@@ -277,7 +278,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				}
 				ranking++;
 				int previousRanking = -1;
-				if (wallet.containsKey("ranking") && wallet.getInteger("ranking") != null ) {
+				if (wallet.containsKey("ranking") && wallet.getInteger("ranking") != null) {
 					previousRanking = wallet.getInteger("ranking");
 				}
 
@@ -427,10 +428,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		validateTransaction(transaction, walletAddress);
 	}
 
-	public void inviteObservers(String dataObjectUrl, Handler<Message<JsonObject>> subscriptionHandler,
-			Handler<Message<JsonObject>> readHandler) {
+	public void inviteObservers(JsonObject identity, String dataObjectUrl,
+			Handler<Message<JsonObject>> subscriptionHandler, Handler<Message<JsonObject>> readHandler) {
 		// An invitation is sent to config.observers
-		DataObjectReporter reporter = create(dataObjectUrl, new JsonObject(), true, subscriptionHandler, readHandler);
+		DataObjectReporter reporter = create(identity, dataObjectUrl, new JsonObject(), true, subscriptionHandler,
+				readHandler);
 		reporter.setMongoClient(mongoClient);
 		// pass handler function that will handle subscription events
 		// reporter.setSubscriptionHandler(requestsHandler);
@@ -459,7 +461,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			transactions.add(transaction);
 			// update bonus-credit
 			walletInfo.put("bonus-credit", bonusCredit + transactionValue);
-			if (!transaction.getString("source").equals("bonus")) {
+			if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 				walletInfo.put("balance", currentBalance + transactionValue);
 			}
 
@@ -642,6 +644,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					}
 
 				}
+
 				performTransaction(walletAddress, transaction);
 
 				String publicWalletAddress = wallet.getString(causeWalletAddress);
@@ -716,44 +719,35 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		});
 
 	}
-	
+
 	String causeID;
 
-	
 	/**
-	 *         let updateMessage = {
-          type: 'forward', to: 'hyperty://sharing-cities-dsm/wallet-manager', from: _this.hypertyURL,
-          identity: _this.identity,
-          body: {
-            type: 'update',
-            from: _this.hypertyURL,
-            resource: source,
-            value: value
-          }
-        };
+	 * let updateMessage = { type: 'forward', to:
+	 * 'hyperty://sharing-cities-dsm/wallet-manager', from: _this.hypertyURL,
+	 * identity: _this.identity, body: { type: 'update', from: _this.hypertyURL,
+	 * resource: source, value: value } };
 	 */
 
 	private void walletUpdateResource(JsonObject msg, Message<JsonObject> message) {
 		JsonObject body = msg.getJsonObject("body");
 		JsonObject toUpdate = new JsonObject();
-		JsonObject identity = new JsonObject().put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid",msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid"))));
+		JsonObject identity = new JsonObject().put("identity", new JsonObject().put("userProfile", new JsonObject()
+				.put("guid", msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid"))));
 		toUpdate.put(body.getString("resource"), body.getString("value"));
 		System.out.println("DATA TO UPDATE " + "(msg)" + msg);
-		
-		JsonObject update = new JsonObject().put("$set",toUpdate);
 
-		System.out.println(logMessage + " update it" + update.toString() + "\n on wallet with "+ identity.toString());
+		JsonObject update = new JsonObject().put("$set", toUpdate);
 
-		mongoClient.updateCollection(this.collection, identity, update,
-				res -> {
-					System.out.println(logMessage +  " result update" + res.succeeded());
-					message.reply(res.succeeded());
-				});
-		
+		System.out.println(logMessage + " update it" + update.toString() + "\n on wallet with " + identity.toString());
+
+		mongoClient.updateCollection(this.collection, identity, update, res -> {
+			System.out.println(logMessage + " result update" + res.succeeded());
+			message.reply(res.succeeded());
+		});
+
 	}
-	
-	
-	
+
 	/**
 	 * Create a new wallet.
 	 *
@@ -832,7 +826,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						JsonObject document = new JsonObject(newWallet.toString());
 						mongoClient.save(walletsCollection, document, id -> {
 							System.out.println("[WalletManager] new wallet with ID:" + id);
-							inviteObservers(address, requestsHandler(), readHandler());
+							inviteObservers(msg.getJsonObject("identity"), address, requestsHandler(), readHandler());
 						});
 						JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
 						System.out.println("wallet created, reply" + response.toString());
@@ -841,9 +835,33 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							transferToPublicWallet(newWallet.getString(causeWalletAddress), newTransaction);
 						}
 
-						/*
-						 * transaction to pubwallet
-						 */
+						String roleCode = profileInfo.getString("code");
+						if (roleCode != null) {
+							System.out.println(logMessage + "resolving role for code " + roleCode);
+							CountDownLatch validateCause = new CountDownLatch(1);
+
+							new Thread(() -> {
+								JsonObject validationMessage = new JsonObject();
+								validationMessage.put("from", url);
+								validationMessage.put("identity", identity);
+								validationMessage.put("type", "forward");
+								validationMessage.put("code", roleCode);
+								// TODO - replace with publish
+								send("resolve-role", validationMessage, reply -> {
+									System.out.println(
+											logMessage + "role validation result: " + reply.result().body().toString());
+									String role = new JsonObject(reply.result().body().toString()).getString("role");
+									response.put("role", role);
+									validateCause.countDown();
+								});
+							}).start();
+
+							try {
+								validateCause.await();
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
 
 						reply2.result().reply(response);
 

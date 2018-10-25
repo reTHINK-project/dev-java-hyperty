@@ -5,6 +5,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
+import com.mongodb.operation.UserExistsOperation;
+
 import data_objects.DataObjectReporter;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
@@ -29,14 +31,20 @@ public class RegistryHyperty extends AbstractHyperty {
 	 * frequency in seconds to execute checkStatus process.
 	 */
 	int checkStatusTimer;
+	String CRMHypertyStatus;
+	String offlineSMStatus;
+	boolean userExist;
 
 	@Override
 	public void start() {
 
 		super.start();
-		handleRequests();
+		handleRequestsOnStatus();
 		
 		checkStatusTimer = config().getInteger("checkStatusTimer");
+		CRMHypertyStatus = config().getString("CRMHypertyStatus");
+		offlineSMStatus = config().getString("offlineSMStatus");
+		
 		Timer timer = new Timer();
 		timer.schedule(new CheckStatusTimer(), 0, checkStatusTimer);
 
@@ -76,6 +84,16 @@ public class RegistryHyperty extends AbstractHyperty {
 									entry, id -> {
 										System.out.println(logMessage + "checkStatus() document updated: " + entry);
 									});
+							
+							JsonObject body = new JsonObject();
+							body.put("resource", entry.getString("guid"));
+							body.put("status", "offline");
+							
+							JsonObject updateMessage = new JsonObject().put("type", "update");
+							updateMessage.put("body", body);
+							publish(CRMHypertyStatus, updateMessage);
+							publish(offlineSMStatus, updateMessage);
+							
 					}
 				}
 			}
@@ -86,7 +104,7 @@ public class RegistryHyperty extends AbstractHyperty {
 	/**
 	 * Handle requests.
 	 */
-	private void handleRequests() {
+	private void handleRequestsOnStatus() {
 		System.out.println("Waiting on ->" + config().getString("url") + "/status");
 		vertx.eventBus().<JsonObject>consumer(config().getString("url") + "/status", message -> {
 			mandatoryFieldsValidator(message);
@@ -142,6 +160,10 @@ public class RegistryHyperty extends AbstractHyperty {
 						document, id -> {
 							System.out.println(logMessage + "updateStatus(): registry updated" + document);
 						});
+				//publish message to crmStatus and offlineSMstatus
+				publish(CRMHypertyStatus, msg);
+				publish(offlineSMStatus, msg);
+				
 				registryLatch.countDown();
 				JsonObject response = new JsonObject().put("code",200);
 				message.reply(response);
@@ -187,5 +209,118 @@ public class RegistryHyperty extends AbstractHyperty {
 			e.printStackTrace();
 		}
 	}
+	
+	@Override
+	public Handler<Message<JsonObject>> onMessage() {
+
+		return message -> {
+
+
+			System.out.println(logMessage + "New message -> " + message.body().toString());
+			if (mandatoryFieldsValidator(message)) {
+
+				System.out.println(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
+						+ "\n[Data] " + message.body());
+
+				final String type = new JsonObject(message.body().toString()).getString("type");
+				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
+
+				JsonObject response = new JsonObject();
+				JsonObject body = new JsonObject().put("code", 200);
+				response.put("body", body);
+				switch (type) {
+
+				case "create":
+
+					JsonObject msg = new JsonObject(message.body().toString());
+					handleCreationRequest(msg, message);
+					message.reply(response);
+					break;
+				default:
+					break;
+				}
+
+			}
+		};
+		
+}
+	
+	@Override
+	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
+		System.out.println("REGISTRY HANDLE NEW ENTRY->" + msg.toString());
+		if (msg.containsKey("identity")) {
+			final String guid = msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
+			if(!userExists(guid)) {
+				addNewUser(guid);
+				
+			} else {
+				System.out.println("user already exist");
+			}
+		}
+	}
+	
+
+	private boolean userExists(String guid) {
+		userExist = false;
+		
+		CountDownLatch getUserStatus= new CountDownLatch(1);
+
+
+		new Thread(() -> {
+
+			JsonObject query = new JsonObject().put("guid",guid);
+
+			mongoClient.find(this.collection, query, res -> {
+
+				JsonArray users = new JsonArray(res.result());
+				if (users.size() != 0)
+					userExist = true;
+				getUserStatus.countDown();
+			});
+		}).start();
+
+		try {
+			getUserStatus.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		return userExist;
+	}
+	
+	private void addNewUser(String guid) {
+
+		
+		CountDownLatch addUser= new CountDownLatch(1);
+
+
+		new Thread(() -> {
+
+			Long date = new Date().getTime();
+			JsonObject newUser = new JsonObject().put("guid",guid)
+					.put("status", "online")
+					.put("lastModified", date);
+			JsonObject toUpdate = new JsonObject();
+			toUpdate.put("type", "update");
+			
+			mongoClient.save(this.collection, newUser, id -> {
+				System.out.println(logMessage + " new user " + id);
+				newUser.remove("lastModified");
+				toUpdate.put("body", newUser);
+				publish(CRMHypertyStatus, toUpdate);
+				publish(offlineSMStatus, toUpdate);
+				addUser.countDown();
+			});
+
+		}).start();
+
+		try {
+			addUser.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 
 }

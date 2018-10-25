@@ -83,6 +83,11 @@ A new entry is created in the Wallet Manager store.
 
 An invitation is sent to `config.observers`.
 
+If there is an associated code for the user, the `resolve-role` endpoint is called, which retrieves the following response:
+```
+role: <role, e.g. agent, user>
+```
+
 ### Wallet address request
 
 **handler:** wallet manager address.
