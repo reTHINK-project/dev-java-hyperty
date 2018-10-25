@@ -50,6 +50,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private String mongoPorts = "27017";
 	private String mongoCluster = "NO";
 
+
 	private String SIOTurl = "https://iot.alticelabs.com/api";
 	private String pointOfContact = "https://url_contact";
 	private MongoClient mongoClient = null;
