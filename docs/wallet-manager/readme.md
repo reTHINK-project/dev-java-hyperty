@@ -4,7 +4,20 @@ The Wallet Manager hyperty handles Token Wallets on behalf of a user.
 
 ### Configuration:
 
-* `observers`: array with all vertx hyperty observers to be invited for all wallets.
+* `publicWallets`: list of Public Wallets to be initiated with associated Device feeds:
+```
+{
+  address: <public wallet address>,
+  identity: <wallet owner identity e.g. schoold>,
+  externalFeeds: <Id of External Feeds or platforms to be Setup>
+}
+```
+* `rankingTimer`: num of milliseconds before recalculating user rankings
+
+
+For each public wallet, a new device and a new sensor is created at the Smart IoT Stub as specified [here](../smart-iot-protostub)
+
+* `observers`: array with all vertx hyperty observers to be invited for all wallets incl. energy saving rating.
 
 ### Storage
 
@@ -17,7 +30,23 @@ Each wallet is store as a JSON object:
   created: <timestamp creation>,
   balance: <amount of token>,
   transactions: <JSON OBject. see below>,
-  status: <active,deleted>
+  status: <active,deleted>,
+  wallet2bGranted: <public wallet address to be granted everytime there is a new transaction>,
+  profile: <JSON object with personal data about the user>,
+  ranking: <int of current ranking, starting at 1>,
+  bonus-credit: <credit to be spent in bonus>
+}
+```
+
+Sample wallet profile:
+
+```
+{
+  cause: 0,
+  gender: 'm',
+  ageRange: "18-25",
+  livesInLisbon: false,
+  worksInLisbon: true
 }
 ```
 
@@ -28,7 +57,9 @@ Transaction JSON Object:
   source: <data stream address>,
   date: <ISO 8601 compliant>,
   value: <amount of tokens in the transaction>
-  nonce: < the count of the number of performed mining transactions, starting with 0>
+  nonce: < the count of the number of performed mining transactions, starting with 0>,
+  bonus: <true if bonus transaction, false otherwise>,
+  data: <transaction relative data>
 }
 ```
 
@@ -83,6 +114,8 @@ If valid, the transaction is stored and the balance updated.
 
 The transaction is published in the event bus sending a [Wallet update message](https://rethink-project.github.io/specs/messages/wallet-messages/).
 
+If a `wallet2bGranted` exists, a new transfer is performed to it.
+
 ### Wallet read
 
 **handler:** wallet address.
@@ -104,10 +137,11 @@ Returns the stored Wallet value.
 ```
 type: delete,
 identity: <compliant with reTHINK identity model>,
+body: { resource: '<wallet address>'},
 from: <wallet observer hyperty address>
 ```
 
-It checks there is wallet for the identity and deletes from the storage.
+It checks there is the wallet address for the identity and deletes from the storage.
 
 A delete info message is sent to `config.observers`.
 

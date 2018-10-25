@@ -6,9 +6,11 @@ It also provides functionalities to support data streams synchronisation setup b
 
 ### Configuration:
 
+
 * `agents`: list of JSON with agent registration codes.
 
 `{code: '<agent code>'}`
+
 
 ### Storage
 
