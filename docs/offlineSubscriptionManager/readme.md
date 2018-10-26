@@ -61,13 +61,13 @@ Forward of [Subscribe](https://rethink-project.github.io/specs/messages/data-syn
 
 1- It queries the Data Objects Registry collection for the data object URL to be subscribed (`message.body.body.resource`), and replies with 200 OK where `reply.body.value = message.body.body.value`.
 
-2- Queries the registry about cguid status.
+2- [Queries the runtime registry](https://github.com/reTHINK-project/dev-java-hyperty/blob/master/docs/registry.md#readstatus-from-user) about cguid status.
 
 3- If online it executes the `processPendingSubscription(subscribeMsg)` otherwise it stores it in the pendingSubscriptions collection.
 
 ### status handler
 
-**handler:** <runtime>/status.
+**handler:** <runtime-address> + `/registry` e.g. `runtime://sharing-cities-dsm/registry` .
 
 **message:**
 
