@@ -40,7 +40,7 @@ public class RegistryHyperty extends AbstractHyperty {
 	public void start() {
 
 		super.start();
-		handleRequestsOnStatus();
+		handleRequests();
 		
 		checkStatusTimer = config().getInteger("checkStatusTimer");
 		CRMHypertyStatus = config().getString("CRMHypertyStatus");
@@ -105,14 +105,16 @@ public class RegistryHyperty extends AbstractHyperty {
 	/**
 	 * Handle requests.
 	 */
-	private void handleRequestsOnStatus() {
-		System.out.println("Waiting on ->" + config().getString("url") + "/status");
-		vertx.eventBus().<JsonObject>consumer(config().getString("url") + "/status", message -> {
+	private void handleRequests() {
+		System.out.println("Waiting on ->" + config().getString("url") + "/registry");
+		vertx.eventBus().<JsonObject>consumer(config().getString("url") + "/registry", message -> {
 			mandatoryFieldsValidator(message);
 			System.out.println(logMessage + "handleRequests(): " + message.body().toString());
 
 			JsonObject msg = new JsonObject(message.body().toString());
-
+			JsonObject response = new JsonObject();
+			
+			
 			switch (msg.getString("type")) {
 			case "update":
 				if (msg.getJsonObject("body") != null) {
@@ -122,6 +124,14 @@ public class RegistryHyperty extends AbstractHyperty {
 			case "read":
 				if (msg.getJsonObject("body") != null) {
 					retrieveStatus(msg, message);
+				}
+				break;
+			case "create":
+				if (msg.getJsonObject("body") != null) {
+					handleCreationRequest(msg, message);
+					JsonObject body = new JsonObject().put("code", 200);
+					response.put("body", body);
+					message.reply(response);
 				}
 				break;
 
@@ -222,7 +232,7 @@ public class RegistryHyperty extends AbstractHyperty {
 
 				System.out.println(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
 						+ "\n[Data] " + message.body());
-
+				/*
 				final String type = new JsonObject(message.body().toString()).getString("type");
 				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
 
@@ -239,7 +249,7 @@ public class RegistryHyperty extends AbstractHyperty {
 					break;
 				default:
 					break;
-				}
+				}*/
 
 			}
 		};

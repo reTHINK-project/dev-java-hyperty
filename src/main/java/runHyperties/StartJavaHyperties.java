@@ -112,7 +112,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String elearningHypertyURL = "hyperty://sharing-cities-dsm/elearning";
 		String energySavingRatingHypertyURL = "hyperty://sharing-cities-dsm/energy-saving-rating";
 		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
-		String registryHypertyURL = "hyperty://sharing-cities-dsm/registry";
+		String registryHypertyURL = "runtime://sharing-cities-dsm";
+		String registryHypertyURLHandler = registryHypertyURL + "/registry";
 		String crmHypertyURL = "hyperty://sharing-cities-dsm/crm";
 		String offlineSubMgrHypertyURL = "hyperty://sharing-cities-dsm/offline-sub-mgr";
 		// Create Router object
@@ -211,7 +212,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		// deploy OfflineSubscriptionManager
 		JsonObject configOfflineSubMgr = new JsonObject();
 		configOfflineSubMgr.put("url", offlineSubMgrHypertyURL);
-		configOfflineSubMgr.put("registry", registryHypertyURL);
+		configOfflineSubMgr.put("registry", registryHypertyURLHandler);
 		configOfflineSubMgr.put("identity", identity);
 		// mongo
 		configOfflineSubMgr.put("db_name", "test");
@@ -356,7 +357,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("mongoHost", mongoHosts);
 		configWalletManager.put("mongoPorts", mongoPorts);
 		configWalletManager.put("mongoCluster", mongoCluster);
-		configWalletManager.put("observers", new JsonArray().add(registryHypertyURL));
+		configWalletManager.put("observers", new JsonArray().add(registryHypertyURLHandler));
 		configWalletManager.put("crm", crmHypertyURL);
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 		configWalletManager.put("rankingTimer", 2000);
