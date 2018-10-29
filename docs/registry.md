@@ -2,6 +2,8 @@
 
 This runtime feature is responsible to keep track of the status of users (online / offline) using hyperties executed in the Vertx Runtime, based on status events published by Vertx Runtime Protostub.
 
+The registry address is `<runtime-url>\registry` e.g. `runtime://sharing-cities-dsm/registry`
+
 ### Configuration:
 
 * `checkStatusTimer`: frequency in seconds to execute checkStatus process.
@@ -22,7 +24,7 @@ The registry handles the registry data collection:
 ### status handler
 
 
-**handler:** <runtime-address> + `/status`.
+**handler:** <runtime-address> + `/registry` e.g. `runtime://sharing-cities-dsm/registry`.
 
 **message:**
 
@@ -44,12 +46,11 @@ It updates the registry collection with received info including last modified ti
 
 This function is executed by a timer every `config.checkStatusTimer` seconds.
 
-For each entry in the registry collection where `timeNow - lastModified > config.checkStatusTimer` it updates its status to offline, and publishes its new status (ensure this event is not processed by the registry status handler specifiec above).
+For each entry in the registry collection where `timeNow - lastModified > config.checkStatusTimer` it updates its status to offline, and publishes its new status (ensure this event is not processed by the registry status handler specified above).
 
 ### readStatus from User
 
-**handler:** <runtime-address> + `/status`.
-
+**handler:** <runtime-address >+ `/registry` e.g. `runtime://sharing-cities-dsm/registry`.
 **message to receive request of status:**
 
 ```javascript
@@ -78,7 +79,7 @@ body: {
 ### create status entry
 
 
-**handler:** <runtime-address> + `/status`.
+**handler:** <runtime-address> + `/registry` e.g. `runtime://sharing-cities-dsm/registry`.
 
 **message:**
 
