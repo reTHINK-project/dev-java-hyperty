@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.mongodb.operation.UserExistsOperation;
 
@@ -170,7 +171,7 @@ public class RegistryHyperty extends AbstractHyperty {
 			});
 		}).start();
 		try {
-			registryLatch.await();
+			registryLatch.await(5L, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
