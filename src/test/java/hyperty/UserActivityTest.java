@@ -58,6 +58,8 @@ class UserActivityTest {
 		configUserActivity.put("db_name", "test");
 		configUserActivity.put("collection", "rates");
 		configUserActivity.put("mongoHost", mongoHost);
+		configUserActivity.put("mongoPorts", "27017");
+		configUserActivity.put("mongoCluster", "NO");
 
 		// tokens per activity
 		configUserActivity.put("tokens_per_walking_km", 10);
@@ -81,6 +83,8 @@ class UserActivityTest {
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
+		configWalletManager.put("mongoPorts", "27017");
+		configWalletManager.put("mongoCluster", "NO");
 
 		configWalletManager.put("observers", new JsonArray().add(""));
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
@@ -205,7 +209,7 @@ class UserActivityTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-	@AfterAll
+//	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(3);
@@ -360,36 +364,35 @@ class UserActivityTest {
 
 		// wait for op
 		try {
-			Thread.sleep(5000);
+			Thread.sleep(2000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 
-//		CountDownLatch assertions = new CountDownLatch(1);
-//
-//
-//		new Thread(() -> {
-//
-//			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
-//			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
-//				JsonObject walletInfo = res.result().get(0);
-//
-//				// check balance updated
-//				int currentBalance = walletInfo.getInteger("balance");
-//				assertEquals(5, currentBalance);
-//
-//				// check if transaction in transactions array
-//				JsonArray transactions = walletInfo.getJsonArray("transactions");
-//				assertEquals(2, transactions.size());
-//				assertions.countDown();
-//			});
-//		}).start();
-//
-//		try {
-//			assertions.await();
-//		} catch (InterruptedException e) {
-//			e.printStackTrace();
-//		}
+		CountDownLatch assertions = new CountDownLatch(1);
+
+		new Thread(() -> {
+
+			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
+				JsonObject walletInfo = res.result().get(0);
+
+				// check balance updated
+				int currentBalance = walletInfo.getInteger("balance");
+				assertEquals(0, currentBalance);
+
+				// check if transaction in transactions array
+				JsonArray transactions = walletInfo.getJsonArray("transactions");
+				assertEquals(1, transactions.size());
+				assertions.countDown();
+			});
+		}).start();
+
+		try {
+			assertions.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 		testContext.completeNow();
 
