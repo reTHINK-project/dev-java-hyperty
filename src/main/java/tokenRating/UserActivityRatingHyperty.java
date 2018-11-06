@@ -105,13 +105,21 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		return unprocessed;
 	}
 
-	int sumSessionsDistance(int start, JsonArray sessions) {
-		int count = start;
+	int sumSessionsDistanceTruncate(String activity, int start, JsonArray sessions) {
+		int totalDistanceMeters = start;
 		for (int i = 0; i < sessions.size(); i++) {
-			count += sessions.getJsonObject(i).getDouble("distance");
+			totalDistanceMeters += sessions.getJsonObject(i).getDouble("distance");
 		}
-		System.out.println(logMessage + "sumSessionsDistance(): " + count);
-		return count;
+		System.out.println(logMessage + "sumSessionsDistance(): " + totalDistanceMeters);
+		switch (activity) {
+		case "user_walking_context":
+			if (totalDistanceMeters > mtWalkPerDay)
+				return mtWalkPerDay;
+		case "user_biking_context":
+			if (totalDistanceMeters > mtBikePerDay)
+				return mtBikePerDay;
+		}
+		return totalDistanceMeters;
 	}
 
 	private static int invalidDistance = -4;
@@ -147,12 +155,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// check if distance is invalid
 		// get total distance (unprocessed sessions)
-		int totalDistance = sumSessionsDistance(currentSessionDistance, unprocessed);
-		boolean validDistance = checkValidDistance(activity, currentSessionDistance);
-		if (!validDistance) {
-
-			return invalidDistance;
-		}
+		int totalDistance = sumSessionsDistanceTruncate(activity, currentSessionDistance, unprocessed);
 
 		if (checkMinDistance(activity, totalDistance)) {
 			processSessions(unprocessed.add(activityMessage), user);
