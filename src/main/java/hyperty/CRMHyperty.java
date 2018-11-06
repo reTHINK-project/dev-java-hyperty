@@ -419,7 +419,7 @@ public class CRMHyperty extends AbstractHyperty {
 	private void forwardPendingTickets(JsonObject agent) {
 		// TODO
 		System.out.println(logMessage + "forwardPendingTickets() for agent " + agent);
-		String address = agent.getString("address");
+		String guid = agent.getString("user");
 //		for (Object entry : pendingTickets) {
 //			JsonObject ticket = (JsonObject) entry;
 //			JsonObject msg = new JsonObject();
@@ -432,6 +432,22 @@ public class CRMHyperty extends AbstractHyperty {
 //				}
 //			});
 //		}
+		
+		JsonObject query = new JsonObject().put("status", "pending");
+		mongoClient.find(ticketsCollection, query, res -> {
+			JsonArray results = new JsonArray(res.result());
+			if (results.size() == 0)
+				return;
+			
+			for (int i = 0; i< res.result().size(); i++) {
+				JsonObject ticket = res.result().get(i);
+				JsonObject message = ticket.getJsonObject("message");
+				System.out.println(logMessage + "forward tickets " + i);
+				send(guid, message, reply ->{});
+			}
+		});
+		
+		
 
 	}
 
@@ -691,6 +707,7 @@ public class CRMHyperty extends AbstractHyperty {
 					new Thread(() -> {
 						send(guid, message, reply -> {
 						});
+						
 //						, reply -> {
 //							System.out.println(
 //									logMessage + "forwardMessage() to address <" + guid + "> reply: " + reply.result());
