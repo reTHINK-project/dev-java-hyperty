@@ -398,7 +398,8 @@ public class CRMHyperty extends AbstractHyperty {
 				JsonObject agent = results.getJsonObject(0);
 				String previousStatus = agent.getString("status");
 
-				if (previousStatus.equals("offline") && nextStatus.equals("online")) {
+				//if (previousStatus.equals("offline") && nextStatus.equals("online")) {
+				if (nextStatus.equals("online")) {
 					changeStatus(nextStatus, agent, query);
 				} else if (previousStatus.equals("online") && nextStatus.equals("offline")) {
 					changeStatus(nextStatus, agent, query);
@@ -485,8 +486,9 @@ public class CRMHyperty extends AbstractHyperty {
 	private void handleNewTicket(JsonObject msg) {
 		JsonObject value = msg.getJsonObject("body").getJsonObject("value");
 		JsonObject ticket = new JsonObject();
+		String url = msg.getString("from").split("/subscription")[0];
 		ticket.put("message", msg);
-		ticket.put("url", msg.getString("from").split("/subscription")[0]);
+		ticket.put("url", url);
 		ticket.put("created", value.getString("created"));
 		ticket.put("lastModified", value.getString("lastModified"));
 		ticket.put("status", ticketNew);
@@ -494,9 +496,14 @@ public class CRMHyperty extends AbstractHyperty {
 				msg.getJsonObject("body").getJsonObject("identity").getJsonObject("userProfile").getString("guid"));
 		System.out.println(logMessage + "handleNewTicket(): " + ticket.toString());
 		// save ticket in DB
-		mongoClient.save(ticketsCollection, ticket, id -> {
-			System.out.println(logMessage + "handleNewTicket(): new ticket " + ticket);
+		mongoClient.find(ticketsCollection, new JsonObject().put("url", url), resultHandler -> {
+			if (resultHandler.result().size() == 0) {
+				mongoClient.save(ticketsCollection, ticket, id -> {
+					System.out.println(logMessage + "handleNewTicket(): new ticket " + ticket);
+				});
+			}
 		});
+
 
 		// forward the message to all agents and add the new ticket to newTickets array.
 		forwardMessage(msg, ticket);
