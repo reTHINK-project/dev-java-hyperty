@@ -37,9 +37,10 @@ class WalletManagerTest {
 	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 	private static String userURL = "user://sharing-cities-dsm/location-identity";
 	private static String reporterFromInvalid = "invalid";
-	private static JsonObject profileInfo = new JsonObject().put("age", 24);
+	private static JsonObject profileInfo = new JsonObject().put("age", 24).put("cause", "user-guid://school-0");
 	private static JsonObject identity = new JsonObject().put("userProfile",
 			new JsonObject().put("userURL", userURL).put("guid", userID).put("info", profileInfo));
+	private static JsonObject identityGUID = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
 	private static JsonObject identityPublicWallets = new JsonObject().put("userProfile",
 			new JsonObject().put("guid", "public-wallets"));
 
@@ -48,7 +49,7 @@ class WalletManagerTest {
 	private static String db_name = "test";
 	private static String walletsCollection = "wallets";
 	private static String iotCollection = "siotdevices";
-	private static String walletAddress;
+	private static String walletAddress = "test-userID";
 	private static String rankingInfoAddress = "data://sharing-cities-dsm/ranking";
 
 	// public wallets
@@ -65,6 +66,8 @@ class WalletManagerTest {
 		config.put("db_name", "test");
 		config.put("collection", walletsCollection);
 		config.put("mongoHost", "localhost");
+		config.put("mongoPorts", "27017");
+		config.put("mongoCluster", "NO");
 		config.put("streams", new JsonObject().put("ranking", rankingInfoAddress));
 
 		// public wallets
@@ -218,17 +221,22 @@ class WalletManagerTest {
 		testContext.completeNow();
 	}
 
+	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";
+
 	@Test
-	void createAndRemoveWallet(VertxTestContext testContext, Vertx vertx) {
+//	@Disabled
+	void createAndTransfer(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("createWallet()");
+
+		// 0 - add handler
+		vertx.eventBus().consumer(publicWalletsOnChangesAddress, message -> {
+			System.out.println("publicWalletsOnChangesAddress" + message.body().toString());
+		});
 
 		// 1 - create wallet (pass cause)
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
-		JsonObject identityWithInfo = identity.copy();
-		JsonObject info = new JsonObject().put("cause", school0ID);
-		identityWithInfo.getJsonObject("userProfile").put("info", info);
-		msg.put("identity", identityWithInfo);
+		msg.put("identity", identity);
 		msg.put("from", "myself");
 		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
 			System.out.println("Received reply from wallet!: " + res.result().body().toString());
@@ -239,37 +247,27 @@ class WalletManagerTest {
 		});
 
 		try {
-			Thread.sleep(3000);
+			Thread.sleep(10000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 
-		// 2 - get wallet address
-		msg = new JsonObject();
-		msg.put("type", "delete");
-		msg.put("identity", identity);
-		msg.put("from", "myself");
-		JsonObject body = new JsonObject();
-		body.put("resource", "wallet");
-		body.put("value", "test-userID");
-		msg.put("body", body);
-		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
-			System.out.println("[WalletManagerTest] delete info: " + res.result().body().toString());
-			JsonObject wallet = (JsonObject) res.result().body();
-			walletAddress = wallet.getString("address");
-		});
+		// 2 - delete wallet
+//		msg = new JsonObject();
+//		msg.put("type", "delete");
+//		msg.put("identity", identity);
+//		msg.put("from", "myself");
+//		JsonObject body = new JsonObject();
+//		body.put("resource", "wallet");
+//		body.put("value", "test-userID");
+//		msg.put("body", body);
+//		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+//			System.out.println("[WalletManagerTest] delete info: " + res.result().body().toString());
+//			JsonObject wallet = (JsonObject) res.result().body();
+//			walletAddress = wallet.getString("address");
+//		});
 
-		// wait for op
-		try {
-			Thread.sleep(5000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-		
-		// TODO - check if removed from DB
-
-		testContext.completeNow();
+		transferToWallet(testContext, vertx);
 
 	}
 
@@ -474,18 +472,17 @@ class WalletManagerTest {
 		});
 	}
 
-	@Test
-	@Disabled
 	void transferToWallet(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
+		System.out.println("transferToWallet() ");
 
 		// create transaction object
 		JsonObject transaction = new JsonObject();
 		transaction.put("address", walletAddress);
 		transaction.put("type", "transfer");
 		transaction.put("recipient", walletAddress);
-		transaction.put("source", "source");
+		transaction.put("source", "checkin");
 		transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 		transaction.put("value", 15);
 		transaction.put("nonce", 1);
@@ -504,7 +501,7 @@ class WalletManagerTest {
 		}
 
 		// get wallet
-		mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
+		mongoClient.find(walletsCollection, new JsonObject().put("identity", identityGUID), res -> {
 			JsonObject walletInfo = res.result().get(0);
 
 			// check balance updated

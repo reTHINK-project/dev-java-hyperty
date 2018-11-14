@@ -476,13 +476,28 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				updateMessage.put("type", "update");
 				updateMessage.put("from", url);
 				updateMessage.put("to", walletAddress + "/changes");
-				JsonObject updateBody = new JsonObject();
-				updateBody.put("balance", walletInfo.getInteger("balance"));
+				JsonArray updateBody = new JsonArray();
+				// balance
+				JsonObject balance = new JsonObject();
+				balance.put("value", walletInfo.getInteger("balance"));
+				balance.put("attribute", "balance");
+				updateBody.add(balance);
+				// transaction
 				JsonArray currentTransactions = walletInfo.getJsonArray("transactions");
-				// send only the new transaction
-				updateBody.put("transactions", currentTransactions.getJsonObject(currentTransactions.size() - 1));
-				updateBody.put("rankings", walletInfo.getInteger("ranking"));
-				updateBody.put("bonus-credit", walletInfo.getInteger("bonus-credit"));
+				JsonObject transactionMsg = new JsonObject();
+				transactionMsg.put("value", currentTransactions.getJsonObject(currentTransactions.size() - 1));
+				transactionMsg.put("attribute", "transaction");
+				updateBody.add(transactionMsg);
+				// ranking
+				JsonObject ranking = new JsonObject();
+				ranking.put("value", walletInfo.getInteger("ranking"));
+				ranking.put("attribute", "rankings");
+				updateBody.add(ranking);
+				// bonus-credit
+				JsonObject bonusCreditMsg = new JsonObject();
+				bonusCreditMsg.put("value", walletInfo.getInteger("bonus-credit"));
+				bonusCreditMsg.put("attribute", "bonus-credit");
+				updateBody.add(bonusCreditMsg);
 				updateMessage.put("body", updateBody);
 
 				// publish transaction in the event bus using the wallet address.
@@ -538,6 +553,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		return walletToReturn;
 	}
 
+	JsonObject updatedWallet;
+
 	private void transferToPublicWallet(String walletAddress, JsonObject transaction) {
 		System.out.println(logMessage + "transferToPublicWallet(): " + walletAddress + "\n" + transaction);
 		String source = transaction.getString("source");
@@ -550,11 +567,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonObject result = res.result().get(0);
 			JsonArray wallets = result.getJsonArray("wallets");
 
-			// create wallets
+			updatedWallet = new JsonObject();
+			// update wallets
 			for (Object pWallet : wallets) {
 				// get wallet with that address
 				JsonObject wallet = (JsonObject) pWallet;
 				if (wallet.getString("address").equals(walletAddress)) {
+					
 					System.out.println(logMessage + "updatePublicWalletBalance(): wallet" + wallet);
 					int currentBalance = wallet.getInteger("balance");
 					if (transactionValue > 0) {
@@ -571,6 +590,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						countersObj.put(source, countersObj.getInteger(source) + transactionValue);
 					}
 
+					updatedWallet = wallet;
 				}
 			}
 
@@ -582,8 +602,20 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				updateMessage.put("type", "update");
 				updateMessage.put("from", url);
 				updateMessage.put("to", walletAddress + "/changes");
-				JsonObject updateBody = new JsonObject();
-				updateBody.put("wallets", wallets);
+				JsonArray updateBody = new JsonArray();
+				JsonObject walletID = new JsonObject();
+				walletID.put("value", updatedWallet.getJsonObject("identity"));
+				walletID.put("attribute", "school-id");
+				updateBody.add(walletID);
+				JsonObject transactions = new JsonObject();
+				transactions.put("value", transaction);
+				transactions.put("attributeType", "array");
+				transactions.put("attribute", "transactions");
+				updateBody.add(transactions);
+				JsonObject value = new JsonObject();
+				value.put("value", updatedWallet.getInteger("balance"));
+				value.put("attribute", "value");
+				updateBody.add(value);
 				updateMessage.put("body", updateBody);
 
 				// publish transaction in the event bus using the wallet address.
