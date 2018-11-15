@@ -25,10 +25,6 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	 */
 	private int tokensPerCorrectAnswer;
 
-	private CountDownLatch getQuizLatch;
-	private CountDownLatch findUserID;
-	private String userIDToReturn = null;
-
 	private String dataSource = "elearning";
 
 	@Override
@@ -135,7 +131,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		System.out.println("Quiz id: " + quizID);
 		
 		// query mongo for quiz info
-		getQuizLatch = new CountDownLatch(1);
+		CountDownLatch getQuizLatch = new CountDownLatch(1);
 		new Thread(() -> {
 			// get shop with that ID
 			mongoClient.find(elearningsCollection, new JsonObject().put("name", quizID), elearningForIdResult -> {
