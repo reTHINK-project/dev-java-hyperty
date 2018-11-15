@@ -89,6 +89,9 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			} else if (numTokens == -4) {
 				transaction.put("description", "invalid-daily-max-exceeded");
 				transaction.put("value", 0);
+			} else if (numTokens == -5) {
+				transaction.put("description", "timeout-error");
+				transaction.put("value", 0);
 			} else {
 				transaction.put("description", "valid");
 			}

@@ -99,7 +99,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	int rate(Object data) {
 
 		// reset latch
-		tokenAmount = -3;
+		tokenAmount = -5;
 		Long currentTimestamp = new Date().getTime();
 
 		// check unprocessed sessions
@@ -133,7 +133,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		String quizID = answer.getString("id");
 		System.out.println("Quiz id: " + quizID);
-
+		
 		// query mongo for quiz info
 		getQuizLatch = new CountDownLatch(1);
 		new Thread(() -> {
