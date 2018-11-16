@@ -425,6 +425,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		final String address_changes = address + "/changes";
 		//System.out.println("waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
+			System.out.println("[Check-In]");
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 3) {

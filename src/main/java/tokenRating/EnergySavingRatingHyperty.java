@@ -269,6 +269,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		final String address_changes = address + "/changes";
 		//System.out.println(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
+			System.out.println("[Energy]");
 			//System.out.println(logMessage + "onChanges(): received message" + message.body());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());

@@ -788,6 +788,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	@Override
 	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
+		System.out.println("[WalletManager] handleCreationRequest");
 		//System.out.println("[WalletManager] handleCreationRequest: " + msg);
 		// send message to Vertx P2P stub and wait for reply
 		message.reply(msg, reply2 -> {

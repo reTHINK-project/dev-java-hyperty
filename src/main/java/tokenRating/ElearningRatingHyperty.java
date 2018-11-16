@@ -183,6 +183,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		final String address_changes = address + "/changes";
 		//System.out.println("waiting for changes to user activity on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
+			System.out.println("[Elearning]");
 			//System.out.println("User activity on changes msg: " + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
