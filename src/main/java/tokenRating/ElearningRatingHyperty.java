@@ -47,7 +47,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Handler for read requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> readHandler() {
@@ -67,7 +67,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Handler for subscription requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> subscriptionHandler() {
@@ -101,7 +101,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		// check unprocessed sessions
 
 		JsonObject message = (JsonObject) data;
-		System.out.println("ELEARNING MESSAGE " + message.toString());
+		//System.out.println("ELEARNING MESSAGE " + message.toString());
 
 		String user = message.getString("guid");
 
@@ -117,26 +117,26 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Get amount of tokens for a Quiz.
-	 * 
+	 *
 	 * @param answer
 	 *            quiz answer object
 	 * @return
 	 */
 	private int getTokensForAnswer(JsonObject answer) {
-		System.out.println("getTokensForAnswer: " + answer);
+		//System.out.println("getTokensForAnswer: " + answer);
 		JsonArray userAnswers = answer.getJsonArray("answers");
 		int tokens = 0;
 
 		String quizID = answer.getString("id");
-		System.out.println("Quiz id: " + quizID);
-		
+		//System.out.println("Quiz id: " + quizID);
+
 		// query mongo for quiz info
 		CountDownLatch getQuizLatch = new CountDownLatch(1);
 		new Thread(() -> {
 			// get shop with that ID
 			mongoClient.find(elearningsCollection, new JsonObject().put("name", quizID), elearningForIdResult -> {
 				JsonObject quizInfo = elearningForIdResult.result().get(0);
-				System.out.println("1 - Received elearning info: " + quizInfo.toString());
+				//System.out.println("1 - Received elearning info: " + quizInfo.toString());
 				// quiz questions
 				JsonArray questions = quizInfo.getJsonArray("questions");
 				boolean isMiniQuiz = quizInfo.getString("type").equals("mini-quiz");
@@ -148,12 +148,12 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		try {
 			getQuizLatch.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch quiz info");
+			//System.out.println("3 - return from latch quiz info");
 			return tokenAmount;
 		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
+			//System.out.println("3 - interrupted exception");
 		}
-		System.out.println("3 - return other");
+		//System.out.println("3 - return other");
 
 		return tokens;
 	}
@@ -163,13 +163,13 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		if (questions.size() != userAnswers.size())
 			return 0;
 		int tokens = 0;
-		if (!isMiniQuiz) 
+		if (!isMiniQuiz)
 			tokens += tokensPerCompletedQuiz;
 		for (int i = 0; i < questions.size(); i++) {
 			JsonObject currentQuestion = questions.getJsonObject(i);
 			int correctAnswer = currentQuestion.getInteger("correctAnswer");
 			int userAnswer = userAnswers.getInteger(i);
-			System.out.println("correctAnswer:" + correctAnswer + "/" + userAnswer);
+			//System.out.println("correctAnswer:" + correctAnswer + "/" + userAnswer);
 			if (userAnswer == correctAnswer)
 				tokens += tokensPerCorrectAnswer;
 		}
@@ -181,18 +181,18 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		System.out.println("waiting for changes to user activity on ->" + address_changes);
+		//System.out.println("waiting for changes to user activity on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			System.out.println("User activity on changes msg: " + message.body().toString());
+			//System.out.println("User activity on changes msg: " + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
-					System.out.println("CHANGES" + data.toString());
+					//System.out.println("CHANGES" + data.toString());
 					JsonObject messageToRate = data.getJsonObject(0);
 					messageToRate.put("guid", getUserURL(address));
 
 					int numTokens = rate(messageToRate);
-					System.out.println("rate tokens: " + numTokens);
+					//System.out.println("rate tokens: " + numTokens);
 					mine(numTokens, messageToRate, "elearning");
 
 				}

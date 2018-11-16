@@ -74,7 +74,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Handler for subscription requests (bonus).
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> subscriptionHandlerBonus() {
@@ -89,7 +89,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Handler for subscription requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> subscriptionHandler() {
@@ -105,7 +105,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Handler for read requests (bonus).
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> readHandlerBonus() {
@@ -115,7 +115,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 			} else {
 				mongoClient.find(bonusCollection, new JsonObject(), res -> {
-					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
+					//System.out.println(res.result().size() + " <-value returned" + res.result().toString());
 
 					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
 							.put("identity", this.identity);
@@ -128,7 +128,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Handler for read requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> readHandler() {
@@ -138,7 +138,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 			} else {
 				mongoClient.find(shopsCollection, new JsonObject(), res -> {
-					System.out.println(res.result().size() + " <-value returned" + res.result().toString());
+					//System.out.println(res.result().size() + " <-value returned" + res.result().toString());
 
 					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
 							.put("identity", this.identity);
@@ -153,7 +153,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	@Override
 	int rate(Object data) {
-		System.out.println("1 - Rating");
+		//System.out.println("1 - Rating");
 		tokenAmount = -1;
 		Long currentTimestamp = new Date().getTime();
 
@@ -163,12 +163,12 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		String bonusID = changesMessage.getString("bonusID");
 		if (bonusID != null) {
 			// COLLECT BONUS
-			System.out.println(logMessage + "COLLECT MESSAGE " + changesMessage.toString());
+			//System.out.println(logMessage + "COLLECT MESSAGE " + changesMessage.toString());
 			checkinLatch = new CountDownLatch(1);
 			new Thread(() -> {
 				// get bonus from DB
 				mongoClient.find(bonusCollection, new JsonObject().put("id", bonusID), bonusForIdResult -> {
-					System.out.println(logMessage + "Received bonus info");
+					//System.out.println(logMessage + "Received bonus info");
 					JsonObject bonusInfo = bonusForIdResult.result().get(0);
 					validatePickUpItem(changesMessage.getString("guid"), bonusInfo, currentTimestamp);
 					checkinLatch.countDown();
@@ -176,17 +176,17 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			}).start();
 		} else {
 			// CHECKIN
-			System.out.println("CHECK IN MESSAGE " + changesMessage.toString());
+			//System.out.println("CHECK IN MESSAGE " + changesMessage.toString());
 			String user = changesMessage.getString("guid");
 			Double userLatitude = changesMessage.getDouble("latitude");
 			Double userLongitude = changesMessage.getDouble("longitude");
 
 			checkinLatch = new CountDownLatch(1);
 			new Thread(() -> {
-				System.out.println("2 - Started thread");
+				//System.out.println("2 - Started thread");
 				// get shop with that ID
 				mongoClient.find(shopsCollection, new JsonObject().put("id", shopID), shopForIdResult -> {
-					System.out.println("2 - Received shop info");
+					//System.out.println("2 - Received shop info");
 					JsonObject shopInfo = shopForIdResult.result().get(0);
 					boolean validPosition = validateUserPosition(user, userLatitude, userLongitude, shopInfo);
 					if (!validPosition) {
@@ -202,12 +202,12 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		try {
 			checkinLatch.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
+			//System.out.println("3 - return from latch");
 			return tokenAmount;
 		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
+			//System.out.println("3 - interrupted exception");
 		}
-		System.out.println("3 - return other");
+		//System.out.println("3 - return other");
 		return tokenAmount;
 
 	}
@@ -228,7 +228,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 				List<JsonObject> rrr = (List<JsonObject>) a.stream() // convert list to stream
 						.filter(element -> shopID.equals(element.getString("id"))).collect(Collectors.toList());
 				if (rrr.size() == 0) {
-					System.out.println("User never went to this shop");
+					//System.out.println("User never went to this shop");
 					persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
 				} else {
 					// order by timestamp
@@ -244,14 +244,14 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					});
 
 					double lastVisitTimestamp = rrr.get(0).getDouble("timestamp");
-					System.out.println("LAST VISIT TIMESTAMP->" + lastVisitTimestamp);
-					System.out.println("Current TIMESTAMP->" + currentTimestamp);
+					//System.out.println("LAST VISIT TIMESTAMP->" + lastVisitTimestamp);
+					//System.out.println("Current TIMESTAMP->" + currentTimestamp);
 					if (lastVisitTimestamp + (min_frequency * 60 * 1 * 1000) <= currentTimestamp) {
-						System.out.println("continue");
+						//System.out.println("continue");
 						persistData(dataSource, user, currentTimestamp, shopID, userRates, null);
 
 					} else {
-						System.out.println("invalid");
+						//System.out.println("invalid");
 						tokenAmount = -1;
 					}
 				}
@@ -262,18 +262,18 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		try {
 			findRates.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
+			//System.out.println("3 - return from latch");
 			return;
 		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
+			//System.out.println("3 - interrupted exception");
 		}
-		System.out.println("3 - return other");
+		//System.out.println("3 - return other");
 		return;
 
 	}
 
 	private void validatePickUpItem(String user, JsonObject bonusInfo, long currentTimestamp) {
-		System.out.println(logMessage + " - validatePickUpItem(): " + bonusInfo.toString());
+		//System.out.println(logMessage + " - validatePickUpItem(): " + bonusInfo.toString());
 
 		findRates = new CountDownLatch(1);
 
@@ -285,7 +285,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 				boolean valid = true;
 				JsonObject userRates = result.result().get(0);
 				JsonArray checkInRates = userRates.getJsonArray(dataSource);
-				System.out.println(logMessage + " - checkInRates: " + checkInRates.toString());
+				//System.out.println(logMessage + " - checkInRates: " + checkInRates.toString());
 				Long start = null;
 				Long expires = null;
 				try {
@@ -301,7 +301,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 						String period = constraints.getString("period");
 						int times = constraints.getInteger("times");
 						JsonArray pickUps = new JsonArray();
-						System.out.println(logMessage + " - validatePickUpItem(): validating constraints");
+						//System.out.println(logMessage + " - validatePickUpItem(): validating constraints");
 						for (int i = 0; i < checkInRates.size(); i++) {
 							JsonObject rate = checkInRates.getJsonObject(i);
 							// check id
@@ -320,8 +320,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 									forThisPeriod.add(rate);
 								}
 							}
-							System.out.println(logMessage + " - forThisPeriod: " + forThisPeriod.size());
-							System.out.println(logMessage + " - times: " + times);
+							//System.out.println(logMessage + " - forThisPeriod: " + forThisPeriod.size());
+							//System.out.println(logMessage + " - times: " + times);
 							if (forThisPeriod.size() == times) {
 								valid = false;
 							}
@@ -345,19 +345,19 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		try {
 			findRates.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
+			//System.out.println("3 - return from latch");
 			return;
 		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
+			//System.out.println("3 - interrupted exception");
 		}
-		System.out.println("3 - return other");
+		//System.out.println("3 - return other");
 		return;
 
 	}
 
 	/**
 	 * Check if user is inside shop boundaries.
-	 * 
+	 *
 	 * @param userLatitude
 	 * @param userLongitude
 	 * @param shopInfo
@@ -370,14 +370,14 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// check if user in range
 		if (getDifferenceBetweenGPSCoordinates(userLatitude, userLongitude, latitude, longitude) <= checkin_radius) {
-			System.out.println("2 - User is close to store");
+			//System.out.println("2 - User is close to store");
 
 			// persist check in
 			// persistData(dataSource, user, new Date().getTime(), shopID);
 			tokenAmount = checkInTokens;
 			return true;
 		} else {
-			System.out.println("2 - User is far from store");
+			//System.out.println("2 - User is far from store");
 			return false;
 		}
 
@@ -385,7 +385,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Get difference (in meters) between two points (in GPS coordinates)
-	 * 
+	 *
 	 * @param userLatitude
 	 * @param userLongitude
 	 * @param shopLatitude
@@ -406,13 +406,13 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 				+ Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
 		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 		double distanceInMeters = earthRadiusKm * c * 1000;
-		System.out.println("Distance: " + distanceInMeters);
+		//System.out.println("Distance: " + distanceInMeters);
 		return distanceInMeters;
 	}
 
 	/**
 	 * Convert degrees to radians.
-	 * 
+	 *
 	 * @param degrees
 	 * @return
 	 */
@@ -423,7 +423,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	@Override
 	public void onChanges(String address) {
 		final String address_changes = address + "/changes";
-		System.out.println("waiting for changes on ->" + address_changes);
+		//System.out.println("waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
@@ -446,19 +446,19 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 						}
 					}
 					changes.put("guid", getUserURL(address));
-					System.out.println("CHANGES" + changes.toString());
+					//System.out.println("CHANGES" + changes.toString());
 
 					int numTokens = rate(changes);
 
 					/*
 					 * if (numTokens == -1) {
-					 * System.out.println("User is not inside any shop or already checkIn"); } else
-					 * { System.out.println("User is close"); mine(numTokens, changes, "checkin"); }
+					 * //System.out.println("User is not inside any shop or already checkIn"); } else
+					 * { //System.out.println("User is close"); mine(numTokens, changes, "checkin"); }
 					 */
 					if (numTokens < 0) {
-						System.out.println("User is not inside any shop or already checkIn");
+						//System.out.println("User is not inside any shop or already checkIn");
 					} else {
-						System.out.println("User is close");
+						//System.out.println("User is close");
 					}
 
 					mine(numTokens, changes, "checkin");
@@ -482,7 +482,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 						}
 					}
 					changes.put("guid", getUserURL(address));
-					System.out.println("CHANGES" + changes.toString());
+					//System.out.println("CHANGES" + changes.toString());
 
 					int pointsToWithdraw = rate(changes);
 					mine(pointsToWithdraw, changes, "bonus");

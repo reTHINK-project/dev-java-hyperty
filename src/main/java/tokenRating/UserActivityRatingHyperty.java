@@ -50,7 +50,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	public void start() {
 		super.start();
 
-		System.out.println(logMessage + "start()");
+		//System.out.println(logMessage + "start()");
 
 		// read config
 		tokensWalkingKm = config().getInteger("tokens_per_walking_km");
@@ -65,7 +65,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Get unprocessed sessions.
-	 * 
+	 *
 	 * @param user
 	 * @param activity
 	 * @return
@@ -101,7 +101,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 			e.printStackTrace();
 		}
 
-		System.out.println(logMessage + "user unprocessed sessions: " + unprocessed.toString());
+		//System.out.println(logMessage + "user unprocessed sessions: " + unprocessed.toString());
 		return unprocessed;
 	}
 
@@ -110,7 +110,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		for (int i = 0; i < sessions.size(); i++) {
 			totalDistanceMeters += sessions.getJsonObject(i).getDouble("distance");
 		}
-		System.out.println(logMessage + "sumSessionsDistance(): " + totalDistanceMeters);
+		//System.out.println(logMessage + "sumSessionsDistance(): " + totalDistanceMeters);
 		switch (activity) {
 		case "user_walking_context":
 			if (totalDistanceMeters > mtWalkPerDay)
@@ -131,7 +131,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		tokenAmount = -3;
 		Long currentTimestamp = new Date().getTime();
 		JsonObject activityMessage = (JsonObject) data;
-		System.out.println(logMessage + " message: " + activityMessage.toString());
+		//System.out.println(logMessage + " message: " + activityMessage.toString());
 		String user = activityMessage.getString("guid");
 		String activity = activityMessage.getString("activity");
 		int currentSessionDistance = activityMessage.getInteger("distance");
@@ -150,7 +150,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		/*
 		 * if ((activity.equals("user_walking_context") ||
 		 * activity.equals("user_biking_context")) && currentSessionDistance < 300) {
-		 * System.out.println(logMessage + "distance < 300!"); return tokenAmount; }
+		 * //System.out.println(logMessage + "distance < 300!"); return tokenAmount; }
 		 */
 
 		// check if distance is invalid
@@ -168,7 +168,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Check if the current session doesn't exceed the max distance.
-	 * 
+	 *
 	 * @param activity
 	 * @param currentSessionDistance
 	 * @return
@@ -187,7 +187,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Turn unprocessed sessions into processed ones.
-	 * 
+	 *
 	 * @param sessionsToProcess
 	 * @param user
 	 */
@@ -212,7 +212,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 				// update only corresponding data source
 				mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
-					System.out.println(logMessage + "processSessions: document with ID " + id + " was updated");
+					//System.out.println(logMessage + "processSessions: document with ID " + id + " was updated");
 					processSessionsLatch.countDown();
 				});
 
@@ -229,13 +229,13 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Get amount of tokens for distance/activity.
-	 * 
+	 *
 	 * @param activity
 	 * @param distance in meters
 	 * @return
 	 */
 	private boolean checkMinDistance(String activity, int distance) {
-		System.out.println(logMessage + "checkMinDistance: " + distance);
+		//System.out.println(logMessage + "checkMinDistance: " + distance);
 		switch (activity) {
 		case "user_walking_context":
 		case "user_biking_context":
@@ -251,7 +251,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Get amount of tokens for distance/activity.
-	 * 
+	 *
 	 * @param activity walking/biking
 	 * @param distance in meters
 	 * @return
@@ -273,7 +273,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		default:
 			break;
 		}
-		System.out.println(logMessage + "getTokensForDistance(): " + activity + "/" + distance + " - " + tokens);
+		//System.out.println(logMessage + "getTokensForDistance(): " + activity + "/" + distance + " - " + tokens);
 		return tokens;
 	}
 
@@ -281,9 +281,9 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		System.out.println("waiting for changes to user activity on ->" + address_changes);
+		//System.out.println("waiting for changes to user activity on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			System.out.println("User activity on changes msg: " + message.body().toString());
+			//System.out.println("User activity on changes msg: " + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
@@ -307,7 +307,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 						}
 					}
 					changes.put("guid", getUserURL(address));
-					System.out.println(logMessage + "changes: " + changes.toString());
+					//System.out.println(logMessage + "changes: " + changes.toString());
 
 					int numTokens = rate(changes);
 					mine(numTokens, changes, "user-activity");

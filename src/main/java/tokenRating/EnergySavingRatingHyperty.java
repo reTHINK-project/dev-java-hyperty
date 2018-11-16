@@ -14,7 +14,7 @@ import walletManager.WalletManagerHyperty;
 /**
  * The Energy Saving Rating Hyperty uses the Smart IoT stub to observe devices
  * energy data consumption and calculate the tokens.
- * 
+ *
  * There are two types of ratings, each one having a different rating engine:
  * public devices (schools) + individual devices (private residences)
  */
@@ -42,7 +42,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		return message -> {
 
-			System.out.println(logMessage + "new message -> " + message.body().toString());
+			//System.out.println(logMessage + "new message -> " + message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
 				final String type = new JsonObject(message.body().toString()).getString("type");
@@ -75,7 +75,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	@Override
 	int rate(Object data) {
 		// reset latch
-		System.out.println(logMessage + "rate(): " + data.toString());
+		//System.out.println(logMessage + "rate(): " + data.toString());
 		Long currentTimestamp = new Date().getTime();
 
 		int tokenAmount = -1;
@@ -109,7 +109,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Rate energy message according to the public algorithm.
-	 * 
+	 *
 	 * @return
 	 */
 	private int applyPublicRating(JsonArray values) {
@@ -118,7 +118,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		new Thread(() -> {
 
-			System.out.println(logMessage + "applyPublicRating(): " + values);
+			//System.out.println(logMessage + "applyPublicRating(): " + values);
 
 			int reductionCausePercentage = -1;
 			biggestReductionIndex = 0;
@@ -144,7 +144,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 					vertx.eventBus().send("wallet-cause-read", msg, res -> {
 						JsonObject reply = (JsonObject) res.result().body();
 						publicWallet = reply.getJsonObject("wallet");
-						System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
+						//System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
 						getPublicWallet.countDown();
 
 					});
@@ -173,7 +173,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			}
 
 			// get tokens won for school with biggest reduction
-			System.out.println(logMessage + "applyPublicRating() school biggest reduction: " + biggestReductionIndex);
+			//System.out.println(logMessage + "applyPublicRating() school biggest reduction: " + biggestReductionIndex);
 
 			// get wallet from wallet manager
 			CountDownLatch readPublicWallet = new CountDownLatch(1);
@@ -191,7 +191,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				vertx.eventBus().send("wallet-cause-read", msg, res -> {
 					JsonObject reply = (JsonObject) res.result().body();
 					publicWallet = reply.getJsonObject("wallet");
-					System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
+					//System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
 					readPublicWallet.countDown();
 				});
 			}).start();
@@ -210,7 +210,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			monthlyPoints /= 10;
 
 			// apply bonus
-			System.out.println(logMessage + "applyPublicRating() bonus: " + monthlyPoints);
+			//System.out.println(logMessage + "applyPublicRating() bonus: " + monthlyPoints);
 
 			JsonObject msg = new JsonObject();
 			msg.put("address", publicWallet.getString("address"));
@@ -243,20 +243,20 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Rate energy message according to the private algorithm.
-	 * 
+	 *
 	 * @return
 	 */
 	private int applyPrivateRating(JsonArray values) {
-		System.out.println(logMessage + "applyPrivateRating(): " + values);
+		//System.out.println(logMessage + "applyPrivateRating(): " + values);
 
 		int reductionUserPercentage = 0;
 
 		final JsonObject valueObject = values.getJsonObject(0);
-		
+
 		final JsonObject dataValueObject = valueObject.getJsonObject("value");
-		
+
 		reductionUserPercentage = dataValueObject.getInteger("value");
-		
+
 
 		int totalReductionPercentage = reductionUserPercentage;
 
@@ -267,9 +267,9 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address, String ratingType) {
 
 		final String address_changes = address + "/changes";
-		System.out.println(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
+		//System.out.println(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			System.out.println(logMessage + "onChanges(): received message" + message.body());
+			//System.out.println(logMessage + "onChanges(): received message" + message.body());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
@@ -279,10 +279,10 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 					changes.put("message", data.getJsonObject(0));
 					changes.put("guid", getUserGuid(address));
 
-					System.out.println(logMessage + "onChanges(): change: " + changes.toString());
+					//System.out.println(logMessage + "onChanges(): change: " + changes.toString());
 
 					int numTokens = rate(changes);
-					System.out.println(logMessage + "rate(): numTokens=" + numTokens);
+					//System.out.println(logMessage + "rate(): numTokens=" + numTokens);
 					if (numTokens > 0) {
 						mine(numTokens, changes, dataSource);
 					}
@@ -293,7 +293,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		});
 
 	}
-	
+
 	public String getUserGuid(String address) {
 
 		CountDownLatch findUserID = new CountDownLatch(1);
@@ -311,23 +311,23 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		try {
 			findUserID.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch");
+			//System.out.println("3 - return from latch");
 			return userIDToReturn;
 		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
+			//System.out.println("3 - interrupted exception");
 		}
-		System.out.println("3 - return other");
+		//System.out.println("3 - return other");
 		return userIDToReturn;
 	}
 
 
 	public void onNotification(JsonObject body, String streamType) {
-		System.out.println("HANDLING" + body.toString());
+		//System.out.println("HANDLING" + body.toString());
 		String from = body.getString("from");
 		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 
 		if (body.containsKey("external") && body.getBoolean("external")) {
-			System.out.println("EXTERNAL INVITE");
+			//System.out.println("EXTERNAL INVITE");
 			String streamID = body.getString("streamID");
 			String objURL = from.split("/subscription")[0];
 			String CheckURL = findDataObjectStream(objURL, guid);
