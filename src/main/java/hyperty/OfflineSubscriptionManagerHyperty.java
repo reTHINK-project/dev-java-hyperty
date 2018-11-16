@@ -47,8 +47,8 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		vertx.eventBus().<JsonObject>consumer(subscriptionHandler, message -> {
 
 			if (mandatoryFieldsValidator(message)) {
-				System.out
-						.println(logMessage + "handleSubscriptionRequests() new message: " + message.body().toString());
+				//System.out
+				//		.println(logMessage + "handleSubscriptionRequests() new message: " + message.body().toString());
 
 				JsonObject msg = new JsonObject(message.body().toString());
 				switch (msg.getString("type")) {
@@ -147,8 +147,8 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 
 			JsonObject query = new JsonObject().put("user", msg.getString("resource"));
 			mongoClient.find(collection, query, res -> {
-				System.out
-						.println(logMessage + "statusUpdate(): cguid associated with msgs: " + res.result().toString());
+				//System.out
+				//		.println(logMessage + "statusUpdate(): cguid associated with msgs: " + res.result().toString());
 				for (Object obj : res.result()) {
 					JsonObject pendingSubscriptionMessage = ((JsonObject) obj).getJsonObject("message");
 					processPendingSubscription(pendingSubscriptionMessage);
@@ -217,14 +217,16 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		// Subscribe message is forwarded to subscribeMsg.to and in case a 200 Ok
 		// response is received it executes the subscribeMsg is removed from
 		// pendingSubscription collection.
-		String forwardAddress = subscribeMsg.getString("to");
-		send(forwardAddress, subscribeMsg, reply -> {
-			JsonObject body = reply.result().body().getJsonObject("body");
-			//System.out.println(logMessage + "processPendingSubscription() reply " + body.toString());
-			if (body.getInteger("code") == 200) {
-				removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
-			}
-		});
+		if (subscribeMsg.containsKey("to")) {
+			String forwardAddress = subscribeMsg.getString("to");
+			send(forwardAddress, subscribeMsg, reply -> {
+				JsonObject body = reply.result().body().getJsonObject("body");
+				//System.out.println(logMessage + "processPendingSubscription() reply " + body.toString());
+				if (body.getInteger("code") == 200) {
+					removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
+				}
+			});
+		}
 	}
 
 	/**
