@@ -1,10 +1,13 @@
 package hyperty;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -206,8 +209,12 @@ public class AbstractHyperty extends AbstractVerticle {
 
 					String streamID = res.result().get(0).getString("url");
 					doStream.complete(streamID);
+					return;
 				}
 			}
+
+			doStream.complete(null);
+
 		});
 
 		return doStream;
@@ -232,9 +239,17 @@ public class AbstractHyperty extends AbstractVerticle {
 			CheckURL.setHandler(asyncResult -> {
 				if (asyncResult.succeeded()) {
 					if (CheckURL == null) {
-						if (persistDataObjUserURL(streamID, guid, objURL, "reporter")) {
-							onChanges(objURL);
-						}
+						Future<Boolean> persisted = persistDataObjUserURL(streamID, guid, objURL, "reporter");
+						persisted.setHandler(res -> {
+							if (res.succeeded()) {
+								if (persisted.result()) {
+									onChanges(objURL);
+								}
+							} else {
+								// oh ! we have a problem...
+							}
+						});
+
 					} else {
 						onChanges(objURL);
 					}
@@ -279,9 +294,23 @@ public class AbstractHyperty extends AbstractVerticle {
 			int code = resultBody.getJsonObject("body").getInteger("code");
 			if (code == 200) {
 				// TODO: associate DataObjectURL to an identity of invite
-				if (checkIfCanHandleData(guid) && persistDataObjUserURL(ObjURL, guid, "observer")) {
-					onChanges(ObjURL);
-				}
+				Future<Boolean> canHandleData = checkIfCanHandleData(guid);
+				Future<Boolean> persisted = persistDataObjUserURL(ObjURL, guid, "observer");
+				List<Future> futures = new ArrayList<>();
+				futures.add(canHandleData);
+				futures.add(persisted);
+				CompositeFuture.all(futures).setHandler(done -> {
+					if (done.succeeded()) {
+						boolean res1 = done.result().resultAt(0);
+						boolean res2 = done.result().resultAt(1);
+						if (res1 && res2) {
+							onChanges(ObjURL);
+						}
+					} else {
+
+					}
+				});
+
 			}
 
 		});
