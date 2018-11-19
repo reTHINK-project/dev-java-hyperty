@@ -69,6 +69,8 @@ class CheckInTest {
 		config.put("collection", ratesCollection);
 		config.put("db_name", db_name);
 		config.put("mongoHost", mongoHost);
+		config.put("mongoPorts", "27017");
+		config.put("mongoCluster", "NO");
 		
 
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(false);
@@ -82,13 +84,15 @@ class CheckInTest {
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
 		configWalletManager.put("rankingTimer", 20000);
+		configWalletManager.put("mongoPorts", "27017");
+		configWalletManager.put("mongoCluster", "NO");
 
 		configWalletManager.put("observers", new JsonArray().add(""));
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
 				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
-			System.out.println("ElearningRatingHyperty Result->" + res.result());
+			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
 
 		makeMongoConnection(vertx);
@@ -185,7 +189,7 @@ class CheckInTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-	//@AfterAll
+	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(4);
@@ -294,7 +298,7 @@ class CheckInTest {
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void userFarFromShop(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - User far from shop");
 		JsonObject checkInMessage = new JsonObject().put("latitude", 40.1).put("longitude", 50);

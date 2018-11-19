@@ -41,7 +41,6 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	private String bonusCollection = "bonus";
 	private String dataSource = "checkin";
 
-
 	@Override
 	public void start() {
 		super.start();
@@ -109,8 +108,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 			} else {
 				mongoClient.find(bonusCollection, new JsonObject(), res -> {
-					// System.out.println(res.result().size() + " <-value returned" +
-					// res.result().toString());
+					// System.out.println(res.result().size() + " <-value returned" + res.result().toString());
 
 					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
 							.put("identity", this.identity);
@@ -133,8 +131,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 			} else {
 				mongoClient.find(shopsCollection, new JsonObject(), res -> {
-					// System.out.println(res.result().size() + " <-value returned" +
-					// res.result().toString());
+					// System.out.println(res.result().size() + " <-value returned" + res.result().toString());
 
 					response.put("data", new InitialData(new JsonArray(res.result().toString())).getJsonObject())
 							.put("identity", this.identity);
@@ -158,8 +155,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		String bonusID = changesMessage.getString("bonusID");
 		if (bonusID != null) {
 			// COLLECT BONUS
-			// System.out.println(logMessage + "COLLECT MESSAGE " +
-			// changesMessage.toString());
+			// System.out.println(logMessage + "COLLECT MESSAGE " + changesMessage.toString());
 
 			// get bonus from DB
 			mongoClient.find(bonusCollection, new JsonObject().put("id", bonusID), bonusForIdResult -> {
@@ -254,8 +250,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	}
 
 	private Future<Integer> validatePickUpItem(String user, JsonObject bonusInfo, long currentTimestamp) {
-		// System.out.println(logMessage + " - validatePickUpItem(): " +
-		// bonusInfo.toString());
+		// System.out.println(logMessage + " - validatePickUpItem(): " + bonusInfo.toString());
 
 		Future<Integer> findRates = Future.future();
 
@@ -266,8 +261,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			boolean valid = true;
 			JsonObject userRates = result.result().get(0);
 			JsonArray checkInRates = userRates.getJsonArray(dataSource);
-			// System.out.println(logMessage + " - checkInRates: " +
-			// checkInRates.toString());
+			// System.out.println(logMessage + " - checkInRates: " + checkInRates.toString());
 			Long start = null;
 			Long expires = null;
 			try {
@@ -283,8 +277,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					String period = constraints.getString("period");
 					int times = constraints.getInteger("times");
 					JsonArray pickUps = new JsonArray();
-					// System.out.println(logMessage + " - validatePickUpItem(): validating
-					// constraints");
+					// System.out.println(logMessage + " - validatePickUpItem(): validating	 constraints");
 					for (int i = 0; i < checkInRates.size(); i++) {
 						JsonObject rate = checkInRates.getJsonObject(i);
 						// check id
@@ -398,7 +391,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 		final String address_changes = address + "/changes";
 		// System.out.println("waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			System.out.println("[Check-In]");
+			// System.out.println("[Check-In]");
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 3) {
@@ -419,28 +412,32 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 							break;
 						}
 					}
-					changes.put("guid", getUserURL(address));
-					// System.out.println("CHANGES" + changes.toString());
+					Future<String> userURL = getUserURL(address);
+					userURL.setHandler(asyncResult -> {
+						// // System.out.println("URL " + userURL.result());
+						changes.put("guid", userURL.result());
+						// System.out.println("CHANGES" + changes.toString());
 
-					Future<Integer> numTokens = rate(changes);
-					numTokens.setHandler(asyncResult -> {
-						if (asyncResult.succeeded()) {
-							/*
-							 * if (numTokens == -1) {
-							 * //System.out.println("User is not inside any shop or already checkIn"); }
-							 * else { //System.out.println("User is close"); mine(numTokens, changes,
-							 * "checkin"); }
-							 */
-							if (numTokens.result() < 0) {
-								// System.out.println("User is not inside any shop or already checkIn");
+						Future<Integer> numTokens = rate(changes);
+						numTokens.setHandler(res -> {
+							if (res.succeeded()) {
+								/*
+								 * if (numTokens == -1) {
+								 * //// System.out.println("User is not inside any shop or already checkIn"); }
+								 * else { //// System.out.println("User is close"); mine(numTokens, changes,
+								 * "checkin"); }
+								 */
+								if (numTokens.result() < 0) {
+									// System.out.println("User is not inside any shop or already checkIn");
+								} else {
+									// System.out.println("User is close");
+								}
+
+								mine(res.result(), changes, "checkin");
 							} else {
-								// System.out.println("User is close");
+								// oh ! we have a problem...
 							}
-
-							mine(asyncResult.result(), changes, "checkin");
-						} else {
-							// oh ! we have a problem...
-						}
+						});
 					});
 
 				}
