@@ -51,7 +51,7 @@ class RegistryTest {
 		
 		
 		
-		DeploymentOptions optRegistry = new DeploymentOptions().setConfig(config).setWorker(true);
+		DeploymentOptions optRegistry = new DeploymentOptions().setConfig(config).setWorker(false);
 
 		Checkpoint checkpoint = context.checkpoint();
 		

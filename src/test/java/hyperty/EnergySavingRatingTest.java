@@ -73,7 +73,7 @@ class EnergySavingRatingTest {
 		config.put("db_name", db_name);
 		config.put("mongoHost", mongoHost);
 
-		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
+		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsLocation, context.succeeding());
 
@@ -106,7 +106,7 @@ class EnergySavingRatingTest {
 		configWalletManager.put("causes", new JsonArray().add(causeAddress));
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});

@@ -70,7 +70,7 @@ class ElearningTest {
 		configElearning.put("streams", new JsonObject().put("elearning", quizzesInfoAddress));
 		configElearning.put("hyperty", "123");
 		configElearning.put("stream", streamAddress);
-		DeploymentOptions optionsElearning = new DeploymentOptions().setConfig(configElearning).setWorker(true);
+		DeploymentOptions optionsElearning = new DeploymentOptions().setConfig(configElearning).setWorker(false);
 
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(ElearningRatingHyperty.class.getName(), optionsElearning, context.succeeding());
@@ -127,7 +127,7 @@ class ElearningTest {
 		configWalletManager.put("rankingTimer", 2000);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});

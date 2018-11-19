@@ -111,7 +111,7 @@ class CRMTest {
 		config.put("checkTicketsTimer", 2000);
 
 		// deploy
-		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(true);
+		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(CRMHyperty.class.getName(), options, context.succeeding());
 

@@ -204,7 +204,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("CRMHypertyStatus", crmStatus);
 		configRegistry.put("offlineSMStatus", offlineSMStatus);
 
-		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);
+		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(false);
 		vertx.deployVerticle(RegistryHyperty.class.getName(), optionsRegistry, res -> {
 			System.out.println("Registry Result->" + res.result());
 		});
@@ -221,7 +221,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configOfflineSubMgr.put("mongoCluster", mongoCluster);
 		configOfflineSubMgr.put("mongoPorts", mongoPorts);
 
-		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr).setWorker(true);
+		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr).setWorker(false);
 		vertx.deployVerticle(OfflineSubscriptionManagerHyperty.class.getName(), optionsOfflineSubMgr, res -> {
 			System.out.println("OfflineSubscriptionManager Result->" + res.result());
 		});
@@ -250,7 +250,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCRM.put("agents", agents);
 		configCRM.put("checkTicketsTimer", 2000);
 
-		DeploymentOptions optionsCRM = new DeploymentOptions().setConfig(configCRM).setWorker(true);
+		DeploymentOptions optionsCRM = new DeploymentOptions().setConfig(configCRM).setWorker(false);
 		vertx.deployVerticle(CRMHyperty.class.getName(), optionsCRM, res -> {
 			System.out.println("Registry Result->" + res.result());
 		});
@@ -275,7 +275,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops").put("bonus",
 				"data://sharing-cities-dsm/bonus"));
 
-		DeploymentOptions optionsCheckIN = new DeploymentOptions().setConfig(configCheckIN).setWorker(true);
+		DeploymentOptions optionsCheckIN = new DeploymentOptions().setConfig(configCheckIN).setWorker(false);
 		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), optionsCheckIN, res -> {
 			System.out.println("CheckInRatingHyperty Result->" + res.result());
 		});
@@ -300,7 +300,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", "vertx://sharing-cities-dsm/user-activity");
 
-		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(true);
+		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(false);
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, res -> {
 			System.out.println("UserActivityRatingHyperty Result->" + res.result());
 		});
@@ -322,7 +322,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configElearning.put("streams", new JsonObject().put("elearning", "data://sharing-cities-dsm/elearning"));
 		configElearning.put("hyperty", "123");
 		configElearning.put("stream", streamAddress);
-		DeploymentOptions optionsElearning = new DeploymentOptions().setConfig(configElearning).setWorker(true);
+		DeploymentOptions optionsElearning = new DeploymentOptions().setConfig(configElearning).setWorker(false);
 		vertx.deployVerticle(ElearningRatingHyperty.class.getName(), optionsElearning, res -> {
 			System.out.println("ElearningRatingHyperty Result->" + res.result());
 		});
@@ -340,7 +340,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configEnergySaving.put("mongoHost", mongoHosts);
 		configEnergySaving.put("mongoPorts", mongoPorts);
 		configEnergySaving.put("mongoCluster", mongoCluster);
-		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(true);
+		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(false);
 		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsEnergy, res -> {
 			System.out.println("EnergySavingRatingHyperty Result->" + res.result());
 		});
@@ -396,7 +396,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("publicWallets", publicWallets);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
@@ -414,7 +414,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configSmartIotStub.put("point_of_contact", pointOfContact);
 
 		DeploymentOptions optionsconfigSmartIotStub = new DeploymentOptions().setConfig(configSmartIotStub)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(SmartIotProtostub.class.getName(), optionsconfigSmartIotStub, res -> {
 			System.out.println("SmartIOTProtustub Result->" + res.result());
 		});

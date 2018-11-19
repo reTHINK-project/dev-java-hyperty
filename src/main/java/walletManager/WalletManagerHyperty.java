@@ -160,38 +160,38 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					messageDevice.put("body", bodyDevice);
 
 					Future<Integer> codeDevice = smartIOTIntegration(messageDevice, this.siotStubUrl);
-					numTokens.setHandler(asyncResult -> {
+					codeDevice.setHandler(res -> {
 						if (asyncResult.succeeded()) {
-							mine(numTokens.result(), messageToRate, "elearning");
+							// System.out.println("WalletManager result code " + codeDevice);
+							if (codeDevice.result() == 200) {
+								for (int i = 0; i < externalFeeds.size(); i++) {
+									JsonObject feed = externalFeeds.getJsonObject(i);
+									String platformID = feed.getString("platformID");
+									String platformUID = feed.getString("platformUID");
+
+									// System.out.println("WalletManager - create new Stream");
+									JsonObject messageStream = new JsonObject();
+
+									messageStream.put("identity", walletIdentity);
+									messageStream.put("from", this.url);
+									messageStream.put("type", "create");
+									messageStream.put("to", this.siotStubUrl);
+
+									JsonObject body = new JsonObject().put("resource", "stream")
+											.put("name", "device Name").put("description", "device description")
+											.put("platformID", platformID).put("platformUID", platformUID)
+											.put("ratingType", "public");
+									messageStream.put("body", body);
+
+									Future<Integer> codeStream = smartIOTIntegration(messageStream, this.siotStubUrl);
+									// System.out.println("WalletManager result code " + codeStream);
+
+								}
+							}
 						} else {
 							// oh ! we have a problem...
 						}
 					});
-					// System.out.println("WalletManager result code " + codeDevice);
-					if (codeDevice == 200) {
-						for (int i = 0; i < externalFeeds.size(); i++) {
-							JsonObject feed = externalFeeds.getJsonObject(i);
-							String platformID = feed.getString("platformID");
-							String platformUID = feed.getString("platformUID");
-
-							// System.out.println("WalletManager - create new Stream");
-							JsonObject messageStream = new JsonObject();
-
-							messageStream.put("identity", walletIdentity);
-							messageStream.put("from", this.url);
-							messageStream.put("type", "create");
-							messageStream.put("to", this.siotStubUrl);
-
-							JsonObject body = new JsonObject().put("resource", "stream").put("name", "device Name")
-									.put("description", "device description").put("platformID", platformID)
-									.put("platformUID", platformUID).put("ratingType", "public");
-							messageStream.put("body", body);
-
-							int codeStream = smartIOTIntegration(messageStream, this.siotStubUrl);
-							// System.out.println("WalletManager result code " + codeStream);
-
-						}
-					}
 
 					JsonObject newWallet = new JsonObject();
 					newWallet.put("address", address);
@@ -236,7 +236,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private Future<Integer> smartIOTIntegration(JsonObject message, String siotUrl) {
 
 		Future<Integer> createDevice = Future.future();
-		final int code[] = new int[1];
 
 		send(siotUrl, message, reply -> {
 			// System.out.println("REP: " + reply.result().body().toString());
@@ -862,32 +861,33 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						String roleCode = profileInfo.getString("code");
 						if (roleCode != null) {
 							// System.out.println(logMessage + "resolving role for code " + roleCode);
-							CountDownLatch validateCause = new CountDownLatch(1);
+							Future<Integer> validateCause = Future.future();
 
-							new Thread(() -> {
-								JsonObject validationMessage = new JsonObject();
-								validationMessage.put("from", url);
-								validationMessage.put("identity", identity);
-								validationMessage.put("type", "forward");
-								validationMessage.put("code", roleCode);
-								// TODO - replace with publish
-								send("resolve-role", validationMessage, reply -> {
-									// System.out.println(
-									// logMessage + "role validation result: " + reply.result().body().toString());
-									String role = new JsonObject(reply.result().body().toString()).getString("role");
-									response.put("role", role);
-									validateCause.countDown();
-								});
-							}).start();
+							JsonObject validationMessage = new JsonObject();
+							validationMessage.put("from", url);
+							validationMessage.put("identity", identity);
+							validationMessage.put("type", "forward");
+							validationMessage.put("code", roleCode);
+							// TODO - replace with publish
+							send("resolve-role", validationMessage, reply -> {
+								// System.out.println(
+								// logMessage + "role validation result: " + reply.result().body().toString());
+								String role = new JsonObject(reply.result().body().toString()).getString("role");
+								response.put("role", role);
+								validateCause.complete();
+							});
 
-							try {
-								validateCause.await();
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}
+							validateCause.setHandler(asyncResult -> {
+								if (asyncResult.succeeded()) {
+									reply2.result().reply(response);
+								} else {
+									// oh ! we have a problem...
+								}
+							});
+
 						}
 
-						reply2.result().reply(response);
+						result.complete();
 
 					} else {
 						// System.out.println("[WalletManager] wallet already exists...");
@@ -908,64 +908,63 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							break;
 						}
 						reply2.result().reply(response);
+						result.complete();
 
 					}
 				});
 			}
 		});
 
-	}
+		return result;
 
-	String causeAddress = "";
+	}
 
 	private void getCauseSupporters(String causeID, Message<Object> message) {
 
 		// get address for wallet with that cause
-		CountDownLatch findCauseAddress = new CountDownLatch(1);
+		Future<String> causeAddress = Future.future();
 
 		new Thread(() -> {
 			mongoClient.find(walletsCollection, new JsonObject().put("identity",
 					new JsonObject().put("userProfile", new JsonObject().put("guid", causeID))), res -> {
 						JsonObject causeWallet = res.result().get(0);
-						causeAddress = causeWallet.getString("address");
-						findCauseAddress.countDown();
+						causeAddress.complete(causeWallet.getString("address"));
 						return;
 					});
 		}).start();
+		causeAddress.setHandler(asyncResult -> {
+			if (asyncResult.succeeded()) {
+				Future<Void> findSupporters = Future.future();
+				int[] causeSuporters = new int[2];
 
-		try {
-			findCauseAddress.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+				// cause supporters
+				mongoClient.find(walletsCollection, new JsonObject().put(causeWalletAddress, causeAddress.result()),
+						res -> {
+							causeSuporters[0] = res.result().size();
+							for (JsonObject object : res.result()) {
+								JsonObject profile = object.getJsonObject("profile");
+								if (profile.containsKey(smartMeterEnabled))
+									causeSuporters[1]++;
+							}
+							findSupporters.complete();
+						});
 
-		CountDownLatch findSupporters = new CountDownLatch(1);
-		int[] causeSuporters = new int[2];
+				findSupporters.setHandler(res -> {
+					if (res.succeeded()) {
+						JsonObject reply = new JsonObject();
+						reply.put(causeSupportersTotal, causeSuporters[0]);
+						reply.put(causeSupportersWithSM, causeSuporters[1]);
+						message.reply(reply);
+					} else {
+						// oh ! we have a problem...
+					}
+				});
 
-		new Thread(() -> {
-			// cause supporters
-			mongoClient.find(walletsCollection, new JsonObject().put(causeWalletAddress, causeAddress), res -> {
-				causeSuporters[0] = res.result().size();
-				for (JsonObject object : res.result()) {
-					JsonObject profile = object.getJsonObject("profile");
-					if (profile.containsKey(smartMeterEnabled))
-						causeSuporters[1]++;
+			} else {
+				// oh ! we have a problem...
+			}
+		});
 
-				}
-				findSupporters.countDown();
-			});
-		}).start();
-
-		try {
-			findSupporters.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-		JsonObject reply = new JsonObject();
-		reply.put(causeSupportersTotal, causeSuporters[0]);
-		reply.put(causeSupportersWithSM, causeSuporters[1]);
-		message.reply(reply);
 	}
 
 	private String getPublicWalletAddress(String causeID) {

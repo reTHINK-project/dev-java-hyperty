@@ -89,7 +89,7 @@ class ChatTest {
 		configCRM.put("agents", agents);
 
 		// deploy
-		DeploymentOptions options = new DeploymentOptions().setConfig(configCRM).setWorker(true);
+		DeploymentOptions options = new DeploymentOptions().setConfig(configCRM).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(CRMHyperty.class.getName(), options, context.succeeding());
 
@@ -105,7 +105,7 @@ class ChatTest {
 		configRegistry.put("checkStatusTimer", 20000);
 		configRegistry.put("CRMHypertyStatus", crmHypertyURLStatus);
 		configRegistry.put("offlineSMStatus", offlineSubMgrStatusHypertyURL);
-		DeploymentOptions optRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);
+		DeploymentOptions optRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(false);
 		vertx.deployVerticle(RegistryHyperty.class.getName(), optRegistry, context.succeeding());
 
 		/*
@@ -121,7 +121,7 @@ class ChatTest {
 		configOfflineSubMgr.put("registry", registryURL);
 
 		// deploy
-		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr).setWorker(true);
+		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr).setWorker(false);
 		vertx.deployVerticle(OfflineSubscriptionManagerHyperty.class.getName(), optionsOfflineSubMgr,
 				context.succeeding());
 

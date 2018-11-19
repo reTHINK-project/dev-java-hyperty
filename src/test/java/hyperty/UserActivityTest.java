@@ -72,7 +72,7 @@ class UserActivityTest {
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", streamAddress);
-		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(true);
+		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(false);
 
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, context.succeeding());
@@ -124,7 +124,7 @@ class UserActivityTest {
 		configWalletManager.put("publicWallets", publicWallets);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});

@@ -111,7 +111,7 @@ class WalletManagerTest {
 		config.put("rankingTimer", 2000);
 
 		// deploy
-		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(true);
+		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), options, context.succeeding());
 
@@ -126,7 +126,7 @@ class WalletManagerTest {
 		configSmartIotStub.put("point_of_contact", pointOfContact);
 
 		DeploymentOptions optionsconfigSmartIotStub = new DeploymentOptions().setConfig(configSmartIotStub)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(SmartIotProtostub.class.getName(), optionsconfigSmartIotStub, res -> {
 			System.out.println("SmartIOTProtustub Result->" + res.result());
 		});
