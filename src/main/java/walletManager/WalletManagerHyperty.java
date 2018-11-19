@@ -300,7 +300,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					JsonObject query = new JsonObject();
 					query.put("identity", wallet.getJsonObject("identity"));
 					mongoClient.findOneAndReplace(collection, query, wallet, id -> {
-						//System.out.println(logMessage + "generateRankings() document updated: " + wallet);
+//						System.out.println(logMessage + "generateRankings() document updated: " + wallet);
 					});
 
 					// publish transaction in the event bus using the wallet address.
@@ -394,10 +394,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		//System.out.println(logMessage + "removing wallet for address " + walletAddress);
 
 		JsonObject query = new JsonObject();
-		query.put("address", walletAddress);
+//		query.put("address", walletAddress);
 
 		mongoClient.removeDocument(walletsCollection, query, res -> {
-			//System.out.println("Wallet removed from DB");
+			System.out.println("Wallets removed from DB");
 		});
 
 	}
@@ -408,7 +408,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		JsonObject query = new JsonObject().put("identity", wallet.getString("identity"));
 		mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
-			//System.out.println("Document with ID:" + id + " was updated");
+//			System.out.println("Document with ID:" + id + " was updated");
 		});
 	}
 
@@ -791,6 +791,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		System.out.println("[WalletManager] handleCreationRequest");
 		//System.out.println("[WalletManager] handleCreationRequest: " + msg);
 		// send message to Vertx P2P stub and wait for reply
+		
+		
+		
+		
 		message.reply(msg, reply2 -> {
 
 			//System.out.println("Reply from P2P stub " + reply2.result().body().toString());
@@ -801,6 +805,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// check if 200
 			int code = rep.getJsonObject("body").getInteger("code");
 			if (code == 200) {
+				
 				JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid",
 						msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid")));
 

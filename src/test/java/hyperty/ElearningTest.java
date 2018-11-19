@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -60,6 +61,8 @@ class ElearningTest {
 		configElearning.put("db_name", "test");
 		configElearning.put("collection", ratesCollection);
 		configElearning.put("mongoHost", mongoHost);
+		configElearning.put("mongoPorts", "27017");
+		configElearning.put("mongoCluster", "NO");
 
 		configElearning.put("tokens_per_completed_quiz", 10);
 		configElearning.put("tokens_per_correct_answer", 10);
@@ -78,13 +81,55 @@ class ElearningTest {
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
+		configWalletManager.put("mongoPorts", "27017");
+		configWalletManager.put("mongoCluster", "NO");
 
 		configWalletManager.put("observers", new JsonArray().add(""));
+
+		// public wallets
+		String wallet0Address = "school0-wallet";
+		String wallet1Address = "school1-wallet";
+		String wallet2Address = "school2-wallet";
+		String school0ID = "user-guid://school-0";
+		String school1ID = "user-guid://school-1";
+		String school2ID = "user-guid://school-2";
+		JsonObject feed0 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet0userID");
+		JsonObject feed1 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet1userID");
+		JsonObject feed2 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet2userID");
+
+		// publicWallets
+		JsonArray publicWallets = new JsonArray();
+		JsonObject walletCause0 = new JsonObject();
+		walletCause0.put("address", wallet0Address);
+		walletCause0.put("identity", school0ID);
+		walletCause0.put("externalFeeds", new JsonArray().add(feed0));
+		publicWallets.add(walletCause0);
+
+		JsonObject walletCause1 = new JsonObject();
+		walletCause1.put("address", wallet1Address);
+		walletCause1.put("identity", school1ID);
+		walletCause1.put("externalFeeds", new JsonArray().add(feed1));
+		publicWallets.add(walletCause1);
+
+		JsonObject walletCause2 = new JsonObject();
+		walletCause2.put("address", wallet2Address);
+		walletCause2.put("identity", school2ID);
+		walletCause2.put("externalFeeds", new JsonArray().add(feed2));
+		publicWallets.add(walletCause2);
+
+		configWalletManager.put("publicWallets", publicWallets);
+//		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
+
+		// pass observers
+		JsonArray observers = new JsonArray();
+		observers.add("");
+		configWalletManager.put("observers", observers);
+		configWalletManager.put("rankingTimer", 2000);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
 				.setWorker(true);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
-			System.out.println("ElearningRatingHyperty Result->" + res.result());
+			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
 
 		makeMongoConnection(vertx);
@@ -132,6 +177,7 @@ class ElearningTest {
 			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			newWallet.put("created", new Date().getTime());
 			newWallet.put("balance", 0);
+			newWallet.put("bonus-credit", 0);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
 
@@ -202,7 +248,34 @@ class ElearningTest {
 
 	}
 
+	public Future<Integer> futureMethod() {
+		Future<Integer> future = Future.future();
+
+		JsonObject query = new JsonObject();
+		mongoClient.find("elearnings", query, result -> {
+			future.complete(result.result().size());
+		});
+
+		return future;
+	}
+
 	@Test
+	void testFutures(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("TEST -  futures");
+		Future<Integer> numQuizzes = futureMethod();
+		numQuizzes.setHandler(asyncResult -> {
+			if (asyncResult.succeeded()) {
+				System.out.println("n quizzes: " + numQuizzes.result());
+			} else {
+				// oh ! we have a problem...
+			}
+			testContext.completeNow();
+		});
+
+	}
+
+	@Test
+	@Disabled
 	void correctQuizz(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - correct quizz");
 		JsonObject message = new JsonObject();
@@ -239,6 +312,7 @@ class ElearningTest {
 	}
 
 	@Test
+	@Disabled
 	void getQuizzesInfo(VertxTestContext testContext, Vertx vertx) {
 
 		JsonObject config = new JsonObject().put("type", "read");

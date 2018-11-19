@@ -233,18 +233,27 @@ class WalletManagerTest {
 			System.out.println("publicWalletsOnChangesAddress" + message.body().toString());
 		});
 
+		int numWallets = 1;
+
 		// 1 - create wallet (pass cause)
-		JsonObject msg = new JsonObject();
-		msg.put("type", "create");
-		msg.put("identity", identity);
-		msg.put("from", "myself");
-		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
-			System.out.println("Received reply from wallet!: " + res.result().body().toString());
-			JsonObject newMsg = new JsonObject();
-			JsonObject body = new JsonObject().put("code", 200);
-			newMsg.put("body", body);
-			res.result().reply(newMsg);
-		});
+		for (int i = 0; i < numWallets; i++) {
+			JsonObject msg = new JsonObject();
+			// create identity
+			String userID = "user-guid://" + i;
+			String userURL = "user://sharing-cities-dsm/" + i;
+			JsonObject identityNow = new JsonObject().put("userProfile",
+					new JsonObject().put("userURL", userURL).put("guid", userID).put("info", profileInfo));
+			msg.put("type", "create");
+			msg.put("identity", identityNow);
+			msg.put("from", "myself");
+			vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+				System.out.println("Received reply from wallet!: " + res.result().body().toString());
+				JsonObject newMsg = new JsonObject();
+				JsonObject body = new JsonObject().put("code", 200);
+				newMsg.put("body", body);
+				res.result().reply(newMsg);
+			});
+		}
 
 		try {
 			Thread.sleep(10000);
@@ -267,7 +276,12 @@ class WalletManagerTest {
 //			walletAddress = wallet.getString("address");
 //		});
 
-		transferToWallet(testContext, vertx);
+//		transferToWallet(testContext, vertx);
+
+		mongoClient.find(walletsCollection, new JsonObject(), res -> {
+			assertEquals(numWallets+1, res.result().size());
+			testContext.completeNow();
+		});
 
 	}
 
