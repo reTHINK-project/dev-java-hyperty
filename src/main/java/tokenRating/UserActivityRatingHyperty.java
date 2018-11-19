@@ -1,9 +1,8 @@
 package tokenRating;
 
 import java.util.Date;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -42,15 +41,13 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	 */
 	private int mtBikePerDay;
 
-	private CountDownLatch checkinLatch;
-
 	private String dataSource = "user-activity";
 
 	@Override
 	public void start() {
 		super.start();
 
-		//System.out.println(logMessage + "start()");
+		// System.out.println(logMessage + "start()");
 
 		// read config
 		tokensWalkingKm = config().getInteger("tokens_per_walking_km");
@@ -61,8 +58,6 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		mtBikePerDay = config().getInteger("mtBikePerDay");
 	}
 
-	int tokenAmount;
-
 	/**
 	 * Get unprocessed sessions.
 	 *
@@ -70,39 +65,31 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @param activity
 	 * @return
 	 */
-	JsonArray getUnprocessedSessions(String user, String activity) {
+	Future<JsonArray> getUnprocessedSessions(String user, String activity) {
 
-		CountDownLatch setupLatch = new CountDownLatch(1);
+		Future<JsonArray> resultFuture = Future.future();
 
 		JsonArray unprocessed = new JsonArray();
 
-		new Thread(() -> {
-			JsonObject query = new JsonObject().put("user", user);
-			mongoClient.find(collection, query, result -> {
-				JsonObject currentDocument = result.result().get(0);
-				JsonArray sessions = currentDocument.getJsonArray(dataSource);
+		JsonObject query = new JsonObject().put("user", user);
+		mongoClient.find(collection, query, result -> {
+			JsonObject currentDocument = result.result().get(0);
+			JsonArray sessions = currentDocument.getJsonArray(dataSource);
 
-				// filter unprocessed sessions
-				for (int i = 0; i < sessions.size(); i++) {
-					JsonObject currentSession = sessions.getJsonObject(i);
-					if (!currentSession.getBoolean("processed")
-							&& currentSession.getString("activity").equals(activity)) {
-						unprocessed.add(currentSession);
-					}
+			// filter unprocessed sessions
+			for (int i = 0; i < sessions.size(); i++) {
+				JsonObject currentSession = sessions.getJsonObject(i);
+				if (!currentSession.getBoolean("processed") && currentSession.getString("activity").equals(activity)) {
+					unprocessed.add(currentSession);
 				}
-				setupLatch.countDown();
+			}
+			resultFuture.complete(unprocessed);
 
-			});
-		}).start();
+		});
 
-		try {
-			setupLatch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-		//System.out.println(logMessage + "user unprocessed sessions: " + unprocessed.toString());
-		return unprocessed;
+		// System.out.println(logMessage + "user unprocessed sessions: " +
+		// unprocessed.toString());
+		return resultFuture;
 	}
 
 	int sumSessionsDistanceTruncate(String activity, int start, JsonArray sessions) {
@@ -110,7 +97,8 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		for (int i = 0; i < sessions.size(); i++) {
 			totalDistanceMeters += sessions.getJsonObject(i).getDouble("distance");
 		}
-		//System.out.println(logMessage + "sumSessionsDistance(): " + totalDistanceMeters);
+		// System.out.println(logMessage + "sumSessionsDistance(): " +
+		// totalDistanceMeters);
 		switch (activity) {
 		case "user_walking_context":
 			if (totalDistanceMeters > mtWalkPerDay)
@@ -122,47 +110,55 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		return totalDistanceMeters;
 	}
 
-	private static int invalidDistance = -4;
 
 	@Override
-	int rate(Object data) {
+	Future<Integer> rate(Object data) {
 
 		// invalid-short-distance
-		tokenAmount = -3;
+		int tokenAmount = -3;
 		Long currentTimestamp = new Date().getTime();
 		JsonObject activityMessage = (JsonObject) data;
-		//System.out.println(logMessage + " message: " + activityMessage.toString());
+		// System.out.println(logMessage + " message: " + activityMessage.toString());
 		String user = activityMessage.getString("guid");
 		String activity = activityMessage.getString("activity");
 		int currentSessionDistance = activityMessage.getInteger("distance");
-		JsonArray unprocessed = getUnprocessedSessions(user, activity);
 
-		// persist in MongoDB
-		activityMessage.remove("type");
-		activityMessage.remove("from");
-		activityMessage.remove("identity");
-		activityMessage.put("processed", false);
-		// min distance according to activity
-		if (checkMinDistance(activity, currentSessionDistance)) {
-			activityMessage.put("processed", true);
-		}
-		persistData(dataSource, user, currentTimestamp, "1", null, activityMessage);
-		/*
-		 * if ((activity.equals("user_walking_context") ||
-		 * activity.equals("user_biking_context")) && currentSessionDistance < 300) {
-		 * //System.out.println(logMessage + "distance < 300!"); return tokenAmount; }
-		 */
+		Future<Integer> result = Future.future();
+		Future<JsonArray> unprocessed = getUnprocessedSessions(user, activity);
+		unprocessed.setHandler(asyncResult -> {
+			if (asyncResult.succeeded()) {
+				// persist in MongoDB
+				activityMessage.remove("type");
+				activityMessage.remove("from");
+				activityMessage.remove("identity");
+				activityMessage.put("processed", false);
+				// min distance according to activity
+				if (checkMinDistance(activity, currentSessionDistance)) {
+					activityMessage.put("processed", true);
+				}
+				persistData(dataSource, user, currentTimestamp, "1", null, activityMessage);
+				/*
+				 * if ((activity.equals("user_walking_context") ||
+				 * activity.equals("user_biking_context")) && currentSessionDistance < 300) {
+				 * //System.out.println(logMessage + "distance < 300!"); return tokenAmount; }
+				 */
 
-		// check if distance is invalid
-		// get total distance (unprocessed sessions)
-		int totalDistance = sumSessionsDistanceTruncate(activity, currentSessionDistance, unprocessed);
+				// check if distance is invalid
+				// get total distance (unprocessed sessions)
+				int totalDistance = sumSessionsDistanceTruncate(activity, currentSessionDistance, asyncResult.result());
 
-		if (checkMinDistance(activity, totalDistance)) {
-			processSessions(unprocessed.add(activityMessage), user);
-			return getTokensForDistance(activity, totalDistance);
-		} else {
-			return tokenAmount;
-		}
+				if (checkMinDistance(activity, totalDistance)) {
+					processSessions(asyncResult.result().add(activityMessage), user);
+					result.complete(getTokensForDistance(activity, totalDistance));
+				} else {
+					result.complete(tokenAmount);
+				}
+			} else {
+				// oh ! we have a problem...
+			}
+		});
+
+		return result;
 
 	}
 
@@ -191,39 +187,33 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @param sessionsToProcess
 	 * @param user
 	 */
-	private void processSessions(JsonArray sessionsToProcess, String user) {
+	private Future<Void> processSessions(JsonArray sessionsToProcess, String user) {
 
-		CountDownLatch processSessionsLatch = new CountDownLatch(1);
+		Future<Void> resultFuture = Future.future();
 
-		new Thread(() -> {
+		JsonObject query = new JsonObject().put("user", user);
+		mongoClient.find(collection, query, result -> {
+			JsonObject currentDocument = result.result().get(0);
+			JsonArray sessions = currentDocument.getJsonArray(dataSource);
 
-			JsonObject query = new JsonObject().put("user", user);
-			mongoClient.find(collection, query, result -> {
-				JsonObject currentDocument = result.result().get(0);
-				JsonArray sessions = currentDocument.getJsonArray(dataSource);
-
-				// filter unprocessed sessions
-				for (int i = 0; i < sessions.size(); i++) {
-					JsonObject currentSession = sessions.getJsonObject(i);
-					if (!currentSession.getBoolean("processed") && sessionsToProcess.contains(currentSession)) {
-						currentSession.put("processed", true);
-					}
+			// filter unprocessed sessions
+			for (int i = 0; i < sessions.size(); i++) {
+				JsonObject currentSession = sessions.getJsonObject(i);
+				if (!currentSession.getBoolean("processed") && sessionsToProcess.contains(currentSession)) {
+					currentSession.put("processed", true);
 				}
+			}
 
-				// update only corresponding data source
-				mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
-					//System.out.println(logMessage + "processSessions: document with ID " + id + " was updated");
-					processSessionsLatch.countDown();
-				});
-
+			// update only corresponding data source
+			mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
+				// System.out.println(logMessage + "processSessions: document with ID " + id + "
+				// was updated");
+				resultFuture.complete();
 			});
-		}).start();
 
-		try {
-			processSessionsLatch.await(5L, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		});
+
+		return resultFuture;
 
 	}
 
@@ -235,7 +225,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @return
 	 */
 	private boolean checkMinDistance(String activity, int distance) {
-		//System.out.println(logMessage + "checkMinDistance: " + distance);
+		// System.out.println(logMessage + "checkMinDistance: " + distance);
 		switch (activity) {
 		case "user_walking_context":
 		case "user_biking_context":
@@ -273,7 +263,8 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		default:
 			break;
 		}
-		//System.out.println(logMessage + "getTokensForDistance(): " + activity + "/" + distance + " - " + tokens);
+		// System.out.println(logMessage + "getTokensForDistance(): " + activity + "/" +
+		// distance + " - " + tokens);
 		return tokens;
 	}
 
@@ -281,10 +272,12 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		//System.out.println("waiting for changes to user activity on ->" + address_changes);
+		// System.out.println("waiting for changes to user activity on ->" +
+		// address_changes);
 		eb.consumer(address_changes, message -> {
 			System.out.println("[UserActivity]");
-			//System.out.println("User activity on changes msg: " + message.body().toString());
+			// System.out.println("User activity on changes msg: " +
+			// message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
@@ -308,10 +301,16 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 						}
 					}
 					changes.put("guid", getUserURL(address));
-					//System.out.println(logMessage + "changes: " + changes.toString());
+					// System.out.println(logMessage + "changes: " + changes.toString());
 
-					int numTokens = rate(changes);
-					mine(numTokens, changes, "user-activity");
+					Future<Integer> numTokens = rate(changes);
+					numTokens.setHandler(asyncResult -> {
+						if (asyncResult.succeeded()) {
+							mine(asyncResult.result(), changes, "user-activity");
+						} else {
+							// oh ! we have a problem...
+						}
+					});
 
 				}
 

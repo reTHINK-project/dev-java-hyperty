@@ -260,6 +260,7 @@ class ElearningTest {
 	}
 
 	@Test
+	@Disabled
 	void testFutures(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST -  futures");
 		Future<Integer> numQuizzes = futureMethod();
@@ -275,14 +276,13 @@ class ElearningTest {
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void correctQuizz(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - correct quizz");
 		JsonObject message = new JsonObject();
 		JsonArray answers = new JsonArray().add(2).add(2).add(2);
 		message.put("identity", new JsonObject());
 		message.put("userID", userID);
-		//
 		message.put("id", "Energias Renováveis");
 		message.put("date", "2018-05-24");
 		message.put("answers", answers);
@@ -295,12 +295,12 @@ class ElearningTest {
 
 		// wait for op
 		try {
-			Thread.sleep(8000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 
-		// check if session is unprocessed
+		// check if quiz is valid
 		JsonObject query = new JsonObject().put("user", userID);
 		mongoClient.find(ratesCollection, query, result -> {
 			JsonObject rates = result.result().get(0);
