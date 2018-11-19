@@ -136,7 +136,7 @@ class WalletManagerTest {
 
 		// wait for Mongo connection to take place
 		try {
-			Thread.sleep(30000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -279,7 +279,7 @@ class WalletManagerTest {
 //		transferToWallet(testContext, vertx);
 
 		mongoClient.find(walletsCollection, new JsonObject(), res -> {
-			assertEquals(numWallets+1, res.result().size());
+			assertEquals(numWallets + 1, res.result().size());
 			testContext.completeNow();
 		});
 
@@ -424,7 +424,7 @@ class WalletManagerTest {
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void getWalletAddress(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
@@ -450,7 +450,7 @@ class WalletManagerTest {
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void getPublicWalletsByRead(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");

@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 
 import data_objects.DataObjectReporter;
 import hyperty.AbstractHyperty;
-import hyperty.CRMHyperty;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
@@ -117,7 +116,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
-	// TODO: wait for this
 	public void createPublicWallets(JsonArray publicWallets) {
 
 		Future<Boolean> walletExists = Future.future();
@@ -126,9 +124,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// check if public wallets already exist
 		JsonObject query = new JsonObject().put("identity",
 				new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
-		System.out.println("TESTING MONGO - 1");
+		// System.out.println("TESTING MONGO - 1");
 		mongoClient.find(walletsCollection, query, res -> {
-			System.out.println("TESTING MONGO - 2");
+			// System.out.println("TESTING MONGO - 2");
 			JsonArray wallets = new JsonArray(res.result());
 			walletExists.complete(wallets.size() != 0);
 		});
@@ -253,7 +251,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	private void generateRankings() {
 
-//		//System.out.println(logMessage + "generateRankings()");
+		// System.out.println(logMessage + "generateRankings()");
 
 		FindOptions findOptions = new FindOptions();
 		findOptions.setSort(new JsonObject().put("balance", -1));
@@ -290,7 +288,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					JsonObject query = new JsonObject();
 					query.put("identity", wallet.getJsonObject("identity"));
 					mongoClient.findOneAndReplace(collection, query, wallet, id -> {
-//						System.out.println(logMessage + "generateRankings() document updated: " + wallet);
+						// // System.out.println(logMessage + "generateRankings() document updated: " +
+						// wallet);
 					});
 
 					// publish transaction in the event bus using the wallet address.
@@ -386,10 +385,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// walletAddress);
 
 		JsonObject query = new JsonObject();
-//		query.put("address", walletAddress);
+		// query.put("address", walletAddress);
 
 		mongoClient.removeDocument(walletsCollection, query, res -> {
-			System.out.println("Wallets removed from DB");
+			// System.out.println("Wallets removed from DB");
 		});
 
 	}
@@ -400,7 +399,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		JsonObject query = new JsonObject().put("identity", wallet.getString("identity"));
 		mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
-//			System.out.println("Document with ID:" + id + " was updated");
+			// System.out.println("Document with ID:" + id + " was updated");
 		});
 	}
 
@@ -668,7 +667,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					transferToPublicWallet(publicWalletAddress, transaction);
 				}
 
-				// // check if nonce is repeated
+				// check if nonce is repeated
 				// JsonObject wallet = res.result().get(0);
 				// JsonArray transactions = wallet.getJsonArray("transactions");
 				//
@@ -680,7 +679,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				// .collect(Collectors.toList());
 				//
 				// if (repeatedNonces.size() > 0) {
-				// // nonce is repeated
+				// nonce is repeated
 				//
 				// }
 			}
@@ -774,7 +773,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 */
 	@Override
 	public Future<Void> handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
-		System.out.println("[WalletManager] handleCreationRequest");
 		// System.out.println("[WalletManager] handleCreationRequest: " + msg);
 		// send message to Vertx P2P stub and wait for reply
 
@@ -782,8 +780,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		message.reply(msg, reply2 -> {
 
-			// System.out.println("Reply from P2P stub " +
-			// reply2.result().body().toString());
+			// System.out.println("Reply from P2P stub " + reply2.result().body().toString());
 
 			JsonObject rep = new JsonObject(reply2.result().body().toString());
 
@@ -872,7 +869,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							// TODO - replace with publish
 							send("resolve-role", validationMessage, reply -> {
 								// System.out.println(
-								// logMessage + "role validation result: " + reply.result().body().toString());
+										// logMessage + "role validation result: " + reply.result().body().toString());
 								String role = new JsonObject(reply.result().body().toString()).getString("role");
 								response.put("role", role);
 								validateCause.complete();
