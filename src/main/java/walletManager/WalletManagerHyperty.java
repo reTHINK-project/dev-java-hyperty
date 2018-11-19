@@ -117,6 +117,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
+	// TODO: wait for this
 	public void createPublicWallets(JsonArray publicWallets) {
 
 		Future<Boolean> walletExists = Future.future();
@@ -125,9 +126,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// check if public wallets already exist
 		JsonObject query = new JsonObject().put("identity",
 				new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
-		// System.out.println("TESTING MONGO - 1");
+		System.out.println("TESTING MONGO - 1");
 		mongoClient.find(walletsCollection, query, res -> {
-			// System.out.println("TESTING MONGO - 2");
+			System.out.println("TESTING MONGO - 2");
 			JsonArray wallets = new JsonArray(res.result());
 			walletExists.complete(wallets.size() != 0);
 		});

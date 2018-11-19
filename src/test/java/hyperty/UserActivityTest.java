@@ -209,7 +209,7 @@ class UserActivityTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-//	@AfterAll
+	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(3);
@@ -245,7 +245,6 @@ class UserActivityTest {
 	}
 
 	@Test
-	@Disabled
 	void sessionWithoutTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session without tokens");
 		JsonObject activityMessage = new JsonObject();
@@ -311,7 +310,7 @@ class UserActivityTest {
 			mongoClient.find(ratesCollection, query, result -> {
 				JsonObject rates = result.result().get(0);
 				JsonArray sessions = rates.getJsonArray("user-activity");
-				assertEquals(2, sessions.size());
+				assertEquals(1, sessions.size());
 				assertEquals(true, sessions.getJsonObject(0).getBoolean("processed"));
 				assertEquals(true, sessions.getJsonObject(1).getBoolean("processed"));
 				assertions.countDown();
@@ -379,11 +378,11 @@ class UserActivityTest {
 
 				// check balance updated
 				int currentBalance = walletInfo.getInteger("balance");
-				assertEquals(0, currentBalance);
+				assertEquals(500, currentBalance);
 
 				// check if transaction in transactions array
 				JsonArray transactions = walletInfo.getJsonArray("transactions");
-				assertEquals(1, transactions.size());
+				assertEquals(2, transactions.size());
 				assertions.countDown();
 			});
 		}).start();
