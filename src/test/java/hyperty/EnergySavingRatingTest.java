@@ -21,6 +21,7 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import protostub.SmartIotProtostub;
 import tokenRating.EnergySavingRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
@@ -29,6 +30,8 @@ import walletManager.WalletManagerHyperty;
 class EnergySavingRatingTest {
 
 	private static final String logMessage = "[EnergySavingRatingTest] ";
+	private static String pointOfContact = "https://url_contact";
+	private static String SIOTurl = "https://iot.alticelabs.com/api";
 
 	private static String userID = "test-userID";
 	private static String subscriptionsAddress = userID + "/subscription";
@@ -50,16 +53,16 @@ class EnergySavingRatingTest {
 			new JsonObject().put("userURL", userID).put("guid", userID));
 
 	// public wallets
-	private static String publicWalletAddress = "school0-wallet";
-	private static String publicWallet1Address = "school1-wallet";
-	private static String school0ID = "0";
-	private static String school1ID = "1";
-	private static String smartIoTPlatform = "IoT0";
+	private static String school0ID = "user-guid://school-0";
+	private static String school1ID = "user-guid://school-1";
+	private static String school2ID = "user-guid://school-2";
 
 	private static String userCGUIDURL = "userCGUIDURL";
 
 	@BeforeAll
 	static void before(VertxTestContext context, Vertx vertx) throws IOException {
+
+		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
 
 		JsonObject config = new JsonObject();
 		config.put("url", energySavingRatingHypertyURL);
@@ -72,6 +75,8 @@ class EnergySavingRatingTest {
 		config.put("collection", ratesCollection);
 		config.put("db_name", db_name);
 		config.put("mongoHost", mongoHost);
+		config.put("mongoPorts", "27017");
+		config.put("mongoCluster", "NO");
 
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
@@ -83,32 +88,69 @@ class EnergySavingRatingTest {
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
+		configWalletManager.put("mongoPorts", "27017");
+		configWalletManager.put("mongoCluster", "NO");
+
+		// public wallets
+		String wallet0Address = "school0-wallet";
+		String wallet1Address = "school1-wallet";
+		String wallet2Address = "school2-wallet";
+		String school0ID = "user-guid://school-0";
+		String school1ID = "user-guid://school-1";
+		String school2ID = "user-guid://school-2";
+		JsonObject feed0 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet0userID");
+		JsonObject feed1 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet1userID");
+		JsonObject feed2 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet2userID");
 
 		// publicWallets
 		JsonArray publicWallets = new JsonArray();
-		// wallet 0
-		JsonObject publicWallet = new JsonObject();
-		publicWallet.put("address", publicWalletAddress);
-		publicWallet.put("identity", school0ID);
-		publicWallet.put("externalFeeds", smartIoTPlatform);
-		publicWallets.add(publicWallet);
-		// wallet 1
-		JsonObject publicWallet1 = new JsonObject();
-		publicWallet1.put("address", publicWallet1Address);
-		publicWallet1.put("identity", "1");
-		publicWallet1.put("externalFeeds", smartIoTPlatform);
-		publicWallets.add(publicWallet1);
+		JsonObject walletCause0 = new JsonObject();
+		walletCause0.put("address", wallet0Address);
+		walletCause0.put("identity", school0ID);
+		walletCause0.put("externalFeeds", new JsonArray().add(feed0));
+		publicWallets.add(walletCause0);
+
+		JsonObject walletCause1 = new JsonObject();
+		walletCause1.put("address", wallet1Address);
+		walletCause1.put("identity", school1ID);
+		walletCause1.put("externalFeeds", new JsonArray().add(feed1));
+		publicWallets.add(walletCause1);
+
+		JsonObject walletCause2 = new JsonObject();
+		walletCause2.put("address", wallet2Address);
+		walletCause2.put("identity", school2ID);
+		walletCause2.put("externalFeeds", new JsonArray().add(feed2));
+		publicWallets.add(walletCause2);
+
 		configWalletManager.put("publicWallets", publicWallets);
 
 		final String causeAddress = "cause1-address";
 
 		configWalletManager.put("observers", new JsonArray().add(causeAddress));
 		configWalletManager.put("causes", new JsonArray().add(causeAddress));
+		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
+		configWalletManager.put("rankingTimer", 2000);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
 				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
+		});
+
+		// deploy smart Iot protostub
+
+		JsonObject configSmartIotStub = new JsonObject();
+		configSmartIotStub.put("url", smartIotProtostubUrl);
+		configSmartIotStub.put("db_name", "test");
+		configSmartIotStub.put("collection", "siotdevices");
+		configSmartIotStub.put("mongoHost", mongoHost);
+		configSmartIotStub.put("smart_iot_url", SIOTurl);
+		configSmartIotStub.put("point_of_contact", pointOfContact);
+
+		DeploymentOptions optionsconfigSmartIotStub = new DeploymentOptions().setConfig(configSmartIotStub)
+				.setWorker(false);
+		vertx.deployVerticle(SmartIotProtostub.class.getName(), optionsconfigSmartIotStub, res -> {
+			System.out.println("SmartIOTProtustub Result->" + res.result());
 		});
 
 		makeMongoConnection(vertx);
@@ -138,7 +180,7 @@ class EnergySavingRatingTest {
 	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
-		CountDownLatch setupLatch = new CountDownLatch(3);
+		CountDownLatch setupLatch = new CountDownLatch(2);
 
 		// remove from rates
 		JsonObject query = new JsonObject();
@@ -149,10 +191,10 @@ class EnergySavingRatingTest {
 
 		// remove from wallets
 		query = new JsonObject();
-		mongoClient.removeDocuments(walletsCollection, query, res -> {
-			System.out.println("Wallet removed from DB");
-			setupLatch.countDown();
-		});
+//		mongoClient.removeDocuments(walletsCollection, query, res -> {
+//			System.out.println("Wallet removed from DB");
+//			setupLatch.countDown();
+//		});
 
 		// remove from dataobjects
 		query = new JsonObject();
@@ -300,6 +342,7 @@ class EnergySavingRatingTest {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
 		msg.put("from", subscriptionsAddress);
+		msg.put("external", true);
 		msg.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 		JsonObject body = new JsonObject();
 		body.put("identity", userCGUIDURL);
@@ -321,6 +364,7 @@ class EnergySavingRatingTest {
 		// ContextValues
 		JsonObject contextValueCause0 = new JsonObject();
 		JsonObject contextValueCause1 = new JsonObject();
+		JsonObject contextValueCause2 = new JsonObject();
 		JsonArray values = new JsonArray();
 		// cause 0
 		contextValueCause0.put("type", "POWER");
@@ -336,6 +380,13 @@ class EnergySavingRatingTest {
 		value1.put("value", 20);
 		contextValueCause1.put("value", value1);
 		values.add(contextValueCause1);
+		// cause 2
+		contextValueCause2.put("type", "POWER");
+		JsonObject value2 = new JsonObject();
+		value2.put("id", school2ID);
+		value2.put("value", 5);
+		contextValueCause2.put("value", value2);
+		values.add(contextValueCause2);
 
 		energySavingsMessage.put("values", values);
 
@@ -344,7 +395,7 @@ class EnergySavingRatingTest {
 		vertx.eventBus().send(changesAddress, toSend);
 
 		try {
-			Thread.sleep(3000);
+			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

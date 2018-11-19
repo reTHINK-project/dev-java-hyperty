@@ -63,7 +63,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// System.out.println(logMessage + "wallet-cause-read():" + received);
 			String walletID = received.getJsonObject("body").getString("value");
 			String publicWalletAddress = getPublicWalletAddress(walletID);
-			message.reply(new JsonObject().put("wallet", getPublicWallet(publicWalletAddress)));
+			Future<JsonObject> publicWallet = getPublicWallet(publicWalletAddress);
+			publicWallet.setHandler(asyncResult -> {
+				message.reply(new JsonObject().put("wallet", publicWallet.result()));
+			});
 		});
 
 		eb.consumer("wallet-cause-transfer", message -> {
@@ -534,9 +537,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	JsonObject updatedWallet;
 
+	// TODO - wait for it to complete ?
 	private void transferToPublicWallet(String walletAddress, JsonObject transaction) {
-		// System.out.println(logMessage + "transferToPublicWallet(): " + walletAddress
-		// + "\n" + transaction);
+		// System.out.println(logMessage + "transferToPublicWallet(): " + walletAddress + "\n" + transaction);
 		String source = transaction.getString("source");
 		int transactionValue = transaction.getInteger("value");
 
@@ -554,8 +557,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				JsonObject wallet = (JsonObject) pWallet;
 				if (wallet.getString("address").equals(walletAddress)) {
 
-					// System.out.println(logMessage + "updatePublicWalletBalance(): wallet" +
-					// wallet);
 					int currentBalance = wallet.getInteger("balance");
 					if (transactionValue > 0) {
 						wallet.put("balance", currentBalance + transactionValue);
@@ -574,6 +575,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					updatedWallet = wallet;
 				}
 			}
+
+			// System.out.println(logMessage + "updating with: wallet" + result);
 
 			mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
 				// System.out.println("[WalletManager] Transaction added to public wallet");
@@ -780,7 +783,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		message.reply(msg, reply2 -> {
 
-			// System.out.println("Reply from P2P stub " + reply2.result().body().toString());
+			// System.out.println("Reply from P2P stub " +
+			// reply2.result().body().toString());
 
 			JsonObject rep = new JsonObject(reply2.result().body().toString());
 
@@ -869,7 +873,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							// TODO - replace with publish
 							send("resolve-role", validationMessage, reply -> {
 								// System.out.println(
-										// logMessage + "role validation result: " + reply.result().body().toString());
+								// logMessage + "role validation result: " + reply.result().body().toString());
 								String role = new JsonObject(reply.result().body().toString()).getString("role");
 								response.put("role", role);
 								validateCause.complete();

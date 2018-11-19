@@ -201,20 +201,15 @@ public class AbstractHyperty extends AbstractVerticle {
 		Future<String> doStream = Future.future();
 
 		mongoClient.find(this.dataObjectsCollection, new JsonObject().put("objURL", objURL), res -> {
-			int x;
-
-			for (x = 0; x < res.result().size(); x++) {
-				String currentGuid = res.result().get(x).getJsonObject("metadata").getString("guid");
+			for (int i = 0; i < res.result().size(); i++) {
+				String currentGuid = res.result().get(i).getJsonObject("metadata").getString("guid");
 				if (currentGuid.equals(guid)) {
-
 					String streamID = res.result().get(0).getString("url");
 					doStream.complete(streamID);
 					return;
 				}
 			}
-
 			doStream.complete(null);
-
 		});
 
 		return doStream;
