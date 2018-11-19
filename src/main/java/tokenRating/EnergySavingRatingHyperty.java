@@ -1,9 +1,8 @@
 package tokenRating;
 
 import java.util.Date;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
@@ -42,7 +41,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		return message -> {
 
-			//System.out.println(logMessage + "new message -> " + message.body().toString());
+			// System.out.println(logMessage + "new message -> " +
+			// message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
 				final String type = new JsonObject(message.body().toString()).getString("type");
@@ -52,14 +52,13 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 				case "create":
 					if (from.contains("/subscription")) {
-						/*String address = from.split("/subscription")[0];
-						String userID = getUserURL(address);
-						// checks there is no subscription yet for the User CGUID URL.
-						if (userID == null) {
-							if (persistDataObjUserURL(address, guid, "reporter") && checkIfCanHandleData(guid)) {
-								onChanges(address, streamType);
-							}
-						}*/
+						/*
+						 * String address = from.split("/subscription")[0]; String userID =
+						 * getUserURL(address); // checks there is no subscription yet for the User
+						 * CGUID URL. if (userID == null) { if (persistDataObjUserURL(address, guid,
+						 * "reporter") && checkIfCanHandleData(guid)) { onChanges(address, streamType);
+						 * } }
+						 */
 						onNotification(new JsonObject(message.body().toString()), streamType);
 
 					}
@@ -73,12 +72,13 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	}
 
 	@Override
-	int rate(Object data) {
+	Future<Integer> rate(Object data) {
 		// reset latch
-		//System.out.println(logMessage + "rate(): " + data.toString());
+		// System.out.println(logMessage + "rate(): " + data.toString());
 		Long currentTimestamp = new Date().getTime();
 
-		int tokenAmount = -1;
+		// TODO : -1
+		Future<Integer> tokenAmount = Future.future();
 
 		// data contains shopID, users's location
 		String ratingType = ((JsonObject) data).getString("ratingType");
@@ -90,11 +90,18 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		// rating algorithm
 		switch (ratingType) {
 		case ratingPublic:
-			applyPublicRating(values);
-			tokenAmount = 0;
+			Future<Void> applyPublicRating = applyPublicRating(values);
+			applyPublicRating.setHandler(asyncResult -> {
+				if (asyncResult.succeeded()) {
+					tokenAmount.complete(0);
+				} else {
+					// oh ! we have a problem...
+				}
+			});
+
 			break;
 		case ratingPrivate:
-			tokenAmount = applyPrivateRating(values);
+			tokenAmount.complete(applyPrivateRating(values));
 			break;
 		default:
 			break;
@@ -104,138 +111,124 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		return tokenAmount;
 	}
 
-	JsonObject publicWallet;
 	int biggestReductionIndex = 0;
+
+	int reductionCausePercentage = -1;
 
 	/**
 	 * Rate energy message according to the public algorithm.
 	 *
 	 * @return
 	 */
-	private int applyPublicRating(JsonArray values) {
+	private Future<Void> applyPublicRating(JsonArray values) {
 
-		CountDownLatch applyPublicRating = new CountDownLatch(1);
+		Future<Void> applyPublicRating = Future.future();
 
-		new Thread(() -> {
+		// System.out.println(logMessage + "applyPublicRating(): " + values);
 
-			//System.out.println(logMessage + "applyPublicRating(): " + values);
+		reductionCausePercentage = -1;
+		biggestReductionIndex = 0;
 
-			int reductionCausePercentage = -1;
-			biggestReductionIndex = 0;
+		// get values for every cause
+		for (int i = 0; i < values.size(); i++) {
+			final JsonObject value = values.getJsonObject(i);
+			JsonObject valObject = value.getJsonObject("value");
+			int aux = valObject.getInteger("value");
+			String id = valObject.getString("id");
 
-			// get values for every cause
-			for (int i = 0; i < values.size(); i++) {
-				final JsonObject value = values.getJsonObject(i);
-				JsonObject valObject = value.getJsonObject("value");
-				int aux = valObject.getInteger("value");
-				String id = valObject.getString("id");
+			Future<JsonObject> getPublicWallet = Future.future();
 
-				CountDownLatch getPublicWallet = new CountDownLatch(1);
-
-				// get public wallet address
-				new Thread(() -> {
-					JsonObject msg = new JsonObject();
-					msg.put("type", "read");
-					msg.put("from", "myself");
-					JsonObject body = new JsonObject().put("resource", "wallet").put("value", id);
-					JsonObject identity = new JsonObject();
-					msg.put("body", body);
-					msg.put("identity", identity);
-					vertx.eventBus().send("wallet-cause-read", msg, res -> {
-						JsonObject reply = (JsonObject) res.result().body();
-						publicWallet = reply.getJsonObject("wallet");
-						//System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
-						getPublicWallet.countDown();
-
-					});
-				}).start();
-
-				try {
-					getPublicWallet.await();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-
-				// transfer to public wallet
-				JsonObject msg = new JsonObject();
-				msg.put("address", publicWallet.getString("address"));
-				JsonObject transaction = new JsonObject();
-				transaction.put("source", "energy-saving");
-				transaction.put("value", aux * 5);
-				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-				msg.put("transaction", transaction);
-				vertx.eventBus().send("wallet-cause-transfer", msg);
-
-				if (aux > reductionCausePercentage) {
-					reductionCausePercentage = aux;
-					biggestReductionIndex = i;
-				}
-			}
-
-			// get tokens won for school with biggest reduction
-			//System.out.println(logMessage + "applyPublicRating() school biggest reduction: " + biggestReductionIndex);
-
-			// get wallet from wallet manager
-			CountDownLatch readPublicWallet = new CountDownLatch(1);
-
-			new Thread(() -> {
-
-				JsonObject msg = new JsonObject();
-				msg.put("type", "read");
-				msg.put("from", "myself");
-				JsonObject body = new JsonObject().put("resource", "wallet").put("value",
-						Integer.toString(biggestReductionIndex));
-				JsonObject identity = new JsonObject();
-				msg.put("body", body);
-				msg.put("identity", identity);
-				vertx.eventBus().send("wallet-cause-read", msg, res -> {
-					JsonObject reply = (JsonObject) res.result().body();
-					publicWallet = reply.getJsonObject("wallet");
-					//System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
-					readPublicWallet.countDown();
-				});
-			}).start();
-
-			try {
-				readPublicWallet.await();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-
-			// access wallet counters
-			JsonObject countersObj = publicWallet.getJsonObject(WalletManagerHyperty.counters);
-			// sum checkin + elearning + activity points
-			int monthlyPoints = countersObj.getInteger("user-activity") + countersObj.getInteger("elearning");
-			monthlyPoints += countersObj.getInteger("checkin");
-			monthlyPoints /= 10;
-
-			// apply bonus
-			//System.out.println(logMessage + "applyPublicRating() bonus: " + monthlyPoints);
-
+			// get public wallet address
 			JsonObject msg = new JsonObject();
-			msg.put("address", publicWallet.getString("address"));
-			JsonObject transaction = new JsonObject();
-			transaction.put("source", "energy-saving");
-			transaction.put("value", monthlyPoints);
-			transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-			msg.put("transaction", transaction);
-			vertx.eventBus().send("wallet-cause-transfer", msg);
+			msg.put("type", "read");
+			msg.put("from", "myself");
+			JsonObject body = new JsonObject().put("resource", "wallet").put("value", id);
+			JsonObject identity = new JsonObject();
+			msg.put("body", body);
+			msg.put("identity", identity);
+			vertx.eventBus().send("wallet-cause-read", msg, res -> {
+				JsonObject reply = (JsonObject) res.result().body();
+				// System.out.println(logMessage + "applyPublicRating() publicWallet: " +
+				// publicWallet);
+				getPublicWallet.complete(reply.getJsonObject("wallet"));
+			});
 
-			// reset counters
-			vertx.eventBus().send("wallet-cause-reset", msg);
-			applyPublicRating.countDown();
+			getPublicWallet.setHandler(asyncResult -> {
+				if (asyncResult.succeeded()) {
+					// transfer to public wallet
+					JsonObject msgToPublicWallet = new JsonObject();
+					msgToPublicWallet.put("address", getPublicWallet.result().getString("address"));
+					JsonObject transaction = new JsonObject();
+					transaction.put("source", "energy-saving");
+					transaction.put("value", aux * 5);
+					transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+					msg.put("transaction", transaction);
+					vertx.eventBus().send("wallet-cause-transfer", msgToPublicWallet);
 
-		}).start();
+					if (aux > reductionCausePercentage) {
+						reductionCausePercentage = aux;
+						biggestReductionIndex = i;
+					}
+				} else {
+					// oh ! we have a problem...
+				}
+			});
 
-		try
-
-		{
-			applyPublicRating.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		}
 
-		return 0;
+		// get tokens won for school with biggest reduction
+		// System.out.println(logMessage + "applyPublicRating() school biggest
+		// reduction: " + biggestReductionIndex);
+
+		// get wallet from wallet manager
+		Future<JsonObject> readPublicWallet = Future.future();
+
+		JsonObject msg = new JsonObject();
+		msg.put("type", "read");
+		msg.put("from", "myself");
+		JsonObject body = new JsonObject().put("resource", "wallet").put("value",
+				Integer.toString(biggestReductionIndex));
+		JsonObject identity = new JsonObject();
+		msg.put("body", body);
+		msg.put("identity", identity);
+		vertx.eventBus().send("wallet-cause-read", msg, res -> {
+			JsonObject reply = (JsonObject) res.result().body();
+			// System.out.println(logMessage + "applyPublicRating() publicWallet: " +
+			// publicWallet);
+			readPublicWallet.complete(reply.getJsonObject("wallet"));
+		});
+
+		readPublicWallet.setHandler(asyncResult -> {
+			if (asyncResult.succeeded()) {
+				// access wallet counters
+				JsonObject countersObj = readPublicWallet.result().getJsonObject(WalletManagerHyperty.counters);
+				// sum checkin + elearning + activity points
+				int monthlyPoints = countersObj.getInteger("user-activity") + countersObj.getInteger("elearning");
+				monthlyPoints += countersObj.getInteger("checkin");
+				monthlyPoints /= 10;
+
+				// apply bonus
+				// System.out.println(logMessage + "applyPublicRating() bonus: " +
+				// monthlyPoints);
+
+				JsonObject msgEnergySaving = new JsonObject();
+				msgEnergySaving.put("address", readPublicWallet.result().getString("address"));
+				JsonObject transaction = new JsonObject();
+				transaction.put("source", "energy-saving");
+				transaction.put("value", monthlyPoints);
+				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+				msg.put("transaction", transaction);
+				vertx.eventBus().send("wallet-cause-transfer", msgEnergySaving);
+
+				// reset counters
+				vertx.eventBus().send("wallet-cause-reset", msgEnergySaving);
+				applyPublicRating.complete();
+			} else {
+				// oh ! we have a problem...
+			}
+		});
+
+		return applyPublicRating;
 	}
 
 	int supportersTotal;
@@ -247,7 +240,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @return
 	 */
 	private int applyPrivateRating(JsonArray values) {
-		//System.out.println(logMessage + "applyPrivateRating(): " + values);
+		// System.out.println(logMessage + "applyPrivateRating(): " + values);
 
 		int reductionUserPercentage = 0;
 
@@ -257,20 +250,20 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		reductionUserPercentage = dataValueObject.getInteger("value");
 
-
 		int totalReductionPercentage = reductionUserPercentage;
 
 		return totalReductionPercentage * 10;
 	}
 
-
 	public void onChanges(String address, String ratingType) {
 
 		final String address_changes = address + "/changes";
-		//System.out.println(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
+		// System.out.println(logMessage + "onChanges(): waiting for changes on ->" +
+		// address_changes);
 		eb.consumer(address_changes, message -> {
 			System.out.println("[Energy]");
-			//System.out.println(logMessage + "onChanges(): received message" + message.body());
+			// System.out.println(logMessage + "onChanges(): received message" +
+			// message.body());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
@@ -280,13 +273,21 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 					changes.put("message", data.getJsonObject(0));
 					changes.put("guid", getUserGuid(address));
 
-					//System.out.println(logMessage + "onChanges(): change: " + changes.toString());
+					// System.out.println(logMessage + "onChanges(): change: " +
+					// changes.toString());
 
-					int numTokens = rate(changes);
-					//System.out.println(logMessage + "rate(): numTokens=" + numTokens);
-					if (numTokens > 0) {
-						mine(numTokens, changes, dataSource);
-					}
+					Future<Integer> numTokens = rate(changes);
+					numTokens.setHandler(asyncResult -> {
+						if (asyncResult.succeeded()) {
+							if (numTokens.result() > 0) {
+								mine(numTokens.result(), changes, dataSource);
+							}
+						} else {
+							// oh ! we have a problem...
+						}
+					});
+					// System.out.println(logMessage + "rate(): numTokens=" + numTokens);
+
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -295,40 +296,27 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 	}
 
-	public String getUserGuid(String address) {
+	public Future<String> getUserGuid(String address) {
 
-		CountDownLatch findUserID = new CountDownLatch(1);
-		new Thread(() -> {
-			mongoClient.find(dataObjectsCollection, new JsonObject().put("objURL", address), userURLforAddress -> {
-				if (userURLforAddress.result().size() == 0) {
-					findUserID.countDown();
-					return;
-				}
-				JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
-				userIDToReturn = dataObjectInfo.getString("guid");
-				findUserID.countDown();
-			});
-		}).start();
+		Future<String> userID = Future.future();
+		mongoClient.find(dataObjectsCollection, new JsonObject().put("objURL", address), userURLforAddress -> {
+			if (userURLforAddress.result().size() == 0) {
+				userID.complete("");
+			}
+			JsonObject dataObjectInfo = userURLforAddress.result().get(0).getJsonObject("metadata");
+			userID.complete(dataObjectInfo.getString("guid"));
+		});
 
-		try {
-			findUserID.await(5L, TimeUnit.SECONDS);
-			//System.out.println("3 - return from latch");
-			return userIDToReturn;
-		} catch (InterruptedException e) {
-			//System.out.println("3 - interrupted exception");
-		}
-		//System.out.println("3 - return other");
-		return userIDToReturn;
+		return userID;
 	}
 
-
 	public void onNotification(JsonObject body, String streamType) {
-		//System.out.println("HANDLING" + body.toString());
+		// System.out.println("HANDLING" + body.toString());
 		String from = body.getString("from");
 		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 
 		if (body.containsKey("external") && body.getBoolean("external")) {
-			//System.out.println("EXTERNAL INVITE");
+			// System.out.println("EXTERNAL INVITE");
 			String streamID = body.getString("streamID");
 			String objURL = from.split("/subscription")[0];
 			String CheckURL = findDataObjectStream(objURL, guid);

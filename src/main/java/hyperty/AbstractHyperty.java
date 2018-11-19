@@ -1,8 +1,6 @@
 package hyperty;
 
 import java.util.Iterator;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
@@ -31,12 +29,8 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String schemaURL;
 	protected EventBus eb;
 	protected MongoClient mongoClient = null;
-	private CountDownLatch findWallet;
 	protected boolean acceptSubscription;
-	private CountDownLatch dataPersisted;
-	private boolean dataPersistedFlag;
 	protected String dataObjectsCollection = "dataobjects";
-	private CountDownLatch findDataObject;
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -198,37 +192,25 @@ public class AbstractHyperty extends AbstractVerticle {
 		return handleCreationRequest;
 	}
 
-	public String findDataObjectStream(String objURL, String guid) {
+	public Future<String> findDataObjectStream(String objURL, String guid) {
 
 		// System.out.println("{{AbstractHyperty}} find do:" + objURL);
-		final String device[] = new String[1];
-		findDataObject = new CountDownLatch(1);
+		Future<String> doStream = Future.future();
 
-		new Thread(() -> {
-			mongoClient.find(this.dataObjectsCollection, new JsonObject().put("objURL", objURL), res -> {
-				int x;
+		mongoClient.find(this.dataObjectsCollection, new JsonObject().put("objURL", objURL), res -> {
+			int x;
 
-				for (x = 0; x < res.result().size(); x++) {
-					String currentGuid = res.result().get(x).getJsonObject("metadata").getString("guid");
-					if (currentGuid.equals(guid)) {
+			for (x = 0; x < res.result().size(); x++) {
+				String currentGuid = res.result().get(x).getJsonObject("metadata").getString("guid");
+				if (currentGuid.equals(guid)) {
 
-						String streamID = res.result().get(0).getString("url");
-
-						device[0] = streamID;
-					}
+					String streamID = res.result().get(0).getString("url");
+					doStream.complete(streamID);
 				}
-				findDataObject.countDown();
-			});
+			}
+		});
 
-		}).start();
-
-		try {
-			findDataObject.await(5L, TimeUnit.SECONDS);
-			return device[0];
-		} catch (InterruptedException e) {
-			System.out.println(e);
-		}
-		return device[0];
+		return doStream;
 	}
 
 	/**
@@ -246,14 +228,20 @@ public class AbstractHyperty extends AbstractVerticle {
 			// System.out.println("EXTERNAL INVITE");
 			String streamID = body.getString("streamID");
 			String objURL = from.split("/subscription")[0];
-			String CheckURL = findDataObjectStream(objURL, guid);
-			if (CheckURL == null) {
-				if (persistDataObjUserURL(streamID, guid, objURL, "reporter")) {
-					onChanges(objURL);
+			Future<String> CheckURL = findDataObjectStream(objURL, guid);
+			CheckURL.setHandler(asyncResult -> {
+				if (asyncResult.succeeded()) {
+					if (CheckURL == null) {
+						if (persistDataObjUserURL(streamID, guid, objURL, "reporter")) {
+							onChanges(objURL);
+						}
+					} else {
+						onChanges(objURL);
+					}
+				} else {
+					// oh ! we have a problem...
 				}
-			} else {
-				onChanges(objURL);
-			}
+			});
 
 		} else {
 			subscribe(from, guid);
@@ -299,8 +287,10 @@ public class AbstractHyperty extends AbstractVerticle {
 		});
 	}
 
-	public boolean checkIfCanHandleData(String objURL) {
-		return true;
+	public Future<Boolean> checkIfCanHandleData(String objURL) {
+		Future<Boolean> checkIfCanHandleData = Future.future();
+		checkIfCanHandleData.complete(true);
+		return checkIfCanHandleData;
 	}
 
 	/**
@@ -324,11 +314,9 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 
-	public boolean persistDataObjUserURL(String streamID, String guid, String objURL, String type) {
+	public Future<Boolean> persistDataObjUserURL(String streamID, String guid, String objURL, String type) {
 
-		dataPersistedFlag = false;
-
-		dataPersisted = new CountDownLatch(1);
+		Future<Boolean> dataPersisted = Future.future();
 
 		JsonObject document = new JsonObject();
 		document.put("guid", guid);
@@ -336,33 +324,20 @@ public class AbstractHyperty extends AbstractVerticle {
 
 		JsonObject toInsert = new JsonObject().put("url", streamID).put("objURL", objURL).put("metadata", document);
 		// System.out.println("Creating DO entry -> " + toInsert.toString());
-		new Thread(() -> {
 
-			mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
-				// System.out.println("Setup complete - dataobjects + Insert" +
-				// res2.result().toString());
-				dataPersistedFlag = true;
-				dataPersisted.countDown();
-			});
+		mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
+			// System.out.println("Setup complete - dataobjects + Insert" +
+			// res2.result().toString());
+			dataPersisted.complete(res2.succeeded());
+		});
 
-		}).start();
-
-		try {
-			dataPersisted.await(5L, TimeUnit.SECONDS);
-			return dataPersistedFlag;
-		} catch (InterruptedException e) {
-			// System.out.println("3 - interrupted exception");
-		}
-		// System.out.println("3 - return other");
-		return dataPersistedFlag;
+		return dataPersisted;
 
 	}
 
-	public boolean persistDataObjUserURL(String address, String guid, String type) {
+	public Future<Boolean> persistDataObjUserURL(String address, String guid, String type) {
 
-		dataPersistedFlag = false;
-
-		dataPersisted = new CountDownLatch(1);
+		Future<Boolean> dataPersisted = Future.future();
 
 		JsonObject document = new JsonObject();
 		document.put("guid", guid);
@@ -375,20 +350,12 @@ public class AbstractHyperty extends AbstractVerticle {
 			mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
 				// System.out.println("Setup complete - dataobjects + Insert" +
 				// res2.result().toString());
-				dataPersistedFlag = true;
-				dataPersisted.countDown();
+				dataPersisted.complete(res2.succeeded());
 			});
 
 		}).start();
 
-		try {
-			dataPersisted.await(5L, TimeUnit.SECONDS);
-			return dataPersistedFlag;
-		} catch (InterruptedException e) {
-			// System.out.println("3 - interrupted exception");
-		}
-		// System.out.println("3 - return other");
-		return dataPersistedFlag;
+		return dataPersisted;
 
 	}
 
@@ -467,8 +434,7 @@ public class AbstractHyperty extends AbstractVerticle {
 			JsonObject toFind = new JsonObject().put("identity", identity);
 			// System.out.println("toFIND" + toFind.toString());
 
-			acceptSubscription = false;
-			findWallet = new CountDownLatch(1);
+			Future<Boolean> findWallet = Future.future();
 
 			new Thread(() -> {
 				mongoClient.find(collection, toFind, res -> {
@@ -481,16 +447,14 @@ public class AbstractHyperty extends AbstractVerticle {
 							// System.out.println("RIGHT WALLET");
 							if (wallet.getJsonObject("identity").equals(identity)) {
 								// System.out.println("RIGHT IDENTITY");
-								acceptSubscription = true;
-								findWallet.countDown();
-								return;
+								findWallet.complete(true);
 							}
-							findWallet.countDown();
+							findWallet.complete(false);
 							return;
 
 						} else {
 							// System.out.println("OTHER WALLET");
-							findWallet.countDown();
+							findWallet.complete(false);
 							return;
 
 						}
@@ -499,12 +463,6 @@ public class AbstractHyperty extends AbstractVerticle {
 				});
 			}).start();
 
-			try {
-				findWallet.await(5L, TimeUnit.SECONDS);
-				return acceptSubscription;
-			} catch (InterruptedException e) {
-				// System.out.println("3 - interrupted exception");
-			}
 			// System.out.println("3 - return other");
 			return acceptSubscription;
 
