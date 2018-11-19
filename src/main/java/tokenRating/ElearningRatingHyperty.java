@@ -164,27 +164,29 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		// System.out.println("waiting for changes to user activity on ->" +
-		// address_changes);
+		// System.out.println("waiting for changes to user activity on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			System.out.println("[Elearning]");
-			// System.out.println("User activity on changes msg: " +
-			// message.body().toString());
+			// System.out.println("[Elearning]");
+			// System.out.println("User activity on changes msg: " + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
 					// System.out.println("CHANGES" + data.toString());
 					JsonObject messageToRate = data.getJsonObject(0);
-					messageToRate.put("guid", getUserURL(address));
-
-					Future<Integer> numTokens = rate(messageToRate);
-					numTokens.setHandler(asyncResult -> {
-						if (asyncResult.succeeded()) {
-							mine(numTokens.result(), messageToRate, "elearning");
-						} else {
-							// oh ! we have a problem...
-						}
+					Future<String> userURL = getUserURL(address);
+					userURL.setHandler(asyncResult -> {
+						// System.out.println("URL " + userURL.result());
+						messageToRate.put("guid", userURL.result());
+						Future<Integer> numTokens = rate(messageToRate);
+						numTokens.setHandler(res -> {
+							if (res.succeeded()) {
+								mine(numTokens.result(), messageToRate, "elearning");
+							} else {
+								// oh ! we have a problem...
+							}
+						});
 					});
+
 				}
 
 			} catch (Exception e) {

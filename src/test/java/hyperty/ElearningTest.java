@@ -260,7 +260,7 @@ class ElearningTest {
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void testFutures(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST -  futures");
 		Future<Integer> numQuizzes = futureMethod();
@@ -306,13 +306,12 @@ class ElearningTest {
 			JsonObject rates = result.result().get(0);
 			JsonArray quizzes = rates.getJsonArray("elearning");
 			assertEquals(1, quizzes.size());
-			// assertEquals(false, quizzes.getJsonObject(0).getBoolean("processed"));
 			testContext.completeNow();
 		});
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void getQuizzesInfo(VertxTestContext testContext, Vertx vertx) {
 
 		JsonObject config = new JsonObject().put("type", "read");
