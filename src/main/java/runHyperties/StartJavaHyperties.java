@@ -2,8 +2,6 @@ package runHyperties;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import hyperty.CRMHyperty;
@@ -11,6 +9,7 @@ import hyperty.OfflineSubscriptionManagerHyperty;
 import hyperty.RegistryHyperty;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
@@ -50,11 +49,9 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private String mongoPorts = "27017";
 	private String mongoCluster = "NO";
 
-
 	private String SIOTurl = "https://iot.alticelabs.com/api";
 	private String pointOfContact = "https://url_contact";
 	private MongoClient mongoClient = null;
-	private CountDownLatch findDOUrl;
 
 	public static void main(String[] args) {
 
@@ -78,9 +75,10 @@ public class StartJavaHyperties extends AbstractVerticle {
 				.addInboundPermitted(new PermittedOptions().setAddressRegex(".*"));
 		return SockJSHandler.create(vertx).bridge(options, event -> {
 			if (BridgeEventType.PUBLISH == event.type() || BridgeEventType.SEND == event.type()) {
-				//System.out.println("BUS HANDLER:(" + event.type() + ") MESSAGE:" + event.getRawMessage());
+				// System.out.println("BUS HANDLER:(" + event.type() + ") MESSAGE:" +
+				// event.getRawMessage());
 			} else {
-				//System.out.println("BUS HANDLER:(" + event.type() + ")");
+				// System.out.println("BUS HANDLER:(" + event.type() + ")");
 			}
 			event.complete(true);
 
@@ -221,7 +219,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configOfflineSubMgr.put("mongoCluster", mongoCluster);
 		configOfflineSubMgr.put("mongoPorts", mongoPorts);
 
-		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr).setWorker(false);
+		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr)
+				.setWorker(false);
 		vertx.deployVerticle(OfflineSubscriptionManagerHyperty.class.getName(), optionsOfflineSubMgr, res -> {
 			System.out.println("OfflineSubscriptionManager Result->" + res.result());
 		});
@@ -420,7 +419,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		});
 
 		// Configure HttpServer and set it UP
-		//System.out.println("Setting up httpserver");
+		// System.out.println("Setting up httpserver");
 		int BUFF_SIZE = 32 * 1024;
 		final JksOptions jksOptions = new JksOptions().setPath("server-keystore.jks").setPassword("rethink2015");
 
@@ -433,18 +432,18 @@ public class StartJavaHyperties extends AbstractVerticle {
 					public void handle(final ServerWebSocket ws) {
 
 						final StringBuilder sb = new StringBuilder();
-						//System.out.println("RESOURCE-OPEN");
+						// System.out.println("RESOURCE-OPEN");
 						ws.frameHandler(frame -> {
 							sb.append(frame.textData());
 
 							if (frame.isFinal()) {
-								//System.out.println("RESOURCE isFinal -> Data:" + sb.toString());
+								// System.out.println("RESOURCE isFinal -> Data:" + sb.toString());
 								ws.writeFinalTextFrame("received");
 								sb.delete(0, sb.length());
 							}
 						});
 						ws.closeHandler(handler -> {
-							//System.out.println("RESOURCE-CLOSE");
+							// System.out.println("RESOURCE-CLOSE");
 						});
 					}
 				});
@@ -486,7 +485,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	private void handleRequestPub(RoutingContext routingContext) {
 
-		//System.out.println("ENDPOINT POST RECEIVED DATA -> " + routingContext.getBodyAsString().toString());
+		// System.out.println("ENDPOINT POST RECEIVED DATA -> " +
+		// routingContext.getBodyAsString().toString());
 
 		JsonObject dataReceived = new JsonObject(routingContext.getBodyAsString().toString());
 		JsonArray values = dataReceived.containsKey("values") ? dataReceived.getJsonArray("values") : null;
@@ -504,13 +504,17 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 				JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuesArray);
 
-				String objURL = findStream(currentObj.getString("streamId"));
-				//System.out.println("publishin on " + objURL + "/changes");
+				Future<String> objURLFuture = findStream(currentObj.getString("streamId"));
+				objURLFuture.setHandler(asyncResult -> {
+					String objURL = asyncResult.result();
+					// System.out.println("publishin on " + objURL + "/changes");
 
-				if (objURL != null) {
-					String changesObj = objURL + "/changes";
-					vertx.eventBus().publish(changesObj, new JsonArray().add(newObjToSend));
-				}
+					if (objURL != null) {
+						String changesObj = objURL + "/changes";
+						vertx.eventBus().publish(changesObj, new JsonArray().add(newObjToSend));
+					}
+				});
+
 			}
 		}
 		HttpServerResponse httpServerResponse = routingContext.response();
@@ -519,31 +523,21 @@ public class StartJavaHyperties extends AbstractVerticle {
 		httpServerResponse.putHeader("Content-Type", "application/text").end();
 	}
 
-	private String findStream(String streamID) {
-		//System.out.println("find stream:" + streamID);
-		final String stream[] = new String[1];
-		findDOUrl = new CountDownLatch(1);
+	private Future<String> findStream(String streamID) {
+		// System.out.println("find stream:" + streamID);
+		Future<String> stream = Future.future();
 
-		new Thread(() -> {
-			mongoClient.find("dataobjects", new JsonObject().put("url", streamID), res -> {
-				if (res.result().size() != 0) {
-					String objURL = res.result().get(0).getString("objURL");
+		mongoClient.find("dataobjects", new JsonObject().put("url", streamID), res -> {
+			if (res.result().size() != 0) {
+				String objURL = res.result().get(0).getString("objURL");
+				stream.complete(objURL);
+				// System.out.println("3,9" + stream[0]);
+			} else {
+				stream.complete(null);
+			}
+		});
 
-					stream[0] = objURL;
-					//System.out.println("3,9" + stream[0]);
-				}
-				findDOUrl.countDown();
-			});
-
-		}).start();
-
-		try {
-			findDOUrl.await(5L, TimeUnit.SECONDS);
-			return stream[0];
-		} catch (InterruptedException e) {
-			//System.out.println(e);
-		}
-		return stream[0];
+		return stream;
 	}
 
 }
