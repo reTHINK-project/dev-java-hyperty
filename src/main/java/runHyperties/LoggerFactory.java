@@ -47,9 +47,28 @@ public class LoggerFactory {
 		Level logLevel;
 		String envLogLevel = System.getenv("LOG_LEVEL");
 		if (envLogLevel != null) {
-			switch (envLogLevel) {
+			String aux = envLogLevel.toLowerCase();
+			switch (aux) {
+			case "trace":
+				logLevel = Level.TRACE;
+				break;
+			case "debug":
+				logLevel = Level.DEBUG;
+				break;
+			case "info":
+				logLevel = Level.INFO;
+				break;
+			case "warn":
+				logLevel = Level.WARN;
+				break;
 			case "error":
 				logLevel = Level.ERROR;
+				break;
+			case "fatal":
+				logLevel = Level.FATAL;
+				break;
+			case "off":
+				logLevel = Level.OFF;
 				break;
 			default:
 				logLevel = Level.ALL;

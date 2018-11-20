@@ -28,7 +28,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	@Override
 	public void start() {
 		super.start();
-		System.out.println("Abstract started");
+		logger.debug("Abstract started");
 
 		// read config
 		hyperty = config().getString("hyperty");
@@ -54,7 +54,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * stored in the recipient wallet ?) (future in a blockchain?):
 	 */
 	void mine(int numTokens, JsonObject msgOriginal, String source) {
-		System.out.println(logMessage + "mine(): Mining " + numTokens + " tokens...\nmsg: " + msgOriginal);
+		logger.debug(logMessage + "mine(): Mining " + numTokens + " tokens...\nmsg: " + msgOriginal);
 		String userId = msgOriginal.getString("guid");
 
 		// store transaction by sending it to wallet through wallet manager
@@ -159,7 +159,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * @param transaction
 	 */
 	private void transfer(JsonObject msg) {
-		System.out.println(logMessage + "transfer(): " + msg.toString());
+		logger.debug(logMessage + "transfer(): " + msg.toString());
 
 		vertx.eventBus().publish(walletManagerAddress, msg);
 	}
@@ -172,7 +172,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * @return
 	 */
 	Future<String> getWalletAddress(String userId) {
-		System.out.println("Getting WalletAddress to:" + userId);
+		logger.debug("Getting WalletAddress to:" + userId);
 		// send message to Wallet Manager address
 		/*
 		 * type: read, from: <rating address>, body: { resource: 'user/<userId>'}
@@ -188,11 +188,11 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		send(walletManagerAddress, msg, reply -> {
 
-			System.out.println("sending reply from getwalletAddress" + reply.result().body().toString());
+			logger.debug("sending reply from getwalletAddress" + reply.result().body().toString());
 			walletAddress.complete(reply.result().body().getString("address"));
 		});
 
-		System.out.println("WALLET ADDRESS returning" + walletAddress);
+		logger.debug("WALLET ADDRESS returning" + walletAddress);
 		return walletAddress;
 
 	}
@@ -203,9 +203,9 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * removeStreamHandler for valid received delete messages.
 	 */
 	private void addMyHandler() {
-		System.out.println(logMessage + "addMyHandler: " + streamAddress);
+		logger.debug(logMessage + "addMyHandler: " + streamAddress);
 		vertx.eventBus().<JsonObject>consumer(streamAddress, message -> {
-			System.out.println(logMessage + "new message: " + message.body().toString());
+			logger.debug(logMessage + "new message: " + message.body().toString());
 			mandatoryFieldsValidator(message);
 			JsonObject body = new JsonObject(message.body().toString());
 			String type = body.getString("type");
@@ -217,7 +217,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			switch (type) {
 			case "create":
 				// valid received invitations (create messages)
-				System.out.println("Abstract ADD STREAM");
+				logger.debug("Abstract ADD STREAM");
 				Future<Boolean> canHandleData = checkIfCanHandleData(handleCheckInUserURL);
 				canHandleData.setHandler(asyncResult -> {
 					if (asyncResult.succeeded()) {
@@ -225,7 +225,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 							addStreamHandler(handleCheckInUserURL);
 							response.put("body", new JsonObject().put("code", 200));
 							message.reply(response);
-							System.out.println("Replied with" + response.toString());
+							logger.debug("Replied with" + response.toString());
 						} else {
 							response.put("body", new JsonObject().put("code", 406));
 							message.reply(response);
@@ -241,7 +241,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 				break;
 
 			default:
-				System.out.println("Incorrect message type: " + type);
+				logger.debug("Incorrect message type: " + type);
 				break;
 			}
 		});
@@ -251,7 +251,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		Future<String> userID = Future.future();
 		mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {
-			System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
+			logger.debug("2 - find Dataobjects size->" + userURLforAddress.result().size());
 			if (userURLforAddress.result().size() == 0) {
 				userID.complete("");
 			}
@@ -259,19 +259,19 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			userID.complete(dataObjectInfo.getString("guid"));
 		});
 
-		System.out.println("3 - return other");
+		logger.debug("3 - return other");
 		return userID;
 	}
 
 	public Future<Boolean> checkIfCanHandleData(String userURL) {
-		System.out.println(logMessage + "checkIfCanHandleData():" + userURL);
+		logger.debug(logMessage + "checkIfCanHandleData():" + userURL);
 		Future<Boolean> canHandleData = Future.future();
 
 		JsonObject query = new JsonObject().put("user", userURL);
 		mongoClient.find(collection, query, res -> {
 			if (res.result().size() != 0) {
 				canHandleData.complete(true);
-				System.out.println("User exists");
+				logger.debug("User exists");
 			} else {
 				JsonObject document = new JsonObject();
 				document.put("user", userURL);
@@ -280,16 +280,16 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 				document.put("user-activity", new JsonArray());
 				document.put("elearning", new JsonArray());
 				document.put("energy-saving", new JsonArray());
-				System.out.println("User exists false");
+				logger.debug("User exists false");
 				mongoClient.insert(collection, document, res2 -> {
-					System.out.println("Setup complete - rates");
+					logger.debug("Setup complete - rates");
 					canHandleData.complete(true);
 				});
 			}
 
 		});
 
-		System.out.println("3 - return other");
+		logger.debug("3 - return other");
 		return canHandleData;
 
 	}
@@ -302,11 +302,11 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 */
 	private void addStreamHandler(String from) {
 		// add a stream handler
-		System.out.println("Adding stream handler from " + from);
+		logger.debug("Adding stream handler from " + from);
 		vertx.eventBus().<JsonObject>consumer(from, message -> {
 			mandatoryFieldsValidator(message);
 
-			System.out.println("Received message " + message.body() + " from " + from);
+			logger.debug("Received message " + message.body() + " from " + from);
 
 			Future<Integer> numTokens = rate(message.body());
 			numTokens.setHandler(asyncResult -> {
@@ -321,7 +321,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	}
 
 	private void removeStreamHandler(String from) {
-		System.out.println("Removing stream handler from " + from);
+		logger.debug("Removing stream handler from " + from);
 	}
 
 	JsonArray entryArray = null;
@@ -335,7 +335,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 */
 	Future<Void> persistData(String dataSource, String user, long timestamp, String entryID, JsonObject userRates,
 			JsonObject data) {
-		System.out.println(logMessage + "persistData()");
+		logger.debug(logMessage + "persistData()");
 
 		Future<Void> persist = Future.future();
 
@@ -349,7 +349,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 			mongoClient.find(collection, query, result -> {
 				JsonObject currentDocument = result.result().get(0);
-				System.out.println("");
+				logger.debug("");
 				entryArray = currentDocument.getJsonArray(dataSource);
 				if (data != null) {
 					data.put("timestamp", timestamp);
@@ -365,7 +365,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 				// update only corresponding data source
 				mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
-					System.out.println(logMessage + "persistData -document updated: " + currentDocument);
+					logger.debug(logMessage + "persistData -document updated: " + currentDocument);
 					persist.complete();
 				});
 			});

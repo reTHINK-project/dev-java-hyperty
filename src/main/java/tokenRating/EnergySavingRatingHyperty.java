@@ -44,7 +44,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		return message -> {
 
-			System.out.println(logMessage + "new message -> " + message.body().toString());
+			logger.debug(logMessage + "new message -> " + message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
 				final String type = new JsonObject(message.body().toString()).getString("type");
@@ -75,7 +75,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 	@Override
 	Future<Integer> rate(Object data) {
-		System.out.println(logMessage + "rate(): " + data.toString());
+		logger.debug(logMessage + "rate(): " + data.toString());
 		Long currentTimestamp = new Date().getTime();
 
 		// TODO : -1
@@ -121,7 +121,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		Future<Void> applyPublicRating = Future.future();
 
-		System.out.println(logMessage + "applyPublicRating(): " + values);
+		logger.debug(logMessage + "applyPublicRating(): " + values);
 
 		int biggestReductionPercentage = -1;
 		int biggestReductionIndex = 0;
@@ -140,7 +140,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		}
 
 		// get tokens won for school with biggest reduction
-		System.out.println(logMessage + "applyPublicRating() school biggest reduction: " + biggestReductionIndex);
+		logger.debug(logMessage + "applyPublicRating() school biggest reduction: " + biggestReductionIndex);
 
 		// get wallet from wallet manager
 		Future<JsonObject> readPublicWallet = Future.future();
@@ -153,11 +153,11 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		JsonObject identity = new JsonObject();
 		msg.put("body", body);
 		msg.put("identity", identity);
-		System.out.println(logMessage + "applyPublicRating() school biggest reduction sending: " + msg);
+		logger.debug(logMessage + "applyPublicRating() school biggest reduction sending: " + msg);
 		vertx.eventBus().send("wallet-cause-read", msg, res -> {
 			JsonObject reply = (JsonObject) res.result().body();
 			JsonObject publicWallet = reply.getJsonObject("wallet");
-			System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
+			logger.debug(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
 			readPublicWallet.complete(publicWallet);
 		});
 
@@ -171,7 +171,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				monthlyPoints /= 10;
 
 				// apply bonus
-				System.out.println(logMessage + "applyPublicRating() bonus: " + monthlyPoints);
+				logger.debug(logMessage + "applyPublicRating() bonus: " + monthlyPoints);
 
 				JsonObject msgEnergySaving = new JsonObject();
 				msgEnergySaving.put("address", readPublicWallet.result().getString("address"));
@@ -195,7 +195,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 	private void transferToPublicWallet(int causeReductionPercentage, String id) {
 
-//		System.out.println("transferToPublicWallet(): " + id + "/" + causeReductionPercentage);
+//		logger.debug("transferToPublicWallet(): " + id + "/" + causeReductionPercentage);
 		Future<JsonObject> getPublicWallet = Future.future();
 
 		// get public wallet address
@@ -208,7 +208,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		msg.put("identity", identity);
 		vertx.eventBus().send("wallet-cause-read", msg, res -> {
 			JsonObject reply = (JsonObject) res.result().body();
-//			System.out.println(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
+//			logger.debug(logMessage + "applyPublicRating() publicWallet: " + publicWallet);
 			getPublicWallet.complete(reply.getJsonObject("wallet"));
 		});
 
@@ -235,7 +235,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @return
 	 */
 	private int applyPrivateRating(JsonArray values) {
-		System.out.println(logMessage + "applyPrivateRating(): " + values);
+		logger.debug(logMessage + "applyPrivateRating(): " + values);
 
 		int reductionUserPercentage = 0;
 
@@ -253,10 +253,10 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address, String ratingType) {
 
 		final String address_changes = address + "/changes";
-		System.out.println(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
+		logger.info(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			System.out.println("[Energy]");
-			System.out.println(logMessage + "onChanges(): received message" + message.body());
+			logger.info("[Energy]");
+			logger.debug(logMessage + "onChanges(): received message" + message.body());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
@@ -269,12 +269,12 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 					userGuid.setHandler(asyncResult -> {
 						changes.put("guid", userGuid.result());
 
-						System.out.println(logMessage + "onChanges(): change: " + changes.toString());
+						logger.debug(logMessage + "onChanges(): change: " + changes.toString());
 
 						Future<Integer> numTokens = rate(changes);
 						numTokens.setHandler(res -> {
 							if (numTokens.result() > 0) {
-								System.out.println(logMessage + "rate(): numTokens=" + numTokens);
+								logger.debug(logMessage + "rate(): numTokens=" + numTokens);
 								mine(numTokens.result(), changes, dataSource);
 							}
 
@@ -304,12 +304,12 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	}
 
 	public void onNotification(JsonObject body, String streamType) {
-		System.out.println("onNotification()" + body.toString());
+		logger.debug("onNotification()" + body.toString());
 		String from = body.getString("from");
 		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 
 		if (body.containsKey("external") && body.getBoolean("external")) {
-			System.out.println("EXTERNAL INVITE");
+			logger.debug("EXTERNAL INVITE");
 			String streamID = body.getString("streamID");
 			String objURL = from.split("/subscription")[0];
 			Future<String> CheckURL = findDataObjectStream(objURL, guid);
