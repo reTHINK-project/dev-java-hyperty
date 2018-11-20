@@ -59,7 +59,7 @@ public class RegistryHyperty extends AbstractHyperty {
 	 */
 	private void checkStatus() {
 
-		// System.out.println(logMessage + "checkStatus()");
+		System.out.println(logMessage + "checkStatus()");
 		Long timeNow = new Date().getTime();
 
 		mongoClient.find(collection, new JsonObject(), res -> {
@@ -68,15 +68,14 @@ public class RegistryHyperty extends AbstractHyperty {
 				String status = entry.getString("status");
 				if (status.equals("online")) {
 					Long lastModified = entry.getLong("lastModified");
-					// System.out.println("test" + "\nlm:" + lastModified + " \ntimenow" + timeNow
-					// );
+					System.out.println("test" + "\nlm:" + lastModified + " \ntimenow" + timeNow);
 					if (timeNow - lastModified > checkStatusTimer) {
 
 						entry.put("status", "offline");
 						entry.put("lastModified", timeNow);
 						mongoClient.findOneAndReplace(collection, new JsonObject().put("guid", entry.getString("guid")),
 								entry, id -> {
-									// System.out.println(logMessage + "checkStatus() document updated: " + entry);
+									System.out.println(logMessage + "checkStatus() document updated: " + entry);
 								});
 
 						JsonObject body = new JsonObject();
@@ -98,12 +97,10 @@ public class RegistryHyperty extends AbstractHyperty {
 	 * Handle requests.
 	 */
 	private void handleRequests() {
-		// System.out.println("Waiting on ->" + config().getString("url") +
-		// "/registry");
+		System.out.println("Waiting on ->" + config().getString("url") + "/registry");
 		vertx.eventBus().<JsonObject>consumer(config().getString("url") + "/registry", message -> {
 			mandatoryFieldsValidator(message);
-			// System.out.println(logMessage + "handleRequests(): " +
-			// message.body().toString());
+			System.out.println(logMessage + "handleRequests(): " + message.body().toString());
 
 			JsonObject msg = new JsonObject(message.body().toString());
 			JsonObject response = new JsonObject();
@@ -129,7 +126,7 @@ public class RegistryHyperty extends AbstractHyperty {
 				break;
 
 			default:
-				// System.out.println("Incorrect message type: " + msg.getString("type"));
+				System.out.println("Incorrect message type: " + msg.getString("type"));
 				break;
 			}
 		});
@@ -143,7 +140,7 @@ public class RegistryHyperty extends AbstractHyperty {
 	 * @param message
 	 */
 	private Future<Void> updateStatus(JsonObject msg, Message<JsonObject> message) {
-		// System.out.println(logMessage + "updateStatus(): " + msg.toString());
+		System.out.println(logMessage + "updateStatus(): " + msg.toString());
 		JsonObject body = msg.getJsonObject("body");
 		String guid = body.getString("resource");
 		String status = body.getString("status");
@@ -161,8 +158,8 @@ public class RegistryHyperty extends AbstractHyperty {
 			JsonObject document = new JsonObject(entry.toString());
 			mongoClient.findOneAndReplace(collection, new JsonObject().put("guid", entry.getString("guid")), document,
 					id -> {
-						// System.out.println(logMessage + "updateStatus(): registry updated" +
-						// document);
+						System.out.println(logMessage + "updateStatus(): registry updated" +
+						 document);
 					});
 			// publish message to crmStatus and offlineSMstatus
 			publish(CRMHypertyStatus, msg);
@@ -178,7 +175,7 @@ public class RegistryHyperty extends AbstractHyperty {
 	}
 
 	private Future<Void> retrieveStatus(JsonObject msg, Message<JsonObject> message) {
-		// System.out.println(logMessage + "updateStatus(): " + msg.toString());
+		System.out.println(logMessage + "updateStatus(): " + msg.toString());
 		JsonObject body = msg.getJsonObject("body");
 		String guid = body.getString("resource");
 
@@ -209,13 +206,11 @@ public class RegistryHyperty extends AbstractHyperty {
 
 		return message -> {
 
-			// System.out.println(logMessage + "New message -> " +
-			// message.body().toString());
+			System.out.println(logMessage + "New message -> " + message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 
-				// System.out.println(logMessage + "[NewData] -> [Worker]-" +
-				// Thread.currentThread().getName()
-				// + "\n[Data] " + message.body());
+				System.out.println(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
+						+ "\n[Data] " + message.body());
 				/*
 				 * final String type = new
 				 * JsonObject(message.body().toString()).getString("type"); final JsonObject
@@ -239,7 +234,7 @@ public class RegistryHyperty extends AbstractHyperty {
 
 	@Override
 	public Future<Void> handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
-		// System.out.println("REGISTRY HANDLE NEW ENTRY->" + msg.toString());
+		System.out.println("REGISTRY HANDLE NEW ENTRY->" + msg.toString());
 
 		Future<Void> creationRequest = Future.future();
 		if (msg.containsKey("identity")) {
@@ -257,7 +252,7 @@ public class RegistryHyperty extends AbstractHyperty {
 							}
 						});
 					} else {
-						// System.out.println("user already exist");
+						System.out.println("user already exist");
 						creationRequest.complete();
 					}
 				} else {
@@ -298,7 +293,7 @@ public class RegistryHyperty extends AbstractHyperty {
 		toUpdate.put("type", "update");
 
 		mongoClient.save(this.collection, newUser, id -> {
-			// System.out.println(logMessage + " new user " + id);
+			System.out.println(logMessage + " new user " + id);
 			newUser.remove("lastModified");
 			toUpdate.put("body", newUser);
 			publish(CRMHypertyStatus, toUpdate);

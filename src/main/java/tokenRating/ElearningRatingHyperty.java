@@ -99,7 +99,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		// check unprocessed sessions
 
 		JsonObject message = (JsonObject) data;
-		// System.out.println("ELEARNING MESSAGE " + message.toString());
+		System.out.println("ELEARNING MESSAGE " + message.toString());
 
 		String user = message.getString("guid");
 
@@ -120,18 +120,18 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	 * @return
 	 */
 	private Future<Integer> getTokensForAnswer(JsonObject answer) {
-		// System.out.println("getTokensForAnswer: " + answer);
+		System.out.println("getTokensForAnswer: " + answer);
 		JsonArray userAnswers = answer.getJsonArray("answers");
 
 		String quizID = answer.getString("id");
-		// System.out.println("Quiz id: " + quizID);
+		System.out.println("Quiz id: " + quizID);
 
 		// query mongo for quiz info
 		Future<Integer> tokens = Future.future();
 		// get shop with that ID
 		mongoClient.find(elearningsCollection, new JsonObject().put("name", quizID), elearningForIdResult -> {
 			JsonObject quizInfo = elearningForIdResult.result().get(0);
-			// System.out.println("1 - Received elearning info: " + quizInfo.toString());
+			System.out.println("1 - Received elearning info: " + quizInfo.toString());
 			// quiz questions
 			JsonArray questions = quizInfo.getJsonArray("questions");
 			boolean isMiniQuiz = quizInfo.getString("type").equals("mini-quiz");
@@ -152,7 +152,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 			JsonObject currentQuestion = questions.getJsonObject(i);
 			int correctAnswer = currentQuestion.getInteger("correctAnswer");
 			int userAnswer = userAnswers.getInteger(i);
-			// System.out.println("correctAnswer:" + correctAnswer + "/" + userAnswer);
+			System.out.println("correctAnswer:" + correctAnswer + "/" + userAnswer);
 			if (userAnswer == correctAnswer)
 				tokens += tokensPerCorrectAnswer;
 		}
@@ -164,18 +164,18 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		// System.out.println("waiting for changes to user activity on ->" + address_changes);
+		System.out.println("waiting for changes to user activity on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			// System.out.println("[Elearning]");
-			// System.out.println("User activity on changes msg: " + message.body().toString());
+			System.out.println("[Elearning]");
+			System.out.println("User activity on changes msg: " + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
-					// System.out.println("CHANGES" + data.toString());
+					System.out.println("CHANGES" + data.toString());
 					JsonObject messageToRate = data.getJsonObject(0);
 					Future<String> userURL = getUserURL(address);
 					userURL.setHandler(asyncResult -> {
-						// System.out.println("URL " + userURL.result());
+						System.out.println("URL " + userURL.result());
 						messageToRate.put("guid", userURL.result());
 						Future<Integer> numTokens = rate(messageToRate);
 						numTokens.setHandler(res -> {
