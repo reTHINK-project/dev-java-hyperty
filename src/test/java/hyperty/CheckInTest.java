@@ -39,10 +39,12 @@ class CheckInTest {
 	private static String from = "tester";
 
 	private static String storeID = "test-shopID";
+	private static String bonusID = "test-bonusID";
 	// mongo config
 	private static MongoClient mongoClient;
 	private static String ratesCollection = "rates";
 	private static String shopsCollection = "shops";
+	private static String bonusCollection = "bonus";
 	private static String walletsCollection = "wallets";
 	private static String dataobjectsCollection = "dataobjects";
 	private static String db_name = "test";
@@ -71,7 +73,6 @@ class CheckInTest {
 		config.put("mongoHost", mongoHost);
 		config.put("mongoPorts", "27017");
 		config.put("mongoCluster", "NO");
-		
 
 		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
@@ -126,9 +127,8 @@ class CheckInTest {
 			e.printStackTrace();
 		}
 
-		CountDownLatch setupLatch = new CountDownLatch(2);
+		CountDownLatch setupLatch = new CountDownLatch(3);
 
-		
 		new Thread(() -> { // create wallet
 			System.out.println("no wallet yet, creating");
 
@@ -139,10 +139,10 @@ class CheckInTest {
 			newWallet.put("address", address);
 			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
 			newWallet.put("created", new Date().getTime());
-			newWallet.put("balance", 0);
+			newWallet.put("balance", 40);
 			newWallet.put("transactions", new JsonArray());
 			newWallet.put("status", "active");
-			newWallet.put("bonus-credit", 0);
+			newWallet.put("bonus-credit", 40);
 			newWallet.put("ranking", 0);
 
 			JsonObject document = new JsonObject(newWallet.toString());
@@ -152,7 +152,6 @@ class CheckInTest {
 				setupLatch.countDown();
 			});
 		}).start();
-		
 
 		new Thread(() -> {
 			// add shop
@@ -163,6 +162,24 @@ class CheckInTest {
 			storeLocation.put("degrees-longitude", 50);
 			document.put("location", storeLocation);
 			mongoClient.insert(shopsCollection, document, res -> {
+				System.out.println("Setup complete - shops");
+				setupLatch.countDown();
+			});
+		}).start();
+
+		new Thread(() -> {
+			// add bonus
+			JsonObject bonus = new JsonObject();
+			bonus.put("id", bonusID);
+			bonus.put("name", "bonus name");
+			bonus.put("description", "bonus description");
+			bonus.put("cost", 5);
+			JsonObject constraints = new JsonObject().put("times", 1).put("period", "day");
+			bonus.put("start", "2000/08/01");
+			bonus.put("expires", "2020/08/30");
+			bonus.put("constraints", constraints);
+			bonus.put("spotID", storeID);
+			mongoClient.insert(bonusCollection, bonus, res -> {
 				System.out.println("Setup complete - shops");
 				setupLatch.countDown();
 			});
@@ -192,7 +209,7 @@ class CheckInTest {
 	@AfterAll
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
-		CountDownLatch setupLatch = new CountDownLatch(4);
+		CountDownLatch setupLatch = new CountDownLatch(5);
 
 		// remove from rates
 		JsonObject query = new JsonObject();
@@ -226,6 +243,14 @@ class CheckInTest {
 			setupLatch.countDown();
 		});
 
+		// remove from bonus
+		query = new JsonObject();
+		query.put("id", bonusID);
+		mongoClient.removeDocument(bonusCollection, query, res -> {
+			System.out.println("Bonus removed from DB");
+			setupLatch.countDown();
+		});
+
 		try {
 			setupLatch.await();
 			testContext.completeNow();
@@ -236,6 +261,7 @@ class CheckInTest {
 	}
 
 	@Test
+//	@Disabled
 	void userCloseToShop(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "create");
@@ -253,14 +279,14 @@ class CheckInTest {
 			JsonObject body = new JsonObject().put("code", 200);
 			newMsg.put("body", body);
 			res.result().reply(newMsg);
-		});	
-		
+		});
+
 		try {
-			Thread.sleep(5000);
+			Thread.sleep(3000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+
 		System.out.println("TEST - User close to shop");
 		// latitude
 		JsonObject latitude = new JsonObject().put("name", "latitude").put("value", 40.0001);
@@ -281,7 +307,7 @@ class CheckInTest {
 
 		// wait for op
 		try {
-			Thread.sleep(6000);
+			Thread.sleep(3000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -291,7 +317,7 @@ class CheckInTest {
 		mongoClient.find(ratesCollection, query, result -> {
 			JsonObject rates = result.result().get(0);
 			JsonArray checkIns = rates.getJsonArray("checkin");
-			assertEquals(1, checkIns.size());
+			assertEquals(2, checkIns.size());
 			testContext.completeNow();
 		});
 
@@ -325,6 +351,7 @@ class CheckInTest {
 	}
 
 	@Test
+//	@Disabled
 	void getBonus(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - get bonus");
 		JsonObject config = new JsonObject().put("type", "read");
@@ -337,6 +364,7 @@ class CheckInTest {
 	}
 
 	@Test
+//	@Disabled
 	void getShops(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - get shops");
 		JsonObject config = new JsonObject().put("type", "read");
@@ -347,4 +375,43 @@ class CheckInTest {
 			testContext.completeNow();
 		});
 	}
+
+	@Test
+	void collectBonus(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("TEST - collectBonus");
+		// bonusID
+		JsonObject bonus = new JsonObject().put("name", "bonus").put("value", bonusID);
+		// shopID
+		JsonObject checkin = new JsonObject().put("name", "checkin").put("value", storeID);
+
+		JsonArray toSend = new JsonArray();
+		toSend.add(checkin);
+		toSend.add(bonus);
+		vertx.eventBus().send(changesAddress, toSend, reply -> {
+			System.out.println("REP: " + reply.toString());
+		});
+
+		// wait for op
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// check if rate was added to user
+		JsonObject identity = new JsonObject().put("userProfile",
+				new JsonObject().put("guid", userID));
+		JsonObject query = new JsonObject().put("identity", identity);
+		mongoClient.find(walletsCollection, query, result -> {
+			JsonObject wallet = result.result().get(0);
+			JsonArray transactions = wallet.getJsonArray("transactions");
+			assertEquals(1, transactions.size());
+			testContext.completeNow();
+		});
+		
+		
+
+
+	}
+
 }

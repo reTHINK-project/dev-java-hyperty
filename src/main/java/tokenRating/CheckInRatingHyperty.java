@@ -161,9 +161,11 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 			mongoClient.find(bonusCollection, new JsonObject().put("id", bonusID), bonusForIdResult -> {
 				logger.debug(logMessage + "Received bonus info");
 				JsonObject bonusInfo = bonusForIdResult.result().get(0);
-				validatePickUpItem(changesMessage.getString("guid"), bonusInfo, currentTimestamp);
-				// TODO
-				checkinTokens.complete(0);
+				Future<Integer> collectBonusTokensFuture = validatePickUpItem(changesMessage.getString("guid"),
+						bonusInfo, currentTimestamp);
+				collectBonusTokensFuture.setHandler(asyncResult -> {
+					checkinTokens.complete(asyncResult.result());
+				});
 			});
 		} else {
 			// CHECKIN
@@ -254,8 +256,6 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		Future<Integer> findRates = Future.future();
 
-		// TODO - check wallet funds
-
 		// get previous checkin from that user for that rating source
 		mongoClient.find(collection, new JsonObject().put("user", user), result -> {
 			boolean valid = true;
@@ -305,9 +305,9 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 					// TODO - hour ?
 				}
 				if (valid) {
-					// invalid-failed-constraints
 					findRates.complete(bonusInfo.getInteger("cost") * -1);
 				} else {
+					// invalid-failed-constraints
 					findRates.complete(0);
 				}
 			} else {
@@ -315,7 +315,6 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 				findRates.complete(1);
 			}
 			persistData(dataSource, user, currentTimestamp, bonusInfo.getString("id"), userRates, null);
-			findRates.complete();
 		});
 
 		return findRates;
@@ -423,9 +422,8 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 							if (res.succeeded()) {
 								/*
 								 * if (numTokens == -1) {
-								 * //logger.debug("User is not inside any shop or already checkIn"); }
-								 * else { //logger.debug("User is close"); mine(numTokens, changes,
-								 * "checkin"); }
+								 * //logger.debug("User is not inside any shop or already checkIn"); } else {
+								 * //logger.debug("User is close"); mine(numTokens, changes, "checkin"); }
 								 */
 								if (numTokens.result() < 0) {
 									logger.debug("User is not inside any shop or already checkIn");
@@ -458,16 +456,17 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 							break;
 						}
 					}
-					changes.put("guid", getUserURL(address));
-					logger.debug("CHANGES" + changes.toString());
+					Future<String> userURLFuture = getUserURL(address);
+					userURLFuture.setHandler(asyncResult -> {
+						String userURL = userURLFuture.result();
 
-					Future<Integer> pointsToWithdraw = rate(changes);
-					pointsToWithdraw.setHandler(asyncResult -> {
-						if (asyncResult.succeeded()) {
-							mine(asyncResult.result(), changes, "bonus");
-						} else {
-							// oh ! we have a problem...
-						}
+						changes.put("guid", userURL);
+						logger.debug("CHANGES" + changes.toString());
+
+						Future<Integer> pointsToWithdraw = rate(changes);
+						pointsToWithdraw.setHandler(res -> {
+							mine(pointsToWithdraw.result(), changes, "bonus");
+						});
 					});
 
 				}
