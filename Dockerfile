@@ -45,6 +45,7 @@ RUN ["mvn", "package"]
 
 #Setup Config
 ADD server-keystore.jks /build/server-keystore.jks
+ADD configuration.xml /build/configuration.xml
 
 #Run msg-node
 EXPOSE 9090
