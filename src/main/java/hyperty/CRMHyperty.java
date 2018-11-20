@@ -366,7 +366,7 @@ public class CRMHyperty extends AbstractHyperty {
 					changeStatus(nextStatus, agent, query);
 				}
 			} else {
-				System.err.println(logMessage + "statusUpdate(): no user");
+				logger.debug(logMessage + "statusUpdate(): no user");
 			}
 
 		});

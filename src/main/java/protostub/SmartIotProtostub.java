@@ -651,19 +651,22 @@ public class SmartIotProtostub extends AbstractVerticle {
 		Future<String> findDevice = Future.future();
 
 		mongoClient.find("dataobjects", new JsonObject().put("objURL", objURL), res -> {
-
+			boolean streamExist = false;
 			int x;
 			for (x = 0; x < res.result().size(); x++) {
 				String currentGuid = res.result().get(x).getJsonObject("metadata").getString("guid");
 				if (currentGuid.equals(guid)) {
 
 					String streamID = res.result().get(0).getString("url");
-
+					streamExist = true;
 					findDevice.complete(streamID);
 					break;
 				}
 			}
-			findDevice.complete(null);
+			if (! streamExist) {
+				findDevice.complete(null);
+			}
+			
 
 		});
 

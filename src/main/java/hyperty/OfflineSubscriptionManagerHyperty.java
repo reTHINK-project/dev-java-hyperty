@@ -146,8 +146,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 
 			JsonObject query = new JsonObject().put("user", msg.getString("resource"));
 			mongoClient.find(collection, query, res -> {
-				System.out
-						.println(logMessage + "statusUpdate(): cguid associated with msgs: " + res.result().toString());
+				logger.debug(logMessage + "statusUpdate(): cguid associated with msgs: " + res.result().toString());
 				for (Object obj : res.result()) {
 					JsonObject pendingSubscriptionMessage = ((JsonObject) obj).getJsonObject("message");
 					processPendingSubscription(pendingSubscriptionMessage);
