@@ -54,8 +54,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * stored in the recipient wallet ?) (future in a blockchain?):
 	 */
 	void mine(int numTokens, JsonObject msgOriginal, String source) {
-		System.out.println(logMessage + "mine(): Mining " + numTokens + " tokens...\n
-		// msg: " + msgOriginal);
+		System.out.println(logMessage + "mine(): Mining " + numTokens + " tokens...\nmsg: " + msgOriginal);
 		String userId = msgOriginal.getString("guid");
 
 		// store transaction by sending it to wallet through wallet manager
@@ -189,8 +188,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		send(walletManagerAddress, msg, reply -> {
 
-			System.out.println("sending reply from getwalletAddress" +
-			// reply.result().body().toString());
+			System.out.println("sending reply from getwalletAddress" + reply.result().body().toString());
 			walletAddress.complete(reply.result().body().getString("address"));
 		});
 
@@ -253,8 +251,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 		Future<String> userID = Future.future();
 		mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {
-			System.out.println("2 - find Dataobjects size->" +
-			// userURLforAddress.result().size());
+			System.out.println("2 - find Dataobjects size->" + userURLforAddress.result().size());
 			if (userURLforAddress.result().size() == 0) {
 				userID.complete("");
 			}
@@ -368,8 +365,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 				// update only corresponding data source
 				mongoClient.findOneAndReplace(collection, query, currentDocument, id -> {
-					System.out.println(logMessage + "persistData -document updated: " +
-					// currentDocument);
+					System.out.println(logMessage + "persistData -document updated: " + currentDocument);
 					persist.complete();
 				});
 			});
