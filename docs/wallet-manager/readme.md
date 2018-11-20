@@ -14,6 +14,7 @@ The Wallet Manager hyperty handles Token Wallets on behalf of a user.
 ```
 * `rankingTimer`: num of milliseconds before recalculating user rankings
 
+* `onReadMaxTransactions`: max of transactions to be returned on wallet read request
 
 For each public wallet, a new device and a new sensor is created at the Smart IoT Stub as specified [here](../smart-iot-protostub)
 
@@ -110,7 +111,7 @@ type: create,
 body: { resource: 'wallet/<wallet-address>', value: <transaction JSON Object>}
 ```
 
-If valid, the transaction is stored and the balance updated.
+If valid, the transaction is stored and the balance, bonus credit as well as associated Account are updated.
 
 The transaction is published in the event bus sending a [Wallet update message](https://rethink-project.github.io/specs/messages/wallet-messages/).
 
@@ -126,7 +127,7 @@ If a `wallet2bGranted` exists, a new transfer is performed to it.
 type: read,
 ```
 
-Returns the stored Wallet value.
+Returns the stored Wallet JSON. Number of transactions returned per request is limited to `onReadMaxTransactions`.
 
 ### Wallet delete requests
 
