@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.logging.log4j.core.Logger;
+
 import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
@@ -16,6 +18,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import runHyperties.LoggerFactory;
 
 public class AbstractHyperty extends AbstractVerticle {
 
@@ -34,6 +37,7 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected MongoClient mongoClient = null;
 	protected boolean acceptSubscription;
 	protected String dataObjectsCollection = "dataobjects";
+	protected Logger logger;
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -53,6 +57,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.schemaURL = config().getString("schemaURL");
 		this.observers = config().getJsonArray("observers");
 		this.siotStubUrl = config().getString("siot_stub_url");
+		this.logger =  LoggerFactory.getInstance().getLogger(); 
 
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
