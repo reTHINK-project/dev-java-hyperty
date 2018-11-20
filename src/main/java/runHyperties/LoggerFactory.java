@@ -17,7 +17,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 
 public class LoggerFactory {
 
-	private static LoggerContext context;
+	private static Logger logger;
 
 	private static LoggerFactory single_instance = null;
 
@@ -70,6 +70,8 @@ public class LoggerFactory {
 
 		// Start logging system
 		context.start(configuration);
+
+		logger = context.getLogger("com");
 	}
 
 	public static LoggerFactory getInstance() {
@@ -86,11 +88,6 @@ public class LoggerFactory {
 	public Logger getLogger() {
 
 		// Get a reference for logger
-		Logger logger = context.getLogger("com");
-
-		// LogEvent of ERROR message that would be handled by Root
-		logger.getParent().log(Level.ERROR,
-				"Root Logger :: Passed Message As Root Is Configured For ERROR Level messages");
 
 		return logger;
 
