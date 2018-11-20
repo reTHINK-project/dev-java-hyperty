@@ -564,7 +564,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					// update counters
 					JsonObject countersObj = wallet.getJsonObject(counters);
-					if (!source.equals("created")) {
+					if (!source.equals("created") && !source.equals("bonus")) {
 						countersObj.put(source, countersObj.getInteger(source) + transactionValue);
 					}
 
