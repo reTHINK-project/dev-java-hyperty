@@ -703,7 +703,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				transactions.put("attribute", "transactions");
 				updateBody.add(transactions);
 				JsonObject accounts = new JsonObject();
-				accounts.put("value", accounts);
+				accounts.put("value", updatedWallet.getJsonArray("accounts"));
 				accounts.put("attributeType", "array");
 				accounts.put("attribute", "accounts");
 				updateBody.add(accounts);
