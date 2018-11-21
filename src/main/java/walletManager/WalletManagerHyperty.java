@@ -218,7 +218,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					newWallet.put("balance", 0);
 					newWallet.put("transactions", new JsonArray());
 					newWallet.put("status", "active");
-//					newWallet.put("accounts", accounts);
+					newWallet.put("accounts", accounts);
 
 					// counters (by source)
 					JsonObject counters = new JsonObject();
@@ -478,7 +478,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 
 			// update accounts
-//			updateAccounts(walletInfo);
+			updateAccounts(walletInfo);
 
 			JsonObject document = new JsonObject(walletInfo.toString());
 
@@ -676,7 +676,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					}
 
 					// update accounts
-//					updateAccounts(wallet);
+					updateAccounts(wallet);
 
 					updatedWallet = wallet;
 				}
@@ -939,7 +939,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						newWallet.put("ranking", 0);
-//						newWallet.put("accounts", accounts);
+						newWallet.put("accounts", accounts);
 
 						// check if profile info
 						JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
