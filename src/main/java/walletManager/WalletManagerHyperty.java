@@ -29,6 +29,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	 * Max number of transactions returned
 	 */
 	private Integer onReadMaxTransactions;
+	private JsonArray accounts;
 
 	private static final String logMessage = "[WalletManager] ";
 	private static final String smartMeterEnabled = "smartMeterEnabled";
@@ -91,6 +92,12 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		Timer timer = new Timer();
 		timer.schedule(new RankingsTimer(), 0, rankingTimer);
 
+		accounts = new JsonArray();
+		accounts.add(new Account("elearning", "quizzes").toJsonObject());
+		accounts.add(new Account("walking", "km").toJsonObject());
+		accounts.add(new Account("biking", "km").toJsonObject());
+		accounts.add(new Account("checkin", "checkin").toJsonObject());
+		accounts.add(new Account("energy-saving", "%").toJsonObject());
 	}
 
 	class RankingsTimer extends TimerTask {
@@ -211,6 +218,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					newWallet.put("balance", 0);
 					newWallet.put("transactions", new JsonArray());
 					newWallet.put("status", "active");
+					newWallet.put("accounts", accounts);
 
 					// counters (by source)
 					JsonObject counters = new JsonObject();
@@ -248,11 +256,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		Future<Integer> createDevice = Future.future();
 
-		send(siotUrl, message, reply -> {
-			logger.debug("REP: " + reply.result().body().toString());
-			int result = new JsonObject(reply.result().body().toString()).getJsonObject("body").getInteger("code");
-			createDevice.complete(result);
-		});
+		if (siotUrl.equals("")) {
+			createDevice.complete(0);
+		} else {
+			send(siotUrl, message, reply -> {
+				logger.debug("REP: " + reply.result().body().toString());
+				int result = new JsonObject(reply.result().body().toString()).getJsonObject("body").getInteger("code");
+				createDevice.complete(result);
+			});
+		}
 
 		return createDevice;
 
@@ -466,8 +478,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 
 			// update accounts
-			JsonArray accounts = walletInfo.getJsonArray("accounts");
-			accounts = updateAccounts(accounts, transactions);
+			updateAccounts(walletInfo);
 
 			JsonObject document = new JsonObject(walletInfo.toString());
 
@@ -492,6 +503,12 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				transactionMsg.put("value", currentTransactions.getJsonObject(currentTransactions.size() - 1));
 				transactionMsg.put("attribute", "transaction");
 				updateBody.add(transactionMsg);
+				// accounts
+				JsonArray accounts = walletInfo.getJsonArray("accounts");
+				JsonObject accountsMsg = new JsonObject();
+				accountsMsg.put("value", accounts);
+				accountsMsg.put("attribute", "accounts");
+				updateBody.add(accountsMsg);
 				// ranking
 				JsonObject ranking = new JsonObject();
 				ranking.put("value", walletInfo.getInteger("ranking"));
@@ -517,9 +534,27 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
-	private JsonArray updateAccounts(JsonArray accounts, JsonArray transactions) {
-		JsonObject lastTransaction = transactions.getJsonObject(transactions.size() - 1);
+	private String getSource(JsonObject lastTransaction) {
 		String source = lastTransaction.getString("source");
+		if (source.equals("user-activity")) {
+			String activity = lastTransaction.getJsonObject("data").getString("activity");
+			if (activity.equals("user_biking_context")) {
+				source = "biking";
+			} else if (activity.equals("user_walking_context")) {
+				source = "walking";
+			}
+		}
+		return source;
+	}
+
+	private void updateAccounts(JsonObject wallet) {
+		JsonArray accounts = wallet.getJsonArray("accounts");
+		JsonArray transactions = wallet.getJsonArray("transactions");
+		if (transactions.size() == 0) {
+			return;
+		}
+		JsonObject lastTransaction = transactions.getJsonObject(transactions.size() - 1);
+		String source = getSource(lastTransaction);
 		// get account for source
 		List<Object> res = accounts.stream().filter(account -> ((JsonObject) account).getString("name").equals(source))
 				.collect(Collectors.toList());
@@ -527,7 +562,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		Account account = Account.toAccount(accountJson);
 		int value = lastTransaction.getInteger("value");
 		account.totalBalance += value;
-		if (!source.equals("user-activity")) {
+		if (!lastTransaction.getString("source").equals("user-activity")) {
 			account.totalData += 1;
 		} else {
 			account.totalData += lastTransaction.getJsonObject("data").getInteger("distance");
@@ -538,7 +573,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			lastBalance += ((JsonObject) transaction).getInteger("value");
 		}
 		account.lastBalance = lastBalance;
-		if (!source.equals("user-activity")) {
+		if (!lastTransaction.getString("source").equals("user-activity")) {
 			account.lastData = lastWeekTransactions.size();
 		} else {
 			int lastData = 0;
@@ -554,20 +589,17 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			if (js.getString("name").equals(source)) {
 				accounts.remove(js);
 				accounts.add(accountJson);
-				System.out.println("updateAccounts:" + "updating with " + accountJson);
 				break;
 			}
 		}
 
-		System.out.println("updateAccounts:" + accounts);
-		return accounts;
+		return;
 	}
 
 	private JsonArray lastWeekTransactions(JsonArray transactions) {
 		JsonArray lastWeek = new JsonArray();
 		for (Object object : transactions) {
 			JsonObject transaction = (JsonObject) object;
-			System.out.println("updateAccounts:" + transaction.getString("date"));
 			if (DateUtilsHelper.isDateInCurrentWeek(DateUtilsHelper.stringToDate(transaction.getString("date")))) {
 				lastWeek.add(transaction);
 			}
@@ -606,7 +638,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	JsonObject updatedWallet;
 
-	// TODO - wait for it to complete ?
 	private void transferToPublicWallet(String walletAddress, JsonObject transaction) {
 		logger.debug(logMessage + "transferToPublicWallet(): " + walletAddress + "\n" + transaction);
 		String source = transaction.getString("source");
@@ -641,6 +672,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						countersObj.put(source, countersObj.getInteger(source) + transactionValue);
 					}
 
+					// update accounts
+					updateAccounts(wallet);
+
 					updatedWallet = wallet;
 				}
 			}
@@ -665,6 +699,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				transactions.put("attributeType", "array");
 				transactions.put("attribute", "transactions");
 				updateBody.add(transactions);
+				JsonObject accounts = new JsonObject();
+				accounts.put("value", accounts);
+				accounts.put("attributeType", "array");
+				accounts.put("attribute", "accounts");
+				updateBody.add(accounts);
 				JsonObject value = new JsonObject();
 				value.put("value", updatedWallet.getInteger("balance"));
 				value.put("attribute", "value");
@@ -897,12 +936,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						newWallet.put("ranking", 0);
-
-						JsonArray accounts = new JsonArray();
-						accounts.add(new Account("elearning", "quizzes").toJsonObject());
-						accounts.add(new Account("user-activity", "km").toJsonObject());
-						accounts.add(new Account("checkin", "checkin").toJsonObject());
-						accounts.add(new Account("energy-saving", "%").toJsonObject());
 						newWallet.put("accounts", accounts);
 
 						// check if profile info

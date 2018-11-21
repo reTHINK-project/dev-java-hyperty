@@ -20,6 +20,7 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import runHyperties.Account;
 import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
@@ -87,8 +88,9 @@ class UserActivityTest {
 		configWalletManager.put("mongoCluster", "NO");
 
 		configWalletManager.put("observers", new JsonArray().add(""));
-		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
+		configWalletManager.put("siot_stub_url", "");
 		configWalletManager.put("rankingTimer", 2000);
+		configWalletManager.put("onReadMaxTransactions", 10);
 
 		// public wallets
 		String wallet0Address = "school0-wallet";
@@ -175,6 +177,10 @@ class UserActivityTest {
 			newWallet.put("created", new Date().getTime());
 			newWallet.put("balance", 0);
 			newWallet.put("transactions", new JsonArray());
+			JsonArray accounts = new JsonArray();
+			accounts.add(new Account("walking", "km").toJsonObject());
+			accounts.add(new Account("biking", "km").toJsonObject());
+			newWallet.put("accounts", accounts);
 			newWallet.put("status", "active");
 			newWallet.put("ranking", 0);
 			newWallet.put("bonus-credit", 30);
