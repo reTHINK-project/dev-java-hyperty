@@ -151,7 +151,7 @@ class CRMTest {
 	}
 
 	@Test
-//	@Disabled
+	@Disabled
 	void testUpdateNewParticipant(VertxTestContext testContext, Vertx vertx) {
 
 		System.out.println("\n" + logMessage + "testUpdateNewParticipant()");
@@ -504,7 +504,7 @@ class CRMTest {
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void agentCodeValid(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "forward");

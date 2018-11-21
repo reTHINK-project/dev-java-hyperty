@@ -3,11 +3,14 @@ package hyperty;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
@@ -130,8 +133,6 @@ public class CRMHyperty extends AbstractHyperty {
 		});
 	}
 
-	boolean walletsExist;
-
 	/**
 	 * Create agents.
 	 *
@@ -142,7 +143,6 @@ public class CRMHyperty extends AbstractHyperty {
 		logger.debug(logMessage + "createAgents(): " + agentsConfig.toString());
 
 		Future<Void> createAgentsFuture = Future.future();
-		walletsExist = false;
 
 		Future<Boolean> checkAgentsLatch = Future.future();
 
@@ -158,30 +158,16 @@ public class CRMHyperty extends AbstractHyperty {
 					return;
 				}
 
+				List<Future> futures = new ArrayList<>();
+
 				for (Object agent : agentsConfig) {
-					JsonObject agentJson = (JsonObject) agent;
-					JsonObject query = new JsonObject().put("code", agentJson.getString("code"));
-					mongoClient.find(agentsCollection, query, res -> {
-						JsonArray results = new JsonArray(res.result());
-						if (results.size() == 0) {
-							// set identity
-							JsonObject newAgent = new JsonObject();
-							newAgent.put("code", agentJson.getString("code"));
-							newAgent.put("address", "");
-							newAgent.put("user", "");
-							newAgent.put("openedTickets", 0);
-							newAgent.put("tickets", new JsonArray());
-							newAgent.put("status", "offline");
-							JsonObject document = new JsonObject(newAgent.toString());
-							mongoClient.save(agentsCollection, document, id -> {
-								logger.debug(logMessage + "createAgents(): new agent " + document);
-							});
-						}
-
-						createAgentsFuture.complete();
-					});
-
+					Future<Void> createSingleAgent = createSingleAgent(agent);
+					futures.add(createSingleAgent);
 				}
+
+				CompositeFuture.all(futures).setHandler(done -> {
+					createAgentsFuture.complete();
+				});
 			} else {
 				// oh ! we have a problem...
 			}
@@ -189,6 +175,33 @@ public class CRMHyperty extends AbstractHyperty {
 
 		return createAgentsFuture;
 
+	}
+
+	private Future<Void> createSingleAgent(Object agent) {
+		Future<Void> createAgentFuture = Future.future();
+		JsonObject agentJson = (JsonObject) agent;
+		JsonObject query = new JsonObject().put("code", agentJson.getString("code"));
+		mongoClient.find(agentsCollection, query, res -> {
+			JsonArray results = new JsonArray(res.result());
+			if (results.size() == 0) {
+				// set identity
+				JsonObject newAgent = new JsonObject();
+				newAgent.put("code", agentJson.getString("code"));
+				newAgent.put("address", "");
+				newAgent.put("user", "");
+				newAgent.put("openedTickets", 0);
+				newAgent.put("tickets", new JsonArray());
+				newAgent.put("status", "offline");
+				JsonObject document = new JsonObject(newAgent.toString());
+				mongoClient.save(agentsCollection, document, id -> {
+					logger.debug(logMessage + "createAgents(): new agent " + document);
+				});
+			}
+
+			createAgentFuture.complete();
+		});
+
+		return createAgentFuture;
 	}
 
 	@Override
