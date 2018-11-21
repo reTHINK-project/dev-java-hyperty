@@ -27,7 +27,7 @@ import util.DateUtilsHelper;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
-//@Disabled
+@Disabled
 class WalletManagerTest {
 
 	private static String mongoHost = "localhost";

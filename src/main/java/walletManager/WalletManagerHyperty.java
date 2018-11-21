@@ -2,10 +2,13 @@ package walletManager;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import data_objects.DataObjectReporter;
 import hyperty.AbstractHyperty;
@@ -15,6 +18,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
+import runHyperties.Account;
 import util.DateUtilsHelper;
 
 public class WalletManagerHyperty extends AbstractHyperty {
@@ -435,8 +439,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// reporter.setReadHandler(readHandler);
 	}
 
-	private void performTransaction(String walletAddress, JsonObject transaction) {
-		logger.debug(logMessage + "performTransaction() \n " + transaction.toString());
+	private void transferToPrivateWallet(String walletAddress, JsonObject transaction) {
+		logger.debug(logMessage + "transferToPrivateWallet() \n " + transaction.toString());
 		// get wallet document
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject walletInfo = res.result().get(0);
@@ -460,6 +464,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 				walletInfo.put("balance", currentBalance + transactionValue);
 			}
+
+			// update accounts
+			JsonArray accounts = walletInfo.getJsonArray("accounts");
+			accounts = updateAccounts(accounts, transactions);
 
 			JsonObject document = new JsonObject(walletInfo.toString());
 
@@ -507,6 +515,66 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			});
 		});
 
+	}
+
+	private JsonArray updateAccounts(JsonArray accounts, JsonArray transactions) {
+		JsonObject lastTransaction = transactions.getJsonObject(transactions.size() - 1);
+		String source = lastTransaction.getString("source");
+		// get account for source
+		List<Object> res = accounts.stream().filter(account -> ((JsonObject) account).getString("name").equals(source))
+				.collect(Collectors.toList());
+		JsonObject accountJson = (JsonObject) res.get(0);
+		Account account = Account.toAccount(accountJson);
+		int value = lastTransaction.getInteger("value");
+		account.totalBalance += value;
+		if (!source.equals("user-activity")) {
+			account.totalData += 1;
+		} else {
+			account.totalData += lastTransaction.getJsonObject("data").getInteger("distance");
+		}
+		JsonArray lastWeekTransactions = lastWeekTransactions(transactions);
+		int lastBalance = 0;
+		for (Object transaction : lastWeekTransactions) {
+			lastBalance += ((JsonObject) transaction).getInteger("value");
+		}
+		account.lastBalance = lastBalance;
+		if (!source.equals("user-activity")) {
+			account.lastData = lastWeekTransactions.size();
+		} else {
+			int lastData = 0;
+			for (Object transaction : lastWeekTransactions) {
+				lastData += ((JsonObject) transaction).getJsonObject("data").getInteger("distance");
+			}
+			account.lastData = lastData;
+		}
+		account.lastPeriod = "week";
+		accountJson = account.toJsonObject();
+		for (Object entry : accounts) {
+			JsonObject js = (JsonObject) entry;
+			if (js.getString("name").equals(source)) {
+				accounts.remove(js);
+				accounts.add(accountJson);
+				System.out.println("updateAccounts:" + "updating with " + accountJson);
+				break;
+			}
+		}
+
+		System.out.println("updateAccounts:" + accounts);
+		return accounts;
+	}
+
+	private JsonArray lastWeekTransactions(JsonArray transactions) {
+		JsonArray lastWeek = new JsonArray();
+		for (Object object : transactions) {
+			JsonObject transaction = (JsonObject) object;
+			System.out.println("updateAccounts:" + transaction.getString("date"));
+			if (DateUtilsHelper.isDateInCurrentWeek(DateUtilsHelper.stringToDate(transaction.getString("date")))) {
+				lastWeek.add(transaction);
+			}
+
+		}
+
+		return lastWeek;
 	}
 
 	private Future<JsonObject> getPublicWallet(String walletAddress) {
@@ -662,7 +730,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				}
 
-				performTransaction(walletAddress, transaction);
+				transferToPrivateWallet(walletAddress, transaction);
 
 				String publicWalletAddress = wallet.getString(causeWalletAddress);
 				if (publicWalletAddress != null) {
@@ -829,6 +897,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						newWallet.put("ranking", 0);
+
+						JsonArray accounts = new JsonArray();
+						accounts.add(new Account("elearning", "quizzes").toJsonObject());
+						accounts.add(new Account("user-activity", "km").toJsonObject());
+						accounts.add(new Account("checkin", "checkin").toJsonObject());
+						accounts.add(new Account("energy-saving", "%").toJsonObject());
+						newWallet.put("accounts", accounts);
 
 						// check if profile info
 						JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")

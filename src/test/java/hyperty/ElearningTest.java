@@ -22,6 +22,7 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import runHyperties.Account;
 import tokenRating.ElearningRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
@@ -83,6 +84,7 @@ class ElearningTest {
 		configWalletManager.put("mongoHost", mongoHost);
 		configWalletManager.put("mongoPorts", "27017");
 		configWalletManager.put("mongoCluster", "NO");
+		configWalletManager.put("onReadMaxTransactions", 10);
 
 		configWalletManager.put("observers", new JsonArray().add(""));
 
@@ -179,6 +181,10 @@ class ElearningTest {
 			newWallet.put("balance", 0);
 			newWallet.put("bonus-credit", 0);
 			newWallet.put("transactions", new JsonArray());
+			JsonArray accounts = new JsonArray();
+			Account elearning = new Account("elearning", "quizzes");
+			accounts.add(elearning.toJsonObject());
+			newWallet.put("accounts", accounts);
 			newWallet.put("status", "active");
 
 			JsonObject document = new JsonObject(newWallet.toString());
@@ -260,7 +266,7 @@ class ElearningTest {
 	}
 
 	@Test
-//	@Disabled
+	@Disabled
 	void testFutures(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST -  futures");
 		Future<Integer> numQuizzes = futureMethod();
@@ -311,7 +317,7 @@ class ElearningTest {
 	}
 
 	@Test
-//	@Disabled
+	@Disabled
 	void getQuizzesInfo(VertxTestContext testContext, Vertx vertx) {
 
 		JsonObject config = new JsonObject().put("type", "read");
