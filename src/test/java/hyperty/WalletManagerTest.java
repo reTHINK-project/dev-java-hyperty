@@ -27,7 +27,7 @@ import util.DateUtilsHelper;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
-@Disabled
+//@Disabled
 class WalletManagerTest {
 
 	private static String mongoHost = "localhost";
@@ -50,6 +50,7 @@ class WalletManagerTest {
 	private static String walletsCollection = "wallets";
 	private static String iotCollection = "siotdevices";
 	private static String walletAddress = "test-userID";
+	private static int numTransactions = 10;
 	private static String rankingInfoAddress = "data://sharing-cities-dsm/ranking";
 
 	// public wallets
@@ -69,6 +70,7 @@ class WalletManagerTest {
 		config.put("mongoPorts", "27017");
 		config.put("mongoCluster", "NO");
 		config.put("streams", new JsonObject().put("ranking", rankingInfoAddress));
+		config.put("onReadMaxTransactions", numTransactions);
 
 		// public wallets
 		String wallet0Address = "school0-wallet";
@@ -256,7 +258,7 @@ class WalletManagerTest {
 		}
 
 		try {
-			Thread.sleep(10000);
+			Thread.sleep(3000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -424,33 +426,34 @@ class WalletManagerTest {
 	}
 
 	@Test
-//	@Disabled
+	@Disabled
 	void getWalletAddress(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
-		JsonObject body = new JsonObject().put("resource", "user").put("value", identity);
+		JsonObject body = new JsonObject().put("resource", "user").put("value", userID);
 		msg.put("body", body);
 
 		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
+			System.out.println("getWalletAddress(): " + reply.result().toString());
+			testContext.completeNow();
+		});
+	}
+
+	@Test
+	void getWallet(VertxTestContext testContext, Vertx vertx) {
+		JsonObject msg = new JsonObject();
+		msg.put("type", "read");
+		JsonObject body = new JsonObject().put("resource", "wallet").put("value", "public-wallets");
+		msg.put("body", body);
+
+		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
+			System.out.println("getWallet() reply: " + reply.toString());
 			testContext.completeNow();
 		});
 	}
 
 	@Test
 	@Disabled
-	void getWallet(VertxTestContext testContext, Vertx vertx) {
-		JsonObject msg = new JsonObject();
-		msg.put("type", "read");
-		JsonObject body = new JsonObject().put("resource", "wallet").put("value", walletAddress);
-		msg.put("body", body);
-
-		vertx.eventBus().send(walletManagerHypertyURL, msg, reply -> {
-			testContext.completeNow();
-		});
-	}
-
-	@Test
-//	@Disabled
 	void getPublicWalletsByRead(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");

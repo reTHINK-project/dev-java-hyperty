@@ -21,6 +21,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private String walletsCollection = "wallets";
 	private String causeWalletAddress = "wallet2bGranted";
+	/**
+	 * Max number of transactions returned
+	 */
+	private Integer onReadMaxTransactions;
 
 	private static final String logMessage = "[WalletManager] ";
 	private static final String smartMeterEnabled = "smartMeterEnabled";
@@ -47,6 +51,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// check public wallets to be created
 		JsonArray publicWallets = config().getJsonArray("publicWallets");
 		int rankingTimer = config().getInteger("rankingTimer");
+		onReadMaxTransactions = config().getInteger("onReadMaxTransactions");
 
 		if (publicWallets != null) {
 			createPublicWallets(publicWallets);
@@ -727,7 +732,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject wallet = res.result().get(0);
 			logger.debug(logMessage + "walletRead(): " + wallet);
-			message.reply(wallet.toString());
+			message.reply(limitTransactions(wallet));
 		});
 
 	}
@@ -1029,13 +1034,36 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				JsonObject wallet = res.result().get(0);
 				logger.debug(wallet);
 
-				sendMsgBody.put("code", 200).put("wallet", wallet);
+				sendMsgBody.put("code", 200).put("wallet", limitTransactions(wallet));
 				response.put("body", sendMsgBody);
 				msg.reply(response);
 			});
 
 		};
 
+	}
+
+	private void limitAux(JsonObject wallet) {
+		JsonArray transactions = wallet.getJsonArray("transactions");
+		if (transactions.size() > onReadMaxTransactions) {
+			for (int i = 0; i < transactions.size() - onReadMaxTransactions; i++) {
+				transactions.remove(0);
+			}
+		}
+	}
+
+	private JsonObject limitTransactions(JsonObject wallet) {
+		// check if public or private
+		boolean isPublic = wallet.getJsonArray("wallets") != null;
+		if (isPublic) {
+			JsonArray wallets = wallet.getJsonArray("wallets");
+			for (Object object : wallets) {
+				limitAux((JsonObject) object);
+			}
+		} else {
+			limitAux(wallet);
+		}
+		return wallet;
 	}
 
 	/**
