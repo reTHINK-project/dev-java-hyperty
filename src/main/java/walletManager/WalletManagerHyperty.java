@@ -555,6 +555,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		}
 		JsonObject lastTransaction = transactions.getJsonObject(transactions.size() - 1);
 		String source = getSource(lastTransaction);
+		if (source.equals("created")) {
+			return;
+		}
 		// get account for source
 		List<Object> res = accounts.stream().filter(account -> ((JsonObject) account).getString("name").equals(source))
 				.collect(Collectors.toList());
@@ -968,14 +971,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						String roleCode = profileInfo.getString("code");
 						if (roleCode != null) {
 							logger.debug(logMessage + "resolving role for code " + roleCode);
-							Future<Integer> validateCause = Future.future();
+							Future<Void> validateCause = Future.future();
 
 							JsonObject validationMessage = new JsonObject();
 							validationMessage.put("from", url);
 							validationMessage.put("identity", identity);
 							validationMessage.put("type", "forward");
 							validationMessage.put("code", roleCode);
-							// TODO - replace with publish
 							send("resolve-role", validationMessage, reply -> {
 								logger.debug(
 										logMessage + "role validation result: " + reply.result().body().toString());
