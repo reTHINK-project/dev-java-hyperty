@@ -555,7 +555,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		}
 		JsonObject lastTransaction = transactions.getJsonObject(transactions.size() - 1);
 		String source = getSource(lastTransaction);
-		if (source.equals("created")) {
+		if (source.equals("created") || source.equals("bonus")) {
 			return;
 		}
 		// transactions for this source
