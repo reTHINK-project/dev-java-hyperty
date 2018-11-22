@@ -996,6 +996,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 						}
 
+						reply2.result().reply(response);
 						result.complete();
 
 					} else {
