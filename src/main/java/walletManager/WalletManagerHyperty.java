@@ -558,6 +558,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		if (source.equals("created")) {
 			return;
 		}
+		// transactions for this source
+		List<Object> transactionsForSource = transactions.stream()
+				.filter(transaction -> ((JsonObject) transaction).getString("source").equals(source))
+				.collect(Collectors.toList());
 		// get account for source
 		List<Object> res = accounts.stream().filter(account -> ((JsonObject) account).getString("name").equals(source))
 				.collect(Collectors.toList());
@@ -570,7 +574,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		} else {
 			account.totalData += lastTransaction.getJsonObject("data").getInteger("distance");
 		}
-		JsonArray lastWeekTransactions = lastWeekTransactions(transactions);
+
+		JsonArray lastWeekTransactions = lastWeekTransactions(transactionsForSource);
 		int lastBalance = 0;
 		for (Object transaction : lastWeekTransactions) {
 			lastBalance += ((JsonObject) transaction).getInteger("value");
@@ -599,16 +604,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		return;
 	}
 
-	private JsonArray lastWeekTransactions(JsonArray transactions) {
+	private JsonArray lastWeekTransactions(List<Object> transactions) {
 		JsonArray lastWeek = new JsonArray();
 		for (Object object : transactions) {
 			JsonObject transaction = (JsonObject) object;
 			if (DateUtilsHelper.isDateInCurrentWeek(DateUtilsHelper.stringToDate(transaction.getString("date")))) {
 				lastWeek.add(transaction);
 			}
-
 		}
-
 		return lastWeek;
 	}
 
