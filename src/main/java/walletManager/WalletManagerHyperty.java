@@ -1028,10 +1028,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						result.complete();
 
 					} else {
-						logger.debug("[WalletManager] wallet already exists...");
 						JsonObject wallet = res.result().get(0);
+						logger.debug("[WalletManager] wallet already exists...");
 						JsonArray accounts = wallet.getJsonArray("accounts");
-						if (accounts == null) {
+						if (accounts == null && wallet.getJsonArray("wallets") == null) {
 							JsonArray newAccounts = buildAccounts(wallet);
 							wallet.put("accounts", newAccounts);
 							// update private wallet
