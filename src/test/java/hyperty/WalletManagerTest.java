@@ -317,7 +317,12 @@ class WalletManagerTest {
 			sampleTransaction.put("source", "elearning");
 			sampleTransaction.put("value", 10);
 			sampleTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-			newWallet.put("transactions", new JsonArray().add(sampleTransaction));
+			JsonArray transactions = new JsonArray();
+			transactions.add(sampleTransaction.copy());
+			sampleTransaction.put("source", "user-activity");
+			sampleTransaction.put("data", new JsonObject().put("activity", "user_walking_context"));
+			transactions.add(sampleTransaction.copy());
+			newWallet.put("transactions", transactions);
 			newWallet.put("status", "active");
 			newWallet.put("wallet2bGranted", "school0-wallet");
 
