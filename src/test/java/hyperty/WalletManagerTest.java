@@ -3,10 +3,13 @@ package hyperty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -14,7 +17,9 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -226,7 +231,7 @@ class WalletManagerTest {
 	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";
 
 	@Test
-//	@Disabled
+	@Disabled
 	void createAndTransfer(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("createWallet()");
 
@@ -282,6 +287,105 @@ class WalletManagerTest {
 
 		mongoClient.find(walletsCollection, new JsonObject(), res -> {
 			assertEquals(numWallets + 1, res.result().size());
+			testContext.completeNow();
+		});
+
+	}
+
+	@Test
+	void noAccounts(VertxTestContext testContext, Vertx vertx) {
+
+		// 0 - add handler
+		vertx.eventBus().consumer(publicWalletsOnChangesAddress, message -> {
+			System.out.println("publicWalletsOnChangesAddress" + message.body().toString());
+		});
+
+		// 1 - add wallet programmatically
+		CountDownLatch setupLatch = new CountDownLatch(1);
+		JsonObject identityNow = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+		new Thread(() -> { // create wallet
+
+			// 1 - build wallet document (without accounts)
+			JsonObject newWallet = new JsonObject();
+			String address = "walletAddress";
+			newWallet.put("address", address);
+			newWallet.put("identity", identityNow);
+			newWallet.put("created", new Date().getTime());
+			newWallet.put("balance", 0);
+			newWallet.put("bonus-credit", 0);
+			JsonObject sampleTransaction = new JsonObject();
+			sampleTransaction.put("source", "elearning");
+			sampleTransaction.put("value", 10);
+			sampleTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+			newWallet.put("transactions", new JsonArray().add(sampleTransaction));
+			newWallet.put("status", "active");
+			newWallet.put("wallet2bGranted", "school0-wallet");
+
+			JsonObject document = new JsonObject(newWallet.toString());
+
+			mongoClient.save(walletsCollection, document, id -> {
+				System.out.println("New wallet with ID:" + id);
+				setupLatch.countDown();
+			});
+		}).start();
+
+		try {
+			setupLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// 1 - create wallet again
+		JsonObject msg = new JsonObject();
+		msg.put("type", "create");
+		msg.put("identity", identityNow);
+		msg.put("from", "myself");
+		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+			JsonObject newMsg = new JsonObject();
+			JsonObject body = new JsonObject().put("code", 200);
+			newMsg.put("body", body);
+			res.result().reply(newMsg);
+		});
+
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		// TODO - check if accounts were created
+		Future<Void> assertPrivateWallet = Future.future();
+		JsonObject query = new JsonObject().put("address", "walletAddress");
+		mongoClient.find(walletsCollection, query, result -> {
+			JsonObject wallet = result.result().get(0);
+			JsonArray accounts = wallet.getJsonArray("accounts");
+			List<Object> res = accounts.stream()
+					.filter(account -> ((JsonObject) account).getString("name").equals("elearning"))
+					.collect(Collectors.toList());
+			JsonObject accountElearning = (JsonObject) res.get(0);
+			assertEquals(10, (int) accountElearning.getInteger("totalBalance"));
+			assertEquals(1, (int) accountElearning.getInteger("lastData"));
+			assertPrivateWallet.complete();
+		});
+		Future<Void> assertPublicWallet = Future.future();
+		query = new JsonObject().put("address", "public-wallets");
+		mongoClient.find(walletsCollection, query, result -> {
+			JsonObject wallets = result.result().get(0);
+			JsonObject wallet = wallets.getJsonArray("wallets").getJsonObject(0);
+			JsonArray accounts = wallet.getJsonArray("accounts");
+			List<Object> res = accounts.stream()
+					.filter(account -> ((JsonObject) account).getString("name").equals("elearning"))
+					.collect(Collectors.toList());
+			JsonObject accountElearning = (JsonObject) res.get(0);
+			assertEquals(10, (int) accountElearning.getInteger("totalBalance"));
+			assertEquals(1, (int) accountElearning.getInteger("lastData"));
+			assertPublicWallet.complete();
+		});
+		List<Future> futures = new ArrayList<>();
+		futures.add(assertPrivateWallet);
+		futures.add(assertPublicWallet);
+		CompositeFuture.all(futures).setHandler(done -> {
 			testContext.completeNow();
 		});
 
@@ -440,6 +544,7 @@ class WalletManagerTest {
 	}
 
 	@Test
+	@Disabled
 	void getWallet(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
