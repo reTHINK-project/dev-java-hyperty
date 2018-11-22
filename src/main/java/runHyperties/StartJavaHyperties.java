@@ -360,7 +360,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("crm", crmHypertyURL);
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 		configWalletManager.put("rankingTimer", 2000);
-		configWalletManager.put("onReadMaxTransactions", 100);
+		configWalletManager.put("onReadMaxTransactions", 200);
 
 		// public wallets
 		String wallet0Address = "school0-wallet";
