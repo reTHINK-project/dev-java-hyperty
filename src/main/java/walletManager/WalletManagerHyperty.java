@@ -1180,7 +1180,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			account.totalBalance = 0;
 			// sum all transactions value
 			account.totalBalance = sumTransactionsField(transactionsForSource, "value");
-			if (!source.equals("user-activity")) {
+			if (!source.equals("walking") && !source.equals("biking")) {
 				account.totalData = transactionsForSource.size();
 			} else {
 				account.totalData = sumTransactionsField(transactionsForSource, "distance");
@@ -1188,7 +1188,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			JsonArray lastWeekTransactions = lastWeekTransactions(transactionsForSource);
 			account.lastBalance = sumTransactionsField(lastWeekTransactions.getList(), "value");
-			if (!source.equals("user-activity")) {
+			if (!source.equals("walking") && !source.equals("biking")) {
 				account.lastData = lastWeekTransactions.size();
 			} else {
 				account.lastData = sumTransactionsField(lastWeekTransactions.getList(), "distance");
