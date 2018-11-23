@@ -192,7 +192,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			walletAddress.complete(reply.result().body().getString("address"));
 		});
 
-		logger.debug("WALLET ADDRESS returning" + walletAddress);
 		return walletAddress;
 
 	}
@@ -259,7 +258,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 			userID.complete(dataObjectInfo.getString("guid"));
 		});
 
-		logger.debug("3 - return other");
 		return userID;
 	}
 
