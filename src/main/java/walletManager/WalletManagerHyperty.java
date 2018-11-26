@@ -94,6 +94,30 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// calc rankings every x miliseconds
 		Timer timer = new Timer();
 		timer.schedule(new RankingsTimer(), 0, rankingTimer);
+
+		// TODO - re-create DOs for wallets
+		reCreateDOs();
+
+	}
+
+	private void reCreateDOs() {
+		JsonObject query = new JsonObject();
+		// get wallets document
+		mongoClient.find(walletsCollection, query, res -> {
+			List<JsonObject> wallets = res.result();
+
+			for (Object pWallet : wallets) {
+				JsonObject wallet = (JsonObject) pWallet;
+				if (!wallet.getJsonObject("identity").getJsonObject("userProfile").getString("guid")
+						.equals(publicWalletGuid)) {
+					inviteObservers(wallet.getJsonObject("identity"), wallet.getString("address"), requestsHandler(),
+							readHandler());
+				}
+
+			}
+
+		});
+
 	}
 
 	class RankingsTimer extends TimerTask {
@@ -866,7 +890,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject wallet = res.result().get(0);
 			logger.debug(logMessage + "walletRead(): " + wallet);
-			message.reply(limitTransactions(wallet));
+			message.reply(wallet);
 		});
 
 	}
@@ -1038,7 +1062,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							// update public wallet
 							updatePublicWalletAccountsNewUser(wallet, newAccounts);
 						}
-						JsonObject response = new JsonObject().put("code", 200).put("wallet", limitTransactions(wallet));
+						JsonObject response = new JsonObject().put("code", 200).put("wallet",
+								limitTransactions(wallet));
 						// check its status
 						switch (wallet.getString("status")) {
 						case "active":
