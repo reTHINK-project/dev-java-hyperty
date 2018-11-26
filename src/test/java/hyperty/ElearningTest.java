@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
@@ -16,10 +15,13 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -143,7 +145,7 @@ class ElearningTest {
 		});
 
 		vertx.eventBus().consumer(subscriptionsAddress, message -> {
-			System.out.println("TEST - sub received: " + message.body().toString());
+//			System.out.println("TEST - sub received: " + message.body().toString());
 			// send reply
 			JsonObject reply = new JsonObject().put("body", new JsonObject().put("code", 200));
 			message.reply(reply);
@@ -151,7 +153,7 @@ class ElearningTest {
 
 		// wait for Mongo connection to take place
 		try {
-			Thread.sleep(3000);
+			Thread.sleep(1000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -165,7 +167,7 @@ class ElearningTest {
 		});
 
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(1000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -201,7 +203,6 @@ class ElearningTest {
 		final JsonObject mongoconfig = new JsonObject();
 		mongoconfig.put("connection_string", uri);
 		mongoconfig.put("db_name", db_name);
-		mongoconfig.put("database", db_name);
 		mongoconfig.put("collection", ratesCollection);
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
@@ -244,50 +245,38 @@ class ElearningTest {
 
 	}
 
-	int numWallets = 1200;
+	int numWallets = 1000;
 	int created = 0;
+	int resumed = 0;
 
 	@Test
 //	@Disabled
 	void createMany(VertxTestContext testContext, Vertx vertx) {
-		System.out.println("createWallet()");
-
 		created = 0;
-
 		long startTime = System.currentTimeMillis();
-
 		Future<Void> checkNumWallets = Future.future();
 		vertx.eventBus().consumer("observing", message -> {
 			++created;
 			if (created == numWallets) {
 				long endTime = System.currentTimeMillis();
 				long timeElapsed = endTime - startTime;
-				System.out.println("\n\nTime: " + timeElapsed + " ms" + " - Num wallets: " + created);
-//				checkNumWallets.complete();
-				testContext.completeNow();
+				System.out.println("\nCreate time: " + timeElapsed + " ms" + " - Num wallets: " + created);
+				checkNumWallets.complete();
 			}
 		});
 
 		// create wallets
 		for (int i = 0; i < numWallets; i++) {
-			JsonObject msg = new JsonObject();
-			// create identity
 			String userID = "user-guid://sharing-cities-dsm/" + i;
-			JsonObject identityNow = new JsonObject().put("userProfile",
-					new JsonObject().put("guid", userID).put("info", profileInfo));
-			msg.put("type", "create");
-			msg.put("identity", identityNow);
-			msg.put("from", "myself");
-			vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
-//				System.out.println("Received reply from wallet!: " + res.result().body().toString());
-				JsonObject newMsg = new JsonObject();
-				JsonObject body = new JsonObject().put("code", 200);
-				newMsg.put("body", body);
-				res.result().reply(newMsg);
-			});
+			createWallet(vertx, userID, null);
 		}
 
 		checkNumWallets.setHandler(asyncResult -> {
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 //			for (int i = 0; i < numWallets; i++) {
 //				String userID = "user-guid://sharing-cities-dsm/" + i;
 //				submitQuiz(userID, vertx);
@@ -305,15 +294,53 @@ class ElearningTest {
 //				checkWallet(query, assertWallet);
 //			}
 //
-//			try {
-//				Thread.sleep(4000);
-//			} catch (InterruptedException e) {
-//				e.printStackTrace();
-//			}
 
-			testContext.completeNow();
+			resumed = 0;
+			long startTimeResume = System.currentTimeMillis();
+			for (int i = 0; i < numWallets; i++) {
+				String userID = "user-guid://sharing-cities-dsm/" + i;
+				createWallet(vertx, userID, res -> {
+					++resumed;
+					JsonObject newMsg = new JsonObject();
+					JsonObject body = new JsonObject().put("code", 200);
+					newMsg.put("body", body);
+					res.result().reply(newMsg);
+					if (resumed == numWallets) {
+						long endTime = System.currentTimeMillis();
+						long timeElapsed = endTime - startTimeResume;
+						System.out.println("Resume time: " + timeElapsed + " ms" + " - Num wallets: " + resumed);
+						try {
+							Thread.sleep(2000);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						testContext.completeNow();
+					}
+				});
+			}
 		});
 
+	}
+
+	private void createWallet(Vertx vertx, String userID, Handler<AsyncResult<Message<Object>>> handler) {
+		JsonObject msg = new JsonObject();
+		JsonObject identityNow = new JsonObject().put("userProfile",
+				new JsonObject().put("guid", userID).put("info", profileInfo));
+		msg.put("type", "create");
+		msg.put("identity", identityNow);
+		msg.put("from", "myself");
+		if (handler != null) {
+			vertx.eventBus().send(walletManagerHypertyURL, msg, handler);
+		} else {
+			vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+//			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+				JsonObject newMsg = new JsonObject();
+				JsonObject body = new JsonObject().put("code", 200);
+				newMsg.put("body", body);
+				res.result().reply(newMsg);
+			});
+
+		}
 	}
 
 	void submitQuiz(String userID, Vertx vertx) {
