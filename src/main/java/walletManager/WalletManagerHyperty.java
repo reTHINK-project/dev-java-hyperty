@@ -94,6 +94,30 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// calc rankings every x miliseconds
 		Timer timer = new Timer();
 		timer.schedule(new RankingsTimer(), 0, rankingTimer);
+
+		// TODO - re-create DOs for wallets
+		reCreateDOs();
+
+	}
+
+	private void reCreateDOs() {
+		JsonObject query = new JsonObject();
+		// get wallets document
+		mongoClient.find(walletsCollection, query, res -> {
+			List<JsonObject> wallets = res.result();
+
+			for (Object pWallet : wallets) {
+				JsonObject wallet = (JsonObject) pWallet;
+				if (!wallet.getJsonObject("identity").getJsonObject("userProfile").getString("guid")
+						.equals(publicWalletGuid)) {
+					inviteObservers(wallet.getJsonObject("identity"), wallet.getString("address"), requestsHandler(),
+							readHandler());
+				}
+
+			}
+
+		});
+
 	}
 
 	class RankingsTimer extends TimerTask {
@@ -569,17 +593,18 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			account.totalData += lastTransaction.getJsonObject("data").getInteger("distance");
 		}
 
-		JsonArray lastWeekTransactions = lastWeekTransactions(transactionsForSource);
+		JsonArray lastTransactions = (account.lastPeriod.equals("month")) ? lastMonthTransactions(transactionsForSource)
+				: lastWeekTransactions(transactionsForSource);
 		int lastBalance = 0;
-		for (Object transaction : lastWeekTransactions) {
+		for (Object transaction : lastTransactions) {
 			lastBalance += ((JsonObject) transaction).getInteger("value");
 		}
 		account.lastBalance = lastBalance;
 		if (!lastTransaction.getString("source").equals("user-activity")) {
-			account.lastData = lastWeekTransactions.size();
+			account.lastData = lastTransactions.size();
 		} else {
 			int lastData = 0;
-			for (Object transaction : lastWeekTransactions) {
+			for (Object transaction : lastTransactions) {
 				lastData += ((JsonObject) transaction).getJsonObject("data").getInteger("distance");
 			}
 			account.lastData = lastData;
@@ -627,6 +652,17 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 		}
 		return lastWeek;
+	}
+
+	private JsonArray lastMonthTransactions(List<Object> transactions) {
+		JsonArray lastMonth = new JsonArray();
+		for (Object object : transactions) {
+			JsonObject transaction = (JsonObject) object;
+			if (DateUtilsHelper.isDateInCurrentMonth(DateUtilsHelper.stringToDate(transaction.getString("date")))) {
+				lastMonth.add(transaction);
+			}
+		}
+		return lastMonth;
 	}
 
 	private Future<JsonObject> getPublicWallets() {
@@ -866,7 +902,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject wallet = res.result().get(0);
 			logger.debug(logMessage + "walletRead(): " + wallet);
-			message.reply(limitTransactions(wallet));
+			message.reply(wallet);
 		});
 
 	}
@@ -1038,7 +1074,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							// update public wallet
 							updatePublicWalletAccountsNewUser(wallet, newAccounts);
 						}
-						JsonObject response = new JsonObject().put("code", 200).put("wallet", limitTransactions(wallet));
+						JsonObject response = new JsonObject().put("code", 200).put("wallet",
+								limitTransactions(wallet));
 						// check its status
 						switch (wallet.getString("status")) {
 						case "active":
@@ -1186,12 +1223,14 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				account.totalData = sumTransactionsField(transactionsForSource, "distance");
 			}
 
-			JsonArray lastWeekTransactions = lastWeekTransactions(transactionsForSource);
-			account.lastBalance = sumTransactionsField(lastWeekTransactions.getList(), "value");
+			JsonArray lastTransactions = (account.lastPeriod.equals("month"))
+					? lastMonthTransactions(transactionsForSource)
+					: lastWeekTransactions(transactionsForSource);
+			account.lastBalance = sumTransactionsField(lastTransactions.getList(), "value");
 			if (!source.equals("walking") && !source.equals("biking")) {
-				account.lastData = lastWeekTransactions.size();
+				account.lastData = lastTransactions.size();
 			} else {
-				account.lastData = sumTransactionsField(lastWeekTransactions.getList(), "distance");
+				account.lastData = sumTransactionsField(lastTransactions.getList(), "distance");
 			}
 			accountJson = account.toJsonObject();
 			for (Object entry : accounts) {

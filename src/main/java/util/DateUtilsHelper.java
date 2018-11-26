@@ -66,6 +66,17 @@ public class DateUtilsHelper {
 		int targetYear = targetCalendar.get(Calendar.YEAR);
 		return week == targetWeek && year == targetYear;
 	}
+	
+	public static boolean isDateInCurrentMonth(Date date) {
+		Calendar currentCalendar = Calendar.getInstance();
+		int month = currentCalendar.get(Calendar.MONTH);
+		int year = currentCalendar.get(Calendar.YEAR);
+		Calendar targetCalendar = Calendar.getInstance();
+		targetCalendar.setTime(date);
+		int targetMonth = targetCalendar.get(Calendar.MONTH);
+		int targetYear = targetCalendar.get(Calendar.YEAR);
+		return month == targetMonth && year == targetYear;
+	}
 
 	public static boolean validateDate(String value) {
 		Date date = null;

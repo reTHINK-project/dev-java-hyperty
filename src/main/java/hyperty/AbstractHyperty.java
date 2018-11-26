@@ -438,46 +438,49 @@ public class AbstractHyperty extends AbstractVerticle {
 		logger.debug("validating source ... from:" + from + "\nobservers:" + observers.getList().toString()
 				+ "\nourUserURL:" + this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:"
 				+ collection);
+		
+		// TODO - just for testing
+		return true;
 
-		if (observers.getList().contains(from)) {
-			logger.debug("VALID");
-			return true;
-		} else {
-			JsonObject toFind = new JsonObject().put("identity", identity);
-			logger.debug("toFIND" + toFind.toString());
-
-			Future<Boolean> findWallet = Future.future();
-
-			new Thread(() -> {
-				mongoClient.find(collection, toFind, res -> {
-					if (res.result().size() != 0) {
-						JsonObject wallet = res.result().get(0);
-						logger.debug("to subscribe add:" + address + " wallet to compare" + wallet);
-
-						if (address.equals(wallet.getString("address"))) {
-							logger.debug("RIGHT WALLET");
-							if (wallet.getJsonObject("identity").equals(identity)) {
-								logger.debug("RIGHT IDENTITY");
-								findWallet.complete(true);
-							}
-							findWallet.complete(false);
-							return;
-
-						} else {
-							logger.debug("OTHER WALLET");
-							findWallet.complete(false);
-							return;
-
-						}
-					}
-
-				});
-			}).start();
-
-			logger.debug("3 - return other");
-			return acceptSubscription;
-
-		}
+//		if (observers.getList().contains(from)) {
+//			logger.debug("VALID");
+//			return true;
+//		} else {
+//			JsonObject toFind = new JsonObject().put("identity", identity);
+//			logger.debug("toFIND" + toFind.toString());
+//
+//			Future<Boolean> findWallet = Future.future();
+//
+//			new Thread(() -> {
+//				mongoClient.find(collection, toFind, res -> {
+//					if (res.result().size() != 0) {
+//						JsonObject wallet = res.result().get(0);
+//						logger.debug("to subscribe add:" + address + " wallet to compare" + wallet);
+//
+//						if (address.equals(wallet.getString("address"))) {
+//							logger.debug("RIGHT WALLET");
+//							if (wallet.getJsonObject("identity").equals(identity)) {
+//								logger.debug("RIGHT IDENTITY");
+//								findWallet.complete(true);
+//							}
+//							findWallet.complete(false);
+//							return;
+//
+//						} else {
+//							logger.debug("OTHER WALLET");
+//							findWallet.complete(false);
+//							return;
+//
+//						}
+//					}
+//
+//				});
+//			}).start();
+//
+//			logger.debug("3 - return other");
+//			return acceptSubscription;
+//
+//		}
 
 		// return false;
 	}
