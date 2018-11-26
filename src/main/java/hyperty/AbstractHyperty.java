@@ -406,7 +406,6 @@ public class AbstractHyperty extends AbstractVerticle {
 		logger.debug("[AbstractHyperty] data to send to observers->" + toSend.toString());
 
 		if (toInvite) {
-			System.out.print("inviting: " + observers.toString());
 			Iterator it = observers.getList().iterator();
 			while (it.hasNext()) {
 				String observer = (String) it.next();
