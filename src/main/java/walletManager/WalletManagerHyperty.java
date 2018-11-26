@@ -78,7 +78,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			String publicWalletAddress = getPublicWalletAddress(walletID);
 			Future<JsonObject> publicWallet = getPublicWallet(publicWalletAddress);
 			publicWallet.setHandler(asyncResult -> {
-				message.reply(new JsonObject().put("wallet", publicWallet.result()));
+				message.reply(new JsonObject().put("wallet", limitTransactions(publicWallet.result())));
 			});
 		});
 
@@ -1038,7 +1038,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							// update public wallet
 							updatePublicWalletAccountsNewUser(wallet, newAccounts);
 						}
-						JsonObject response = new JsonObject().put("code", 200).put("wallet", wallet);
+						JsonObject response = new JsonObject().put("code", 200).put("wallet", limitTransactions(wallet));
 						// check its status
 						switch (wallet.getString("status")) {
 						case "active":
