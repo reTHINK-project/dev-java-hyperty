@@ -41,7 +41,7 @@ public class Account {
 		this.lastBalance = 0;
 		this.lastData = 0;
 		this.dataUnit = dataUnit;
-		this.lastPeriod = "week";
+		this.lastPeriod = name.equals("energy-saving") ? "month" : "week";
 		this.description = "";
 	}
 
