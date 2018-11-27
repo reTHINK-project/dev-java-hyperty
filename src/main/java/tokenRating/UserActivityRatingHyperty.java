@@ -56,6 +56,10 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		tokensEvehicleKm = config().getInteger("tokens_per_evehicle_km");
 		mtWalkPerDay = config().getInteger("mtWalkPerDay");
 		mtBikePerDay = config().getInteger("mtBikePerDay");
+		
+		ratingType = "user-activity";
+		resumeDataObjects(ratingType);
+		
 	}
 
 	/**
@@ -267,10 +271,10 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		logger.info("waiting for changes to user activity on ->" + address_changes);
+		logger.info("[USER-ACTIVITY] waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			logger.info("[UserActivity]");
-			logger.debug("User activity on changes msg: " + message.body().toString());
+			logger.info("[UserActivity] data");
+			logger.debug("[User activity] data msg-> " + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {

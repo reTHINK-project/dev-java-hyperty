@@ -28,11 +28,16 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	@Override
 	public void start() {
 		super.start();
+		
+		ratingType = "elearning";
+		
 		// read config
 		tokensPerCompletedQuiz = config().getInteger("tokens_per_completed_quiz");
 		tokensPerCorrectAnswer = config().getInteger("tokens_per_correct_answer");
 
 		createStreams();
+		
+		resumeDataObjects(ratingType);
 	}
 
 	private void createStreams() {
@@ -164,10 +169,10 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		logger.info("waiting for changes to user activity on ->" + address_changes);
+		logger.info("[ELEARNING] waiting for changes->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			logger.info("[Elearning]");
-			logger.debug("User activity on changes msg: " + message.body().toString());
+			logger.info("[Elearning] data");
+			logger.debug("elearning data msg-> " + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
