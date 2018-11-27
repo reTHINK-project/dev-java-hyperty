@@ -1388,7 +1388,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private void limitAux(JsonObject wallet) {
 		JsonArray transactions = wallet.getJsonArray("transactions");
 		if (transactions.size() > onReadMaxTransactions) {
-			for (int i = 0; i < transactions.size() - onReadMaxTransactions; i++) {
+			final int size= transactions.size(); 
+			for (int i = 0; i < size - onReadMaxTransactions; i++) {
 				transactions.remove(0);
 			}
 		}
