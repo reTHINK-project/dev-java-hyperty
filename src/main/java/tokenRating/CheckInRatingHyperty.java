@@ -53,6 +53,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		createStreams();
 		resumeDataObjects(ratingType);
+		cleanDuplicatedDataObjects();
 	}
 
 	private void createStreams() {
