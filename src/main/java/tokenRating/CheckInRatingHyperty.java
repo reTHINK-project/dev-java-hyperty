@@ -45,12 +45,15 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	public void start() {
 		super.start();
 
+		ratingType = "checkin-rating";
 		// read config
 		checkInTokens = config().getInteger("tokens_per_checkin");
 		checkin_radius = config().getInteger("checkin_radius");
 		min_frequency = config().getInteger("min_frequency");
 
 		createStreams();
+		resumeDataObjects(ratingType);
+		cleanDuplicatedDataObjects();
 	}
 
 	private void createStreams() {
@@ -388,9 +391,10 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 	@Override
 	public void onChanges(String address) {
 		final String address_changes = address + "/changes";
-		logger.info("waiting for changes on ->" + address_changes);
+		logger.info("[CHECK-IN] waiting for changes->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			logger.info("[Check-In]");
+			logger.info("[Check-In] data");
+			logger.debug("[Check-In] data msg ->" + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 3) {

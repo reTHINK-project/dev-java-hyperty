@@ -332,7 +332,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					JsonObject query = new JsonObject();
 					query.put("identity", wallet.getJsonObject("identity"));
 					mongoClient.findOneAndReplace(collection, query, wallet, id -> {
-						logger.debug(logMessage + "generateRankings() document updated: " + wallet);
+						logger.debug(logMessage + "generateRankings() document updated");
 					});
 
 					// publish transaction in the event bus using the wallet address.

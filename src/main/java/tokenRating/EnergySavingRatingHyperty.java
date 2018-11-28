@@ -35,6 +35,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		super.start();
 
+		ratingType = "energy-saving";
+		
 		this.eb.<JsonObject>consumer(ratingPublic, onMessage(ratingPublic));
 		this.eb.<JsonObject>consumer(ratingPrivate, onMessage(ratingPrivate));
 
