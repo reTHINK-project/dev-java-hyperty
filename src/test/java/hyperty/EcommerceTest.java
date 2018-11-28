@@ -78,7 +78,7 @@ class EcommerceTest {
 		config.put("db_name", db_name);
 		config.put("mongoHost", mongoHost);
 
-		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(true);
+		DeploymentOptions optionsLocation = new DeploymentOptions().setConfig(config).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), optionsLocation, context.succeeding());
 
@@ -93,7 +93,7 @@ class EcommerceTest {
 		configWalletManager.put("observers", new JsonArray().add(""));
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});

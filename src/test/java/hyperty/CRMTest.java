@@ -111,7 +111,7 @@ class CRMTest {
 		config.put("checkTicketsTimer", 2000);
 
 		// deploy
-		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(true);
+		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(CRMHyperty.class.getName(), options, context.succeeding());
 
@@ -151,7 +151,7 @@ class CRMTest {
 	}
 
 	@Test
-//	@Disabled
+	@Disabled
 	void testUpdateNewParticipant(VertxTestContext testContext, Vertx vertx) {
 
 		System.out.println("\n" + logMessage + "testUpdateNewParticipant()");
@@ -504,7 +504,7 @@ class CRMTest {
 	}
 
 	@Test
-	@Disabled
+//	@Disabled
 	void agentCodeValid(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "forward");

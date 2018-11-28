@@ -2,8 +2,6 @@ package runHyperties;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import hyperty.CRMHyperty;
@@ -11,6 +9,7 @@ import hyperty.OfflineSubscriptionManagerHyperty;
 import hyperty.RegistryHyperty;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
@@ -50,11 +49,9 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private String mongoPorts = "27017";
 	private String mongoCluster = "NO";
 
-
 	private String SIOTurl = "https://iot.alticelabs.com/api";
 	private String pointOfContact = "https://url_contact";
 	private MongoClient mongoClient = null;
-	private CountDownLatch findDOUrl;
 
 	public static void main(String[] args) {
 
@@ -78,9 +75,10 @@ public class StartJavaHyperties extends AbstractVerticle {
 				.addInboundPermitted(new PermittedOptions().setAddressRegex(".*"));
 		return SockJSHandler.create(vertx).bridge(options, event -> {
 			if (BridgeEventType.PUBLISH == event.type() || BridgeEventType.SEND == event.type()) {
-				//System.out.println("BUS HANDLER:(" + event.type() + ") MESSAGE:" + event.getRawMessage());
+				// System.out.println("BUS HANDLER:(" + event.type() + ") MESSAGE:" +
+				// event.getRawMessage());
 			} else {
-				//System.out.println("BUS HANDLER:(" + event.type() + ")");
+				// System.out.println("BUS HANDLER:(" + event.type() + ")");
 			}
 			event.complete(true);
 
@@ -204,7 +202,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("CRMHypertyStatus", crmStatus);
 		configRegistry.put("offlineSMStatus", offlineSMStatus);
 
-		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(true);
+		DeploymentOptions optionsRegistry = new DeploymentOptions().setConfig(configRegistry).setWorker(false);
 		vertx.deployVerticle(RegistryHyperty.class.getName(), optionsRegistry, res -> {
 			System.out.println("Registry Result->" + res.result());
 		});
@@ -221,7 +219,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configOfflineSubMgr.put("mongoCluster", mongoCluster);
 		configOfflineSubMgr.put("mongoPorts", mongoPorts);
 
-		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr).setWorker(true);
+		DeploymentOptions optionsOfflineSubMgr = new DeploymentOptions().setConfig(configOfflineSubMgr)
+				.setWorker(false);
 		vertx.deployVerticle(OfflineSubscriptionManagerHyperty.class.getName(), optionsOfflineSubMgr, res -> {
 			System.out.println("OfflineSubscriptionManager Result->" + res.result());
 		});
@@ -250,7 +249,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCRM.put("agents", agents);
 		configCRM.put("checkTicketsTimer", 2000);
 
-		DeploymentOptions optionsCRM = new DeploymentOptions().setConfig(configCRM).setWorker(true);
+		DeploymentOptions optionsCRM = new DeploymentOptions().setConfig(configCRM).setWorker(false);
 		vertx.deployVerticle(CRMHyperty.class.getName(), optionsCRM, res -> {
 			System.out.println("Registry Result->" + res.result());
 		});
@@ -275,7 +274,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configCheckIN.put("streams", new JsonObject().put("shops", "data://sharing-cities-dsm/shops").put("bonus",
 				"data://sharing-cities-dsm/bonus"));
 
-		DeploymentOptions optionsCheckIN = new DeploymentOptions().setConfig(configCheckIN).setWorker(true);
+		DeploymentOptions optionsCheckIN = new DeploymentOptions().setConfig(configCheckIN).setWorker(false);
 		vertx.deployVerticle(CheckInRatingHyperty.class.getName(), optionsCheckIN, res -> {
 			System.out.println("CheckInRatingHyperty Result->" + res.result());
 		});
@@ -300,7 +299,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", "vertx://sharing-cities-dsm/user-activity");
 
-		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(true);
+		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(false);
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, res -> {
 			System.out.println("UserActivityRatingHyperty Result->" + res.result());
 		});
@@ -322,7 +321,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configElearning.put("streams", new JsonObject().put("elearning", "data://sharing-cities-dsm/elearning"));
 		configElearning.put("hyperty", "123");
 		configElearning.put("stream", streamAddress);
-		DeploymentOptions optionsElearning = new DeploymentOptions().setConfig(configElearning).setWorker(true);
+		DeploymentOptions optionsElearning = new DeploymentOptions().setConfig(configElearning).setWorker(false);
 		vertx.deployVerticle(ElearningRatingHyperty.class.getName(), optionsElearning, res -> {
 			System.out.println("ElearningRatingHyperty Result->" + res.result());
 		});
@@ -340,7 +339,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configEnergySaving.put("mongoHost", mongoHosts);
 		configEnergySaving.put("mongoPorts", mongoPorts);
 		configEnergySaving.put("mongoCluster", mongoCluster);
-		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(true);
+		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(false);
 		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsEnergy, res -> {
 			System.out.println("EnergySavingRatingHyperty Result->" + res.result());
 		});
@@ -361,6 +360,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("crm", crmHypertyURL);
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 		configWalletManager.put("rankingTimer", 2000);
+		configWalletManager.put("onReadMaxTransactions", 10);
 
 		// public wallets
 		String wallet0Address = "school0-wallet";
@@ -396,7 +396,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("publicWallets", publicWallets);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
@@ -414,13 +414,13 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configSmartIotStub.put("point_of_contact", pointOfContact);
 
 		DeploymentOptions optionsconfigSmartIotStub = new DeploymentOptions().setConfig(configSmartIotStub)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(SmartIotProtostub.class.getName(), optionsconfigSmartIotStub, res -> {
 			System.out.println("SmartIOTProtustub Result->" + res.result());
 		});
 
 		// Configure HttpServer and set it UP
-		//System.out.println("Setting up httpserver");
+		// System.out.println("Setting up httpserver");
 		int BUFF_SIZE = 32 * 1024;
 		final JksOptions jksOptions = new JksOptions().setPath("server-keystore.jks").setPassword("rethink2015");
 
@@ -433,18 +433,18 @@ public class StartJavaHyperties extends AbstractVerticle {
 					public void handle(final ServerWebSocket ws) {
 
 						final StringBuilder sb = new StringBuilder();
-						//System.out.println("RESOURCE-OPEN");
+						// System.out.println("RESOURCE-OPEN");
 						ws.frameHandler(frame -> {
 							sb.append(frame.textData());
 
 							if (frame.isFinal()) {
-								//System.out.println("RESOURCE isFinal -> Data:" + sb.toString());
+								// System.out.println("RESOURCE isFinal -> Data:" + sb.toString());
 								ws.writeFinalTextFrame("received");
 								sb.delete(0, sb.length());
 							}
 						});
 						ws.closeHandler(handler -> {
-							//System.out.println("RESOURCE-CLOSE");
+							// System.out.println("RESOURCE-CLOSE");
 						});
 					}
 				});
@@ -486,7 +486,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	private void handleRequestPub(RoutingContext routingContext) {
 
-		//System.out.println("ENDPOINT POST RECEIVED DATA -> " + routingContext.getBodyAsString().toString());
+		// System.out.println("ENDPOINT POST RECEIVED DATA -> " +
+		// routingContext.getBodyAsString().toString());
 
 		JsonObject dataReceived = new JsonObject(routingContext.getBodyAsString().toString());
 		JsonArray values = dataReceived.containsKey("values") ? dataReceived.getJsonArray("values") : null;
@@ -504,13 +505,17 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 				JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuesArray);
 
-				String objURL = findStream(currentObj.getString("streamId"));
-				//System.out.println("publishin on " + objURL + "/changes");
+				Future<String> objURLFuture = findStream(currentObj.getString("streamId"));
+				objURLFuture.setHandler(asyncResult -> {
+					String objURL = asyncResult.result();
+					// System.out.println("publishin on " + objURL + "/changes");
 
-				if (objURL != null) {
-					String changesObj = objURL + "/changes";
-					vertx.eventBus().publish(changesObj, new JsonArray().add(newObjToSend));
-				}
+					if (objURL != null) {
+						String changesObj = objURL + "/changes";
+						vertx.eventBus().publish(changesObj, new JsonArray().add(newObjToSend));
+					}
+				});
+
 			}
 		}
 		HttpServerResponse httpServerResponse = routingContext.response();
@@ -519,31 +524,21 @@ public class StartJavaHyperties extends AbstractVerticle {
 		httpServerResponse.putHeader("Content-Type", "application/text").end();
 	}
 
-	private String findStream(String streamID) {
-		//System.out.println("find stream:" + streamID);
-		final String stream[] = new String[1];
-		findDOUrl = new CountDownLatch(1);
+	private Future<String> findStream(String streamID) {
+		// System.out.println("find stream:" + streamID);
+		Future<String> stream = Future.future();
 
-		new Thread(() -> {
-			mongoClient.find("dataobjects", new JsonObject().put("url", streamID), res -> {
-				if (res.result().size() != 0) {
-					String objURL = res.result().get(0).getString("objURL");
+		mongoClient.find("dataobjects", new JsonObject().put("url", streamID), res -> {
+			if (res.result().size() != 0) {
+				String objURL = res.result().get(0).getString("objURL");
+				stream.complete(objURL);
+				// System.out.println("3,9" + stream[0]);
+			} else {
+				stream.complete(null);
+			}
+		});
 
-					stream[0] = objURL;
-					//System.out.println("3,9" + stream[0]);
-				}
-				findDOUrl.countDown();
-			});
-
-		}).start();
-
-		try {
-			findDOUrl.await(5L, TimeUnit.SECONDS);
-			return stream[0];
-		} catch (InterruptedException e) {
-			//System.out.println(e);
-		}
-		return stream[0];
+		return stream;
 	}
 
 }

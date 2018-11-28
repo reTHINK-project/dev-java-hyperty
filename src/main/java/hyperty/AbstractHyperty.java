@@ -1,12 +1,16 @@
 package hyperty;
 
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
+
+import org.apache.logging.log4j.core.Logger;
 
 import data_objects.DataObjectReporter;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -14,6 +18,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import runHyperties.LoggerFactory;
 
 public class AbstractHyperty extends AbstractVerticle {
 
@@ -28,14 +33,12 @@ public class AbstractHyperty extends AbstractVerticle {
 	protected String mongoPorts;
 	protected String mongoCluster;
 	protected String schemaURL;
+	protected String ratingType;
 	protected EventBus eb;
 	protected MongoClient mongoClient = null;
-	private CountDownLatch findWallet;
 	protected boolean acceptSubscription;
-	private CountDownLatch dataPersisted;
-	private boolean dataPersistedFlag;
 	protected String dataObjectsCollection = "dataobjects";
-	private CountDownLatch findDataObject;
+	protected Logger logger;
 	/**
 	 * Array with all vertx hyperty observers to be invited for all wallets.
 	 */
@@ -55,17 +58,17 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.schemaURL = config().getString("schemaURL");
 		this.observers = config().getJsonArray("observers");
 		this.siotStubUrl = config().getString("siot_stub_url");
+		this.logger =  LoggerFactory.getInstance().getLogger(); 
 
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 
 		if (mongoHost != null && mongoPorts != null && mongoCluster != null) {
-			System.out.println("Setting up Mongo to:" + this.url);
+			logger.debug("Setting up Mongo to:" + this.url);
 
-			System.out.println("Setting up Mongo to:" + this.mongoHost);
+			logger.debug("Setting up Mongo to:" + this.mongoHost);
 
-			System.out.println("Setting up Mongo to:" + this.mongoCluster);
-
+			logger.debug("Setting up Mongo to:" + this.mongoCluster);
 
 			JsonObject mongoconfig = null;
 
@@ -77,19 +80,20 @@ public class AbstractHyperty extends AbstractVerticle {
 			} else {
 				JsonArray hosts = new JsonArray();
 
-				String [] hostsEnv = mongoHost.split(",");
-				String [] portsEnv = mongoPorts.split(",");
+				String[] hostsEnv = mongoHost.split(",");
+				String[] portsEnv = mongoPorts.split(",");
 
-				for (int i = 0; i < hostsEnv.length ; i++) {
+				for (int i = 0; i < hostsEnv.length; i++) {
 					hosts.add(new JsonObject().put("host", hostsEnv[i]).put("port", Integer.parseInt(portsEnv[i])));
-					System.out.println("added to config:" + hostsEnv[i] + ":" + portsEnv[i]);
+					logger.debug("added to config:" + hostsEnv[i] + ":" + portsEnv[i]);
 				}
 
-				mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
+				mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts",
+						hosts);
 
 			}
 
-			System.out.println("Setting up Mongo with cfg on ABS:" +  mongoconfig.toString());
+			logger.debug("Setting up Mongo with cfg on ABS:" + mongoconfig.toString());
 			mongoClient = MongoClient.createShared(vertx, mongoconfig);
 
 		}
@@ -110,11 +114,11 @@ public class AbstractHyperty extends AbstractVerticle {
 
 		return message -> {
 
-			//System.out.println(logMessage + "New message -> " + message.body().toString());
+			logger.debug(logMessage + "New message -> " + message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 
-				//System.out.println(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
-				//		+ "\n[Data] " + message.body());
+				logger.debug(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
+						+ "\n[Data] " + message.body());
 
 				final JsonObject body = new JsonObject(message.body().toString()).getJsonObject("body");
 				final String type = new JsonObject(message.body().toString()).getString("type");
@@ -127,29 +131,29 @@ public class AbstractHyperty extends AbstractVerticle {
 					 * resource field, all persisted data is returned.
 					 */
 					if (body != null && body.getString("resource") != null) {
-						//System.out.println(logMessage + "Getting wallet address  msg:" + body.toString());
+						logger.debug(logMessage + "Getting wallet address msg:" + body.toString());
 
 						JsonObject identity = new JsonObject().put("userProfile",
 								new JsonObject().put("guid", body.getString("value")));
 
 						JsonObject toSearch = new JsonObject().put("identity", identity);
 
-						//System.out.println(
-						//		logMessage + "Search on " + this.collection + "  with data" + toSearch.toString());
+						logger.debug(
+								logMessage + "Search on " + this.collection + " with data" + toSearch.toString());
 
 						mongoClient.find(this.collection, toSearch, res -> {
 							if (res.result().size() != 0) {
 								JsonObject walletInfo = res.result().get(0);
 								// reply with address
-								//System.out.println("Returned wallet: " + walletInfo.toString());
+								logger.debug("Returned wallet: " + walletInfo.toString());
 								message.reply(walletInfo);
 							}
 						});
 
 					} else {
 						mongoClient.find(this.collection, new JsonObject(), res -> {
-							//System.out.println(
-							//		logMessage + res.result().size() + " <-value returned" + res.result().toString());
+							logger.debug(
+									logMessage + res.result().size() + " <-value returned" + res.result().toString());
 
 							response.put("data", new JsonArray(res.result().toString())).put("identity", this.identity);
 							message.reply(response);
@@ -159,7 +163,7 @@ public class AbstractHyperty extends AbstractVerticle {
 					break;
 				case "create":
 					if (from.contains("/subscription")) {
-						//System.out.println("TO INVITE");
+						logger.debug("TO INVITE");
 						onNotification(new JsonObject(message.body().toString()));
 					} else {
 						JsonObject msg = new JsonObject(message.body().toString());
@@ -186,42 +190,30 @@ public class AbstractHyperty extends AbstractVerticle {
 
 	}
 
-	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
-
+	public Future<Void> handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
+		Future<Void> handleCreationRequest = Future.future();
+		handleCreationRequest.complete();
+		return handleCreationRequest;
 	}
 
-	public String findDataObjectStream(String objURL, String guid) {
+	public Future<String> findDataObjectStream(String objURL, String guid) {
 
+		logger.debug("{{AbstractHyperty}} find do:" + objURL);
+		Future<String> doStream = Future.future();
 
-		//System.out.println("{{AbstractHyperty}} find do:" + objURL);
-		final String device[] = new String[1];
-		findDataObject = new CountDownLatch(1);
-
-		new Thread(() -> {
-			mongoClient.find(this.dataObjectsCollection, new JsonObject().put("objURL", objURL), res -> {
-				int x;
-
-				for (x = 0; x < res.result().size(); x++) {
-					String currentGuid = res.result().get(x).getJsonObject("metadata").getString("guid");
-					if (currentGuid.equals(guid)) {
-
-						String streamID = res.result().get(0).getString("url");
-
-						device[0] = streamID;
-					}
+		mongoClient.find(this.dataObjectsCollection, new JsonObject().put("objURL", objURL), res -> {
+			for (int i = 0; i < res.result().size(); i++) {
+				String currentGuid = res.result().get(i).getJsonObject("metadata").getString("guid");
+				if (currentGuid.equals(guid)) {
+					String streamID = res.result().get(0).getString("url");
+					doStream.complete(streamID);
+					return;
 				}
-				findDataObject.countDown();
-			});
+			}
+			doStream.complete(null);
+		});
 
-		}).start();
-
-		try {
-			findDataObject.await(5L, TimeUnit.SECONDS);
-			return device[0];
-		} catch (InterruptedException e) {
-			System.out.println(e);
-		}
-		return device[0];
+		return doStream;
 	}
 
 	/**
@@ -231,22 +223,36 @@ public class AbstractHyperty extends AbstractVerticle {
 	 *
 	 */
 	public void onNotification(JsonObject body) {
-		//System.out.println("HANDLING" + body.toString());
+		logger.debug("HANDLING" + body.toString());
 		String from = body.getString("from");
 		String guid = body.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
 
 		if (body.containsKey("external") && body.getBoolean("external")) {
-			//System.out.println("EXTERNAL INVITE");
+			logger.debug("EXTERNAL INVITE");
 			String streamID = body.getString("streamID");
 			String objURL = from.split("/subscription")[0];
-			String CheckURL = findDataObjectStream(objURL, guid);
-			if (CheckURL == null) {
-				if (persistDataObjUserURL(streamID, guid, objURL, "reporter")) {
-					onChanges(objURL);
+			Future<String> CheckURL = findDataObjectStream(objURL, guid);
+			CheckURL.setHandler(asyncResult -> {
+				if (asyncResult.succeeded()) {
+					if (CheckURL == null) {
+						Future<Boolean> persisted = persistDataObjUserURL(streamID, guid, objURL, "reporter");
+						persisted.setHandler(res -> {
+							if (res.succeeded()) {
+								if (persisted.result()) {
+									onChanges(objURL);
+								}
+							} else {
+								// oh ! we have a problem...
+							}
+						});
+
+					} else {
+						onChanges(objURL);
+					}
+				} else {
+					// oh ! we have a problem...
 				}
-			} else {
-				onChanges(objURL);
-			}
+			});
 
 		} else {
 			subscribe(from, guid);
@@ -258,9 +264,9 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * @param address
 	 * @param handler
 	 *
-	 *            Send a subscription message towards address with a callback that
-	 *            sets the handler at <address>/changes (ie eventBus.sendMessage(
-	 *            ..)).
+	 *                Send a subscription message towards address with a callback
+	 *                that sets the handler at <address>/changes (ie
+	 *                eventBus.sendMessage( ..)).
 	 */
 	public void subscribe(String address, String guid) {
 
@@ -273,25 +279,41 @@ public class AbstractHyperty extends AbstractVerticle {
 		subscribeMessageBody.put("identity", this.identity);
 		subscribeMessage.put("body", subscribeMessageBody);
 
-		//System.out.println(logMessage + "SUBSCRIBE Message Sent" + subscribeMessage.toString());
+		logger.debug(logMessage + "SUBSCRIBE Message Sent" + subscribeMessage.toString());
 		send(address, subscribeMessage, reply -> {
 			// after reply wait for changes
-			//System.out.println(logMessage + "subscribe reply ->" + reply.result().body().toString());
+			logger.debug(logMessage + "subscribe reply ->" + reply.result().body().toString());
 
 			JsonObject resultBody = new JsonObject(reply.result().body().toString());
 			int code = resultBody.getJsonObject("body").getInteger("code");
 			if (code == 200) {
 				// TODO: associate DataObjectURL to an identity of invite
-				if (checkIfCanHandleData(guid) && persistDataObjUserURL(ObjURL, guid, "observer")) {
-					onChanges(ObjURL);
-				}
+				Future<Boolean> canHandleData = checkIfCanHandleData(guid);
+				Future<Boolean> persisted = persistDataObjUserURL(ObjURL, guid, "observer");
+				List<Future> futures = new ArrayList<>();
+				futures.add(canHandleData);
+				futures.add(persisted);
+				CompositeFuture.all(futures).setHandler(done -> {
+					if (done.succeeded()) {
+						boolean res1 = done.result().resultAt(0);
+						boolean res2 = done.result().resultAt(1);
+						if (res1 && res2) {
+							onChanges(ObjURL);
+						}
+					} else {
+
+					}
+				});
+
 			}
 
 		});
 	}
 
-	public boolean checkIfCanHandleData(String objURL) {
-		return true;
+	public Future<Boolean> checkIfCanHandleData(String objURL) {
+		Future<Boolean> checkIfCanHandleData = Future.future();
+		checkIfCanHandleData.complete(true);
+		return checkIfCanHandleData;
 	}
 
 	/**
@@ -299,83 +321,82 @@ public class AbstractHyperty extends AbstractVerticle {
 	 * @param address
 	 * @param handler
 	 *
-	 *            Send a subscription message towards address with a callback that
-	 *            sets the handler at <address>/changes (ie eventBus.sendMessage(
-	 *            ..)).
+	 *                Send a subscription message towards address with a callback
+	 *                that sets the handler at <address>/changes (ie
+	 *                eventBus.sendMessage( ..)).
 	 */
 	public void onChanges(String address) {
-		//System.out.println(logMessage + "onChanges() -> ADDRESS TO PROCESS CHANGES" + address);
+		logger.debug(logMessage + "onChanges() -> ADDRESS TO PROCESS CHANGES" + address);
 		final String address_changes = address + "/changes";
 
 		eb.consumer(address_changes, message -> {
-			//System.out.println(logMessage + "New Change Received ->" + message.body().toString());
+			logger.debug(logMessage + "New Change Received ->" + message.body().toString());
 		});
 
 	}
 
-	public boolean persistDataObjUserURL(String streamID, String guid, String objURL, String type) {
+	public Future<Boolean> persistDataObjUserURL(String streamID, String guid, String objURL, String type) {
 
-		dataPersistedFlag = false;
-
-		dataPersisted = new CountDownLatch(1);
+		Future<Boolean> dataPersisted = Future.future();
 
 		JsonObject document = new JsonObject();
 		document.put("guid", guid);
 		document.put("type", type);
 
 		JsonObject toInsert = new JsonObject().put("url", streamID).put("objURL", objURL).put("metadata", document);
-		//System.out.println("Creating DO entry -> " + toInsert.toString());
-		new Thread(() -> {
+		logger.debug("Creating DO entry -> " + toInsert.toString());
 
-			mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
-				//System.out.println("Setup complete - dataobjects + Insert" + res2.result().toString());
-				dataPersistedFlag = true;
-				dataPersisted.countDown();
-			});
+		mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
+			logger.debug("Setup complete - dataobjects + Insert" + res2.result().toString());
+			dataPersisted.complete(res2.succeeded());
+		});
 
-		}).start();
-
-		try {
-			dataPersisted.await(5L, TimeUnit.SECONDS);
-			return dataPersistedFlag;
-		} catch (InterruptedException e) {
-			//System.out.println("3 - interrupted exception");
-		}
-		//System.out.println("3 - return other");
-		return dataPersistedFlag;
+		return dataPersisted;
 
 	}
 
-	public boolean persistDataObjUserURL(String address, String guid, String type) {
+	public Future<Boolean> persistDataObjUserURL(String address, String guid, String type) {
 
-		dataPersistedFlag = false;
-
-		dataPersisted = new CountDownLatch(1);
+		Future<Boolean> dataPersisted = Future.future();
 
 		JsonObject document = new JsonObject();
 		document.put("guid", guid);
 		document.put("type", type);
 
-		JsonObject toInsert = new JsonObject().put("url", address).put("metadata", document);
-		//System.out.println("Creating DO entry -> " + toInsert.toString());
+		JsonObject toFind = new JsonObject().put("url", address);
+		JsonObject toInsert = new JsonObject().put("url", address)
+				.put("metadata", document)
+				.put("ratingType", ratingType);
+		
+		logger.debug("Creating DO entry -> " + toInsert.toString());
 		new Thread(() -> {
 
-			mongoClient.save(dataObjectsCollection, toInsert, res2 -> {
-				//System.out.println("Setup complete - dataobjects + Insert" + res2.result().toString());
-				dataPersistedFlag = true;
-				dataPersisted.countDown();
+			mongoClient.find(dataObjectsCollection, toFind, res2 -> {
+				if (res2.result().size() > 0) {
+					if (res2.result().get(0).containsKey("ratingType")) {
+						System.out.println("Setup complete - dataobjects + already exist");
+						dataPersisted.complete(true);
+					} else {
+						System.out.println("Setup complete - dataobjects + already exist, but ratingType undefined");
+						mongoClient.removeDocuments(dataObjectsCollection, toFind, deleteResult -> {
+							mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
+								System.out.println("Setup complete - dataobjects + Insert" + resInsert.result().toString());
+								dataPersisted.complete(resInsert.succeeded());
+							});
+						});
+					}
+
+				} else {
+					mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
+						System.out.println("Setup complete - dataobjects + Insert" + resInsert.result().toString());
+						dataPersisted.complete(resInsert.succeeded());
+					});
+				}
 			});
 
 		}).start();
 
-		try {
-			dataPersisted.await(5L, TimeUnit.SECONDS);
-			return dataPersistedFlag;
-		} catch (InterruptedException e) {
-			//System.out.println("3 - interrupted exception");
-		}
-		//System.out.println("3 - return other");
-		return dataPersistedFlag;
+		return dataPersisted;
 
 	}
 
@@ -384,13 +405,14 @@ public class AbstractHyperty extends AbstractVerticle {
 	 *
 	 * @return
 	 */
-	public DataObjectReporter create(JsonObject identity, String dataObjectUrl, JsonObject initialData, boolean toInvite,
-			Handler<Message<JsonObject>> subscriptionHandler, Handler<Message<JsonObject>> readHandler) {
+	public DataObjectReporter create(JsonObject identity, String dataObjectUrl, JsonObject initialData,
+			boolean toInvite, Handler<Message<JsonObject>> subscriptionHandler,
+			Handler<Message<JsonObject>> readHandler) {
 		/**
 		 * type: "create", from: "dataObjectUrl/subscription", body: { source:
 		 * <hypertyUrl>, schema: <catalogueURL>, value: <initialData> }
 		 */
-		//System.out.println("[AbstractHyperty] " + observers);
+		logger.debug("[AbstractHyperty] " + observers);
 		JsonObject toSend = new JsonObject();
 		toSend.put("type", "create");
 		toSend.put("from", dataObjectUrl + "/subscription");
@@ -404,17 +426,15 @@ public class AbstractHyperty extends AbstractVerticle {
 			toSend.put("identity", identity);
 		}
 
-
-		//System.out.println("[AbstractHyperty]  data to send to observers->" + toSend.toString());
+		logger.debug("[AbstractHyperty] data to send to observers->" + toSend.toString());
 
 		if (toInvite) {
-			//System.out.print("inviting: " + observers.toString());
 			Iterator it = observers.getList().iterator();
 			while (it.hasNext()) {
 				String observer = (String) it.next();
 				send(observer, toSend, reply -> {
-					//System.out.println("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
-					//		+ reply.toString());
+					logger.debug("[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+							+ reply.toString());
 				});
 			}
 		}
@@ -438,58 +458,52 @@ public class AbstractHyperty extends AbstractVerticle {
 	 */
 	public boolean validateSource(String from, String address, JsonObject identity, String collection) {
 		// allow wallet creator
-		//System.out.println("validating source ... from:" + from + "\nobservers:" + observers.getList().toString()
-		//		+ "\nourUserURL:" + this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:"
-		//		+ collection);
+		logger.debug("validating source ... from:" + from + "\nobservers:" + observers.getList().toString()
+				+ "\nourUserURL:" + this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:"
+				+ collection);
+		
+		// TODO - just for testing
+		return true;
 
-		if (observers.getList().contains(from)) {
-			//System.out.println("VALID");
-			return true;
-		} else {
-			JsonObject toFind = new JsonObject().put("identity", identity);
-			//System.out.println("toFIND" + toFind.toString());
-
-			acceptSubscription = false;
-			findWallet = new CountDownLatch(1);
-
-			new Thread(() -> {
-				mongoClient.find(collection, toFind, res -> {
-					if (res.result().size() != 0) {
-						JsonObject wallet = res.result().get(0);
-						//System.out.println("to subscribe add:" + address + " wallet to compare" + wallet);
-
-						if (address.equals(wallet.getString("address"))) {
-							//System.out.println("RIGHT WALLET");
-							if (wallet.getJsonObject("identity").equals(identity)) {
-								//System.out.println("RIGHT IDENTITY");
-								acceptSubscription = true;
-								findWallet.countDown();
-								return;
-							}
-							findWallet.countDown();
-							return;
-
-						} else {
-							//System.out.println("OTHER WALLET");
-							findWallet.countDown();
-							return;
-
-						}
-					}
-
-				});
-			}).start();
-
-			try {
-				findWallet.await(5L, TimeUnit.SECONDS);
-				return acceptSubscription;
-			} catch (InterruptedException e) {
-				//System.out.println("3 - interrupted exception");
-			}
-			//System.out.println("3 - return other");
-			return acceptSubscription;
-
-		}
+//		if (observers.getList().contains(from)) {
+//			logger.debug("VALID");
+//			return true;
+//		} else {
+//			JsonObject toFind = new JsonObject().put("identity", identity);
+//			logger.debug("toFIND" + toFind.toString());
+//
+//			Future<Boolean> findWallet = Future.future();
+//
+//			new Thread(() -> {
+//				mongoClient.find(collection, toFind, res -> {
+//					if (res.result().size() != 0) {
+//						JsonObject wallet = res.result().get(0);
+//						logger.debug("to subscribe add:" + address + " wallet to compare" + wallet);
+//
+//						if (address.equals(wallet.getString("address"))) {
+//							logger.debug("RIGHT WALLET");
+//							if (wallet.getJsonObject("identity").equals(identity)) {
+//								logger.debug("RIGHT IDENTITY");
+//								findWallet.complete(true);
+//							}
+//							findWallet.complete(false);
+//							return;
+//
+//						} else {
+//							logger.debug("OTHER WALLET");
+//							findWallet.complete(false);
+//							return;
+//
+//						}
+//					}
+//
+//				});
+//			}).start();
+//
+//			logger.debug("3 - return other");
+//			return acceptSubscription;
+//
+//		}
 
 		// return false;
 	}
@@ -528,5 +542,91 @@ public class AbstractHyperty extends AbstractVerticle {
 
 		return true;
 
+	}
+	
+	
+	
+	public void resumeDataObjects(String ratingType) {
+		
+	 		JsonObject tofind = new JsonObject().put("ratingType", ratingType);
+			logger.debug("Resuming dataobjects ratingType-> " + ratingType);
+	 			mongoClient.find(dataObjectsCollection, tofind, allDataObjects -> {
+	 				logger.debug("GetAllDataObjects complete - " + allDataObjects.result().size());
+					for (int i = 0; i < allDataObjects.result().size(); i++) {
+						String dataObjectUrl = allDataObjects.result().get(i).getString("url");
+						onChanges(dataObjectUrl);					
+					}
+				});		
+		}
+
+	public void cleanDuplicatedDataObjects() {
+		
+		mongoClient.find(dataObjectsCollection, new JsonObject(), resultHandler -> {
+			
+			
+			
+			//all documents
+			List<JsonObject> dataObjectsArray = resultHandler.result();
+			logger.info("All dos size:" + dataObjectsArray.size());
+			
+			//to fill with single url of each dataobject
+			List<String> dataObjectsUrl = new ArrayList<String>();
+			
+			if (dataObjectsArray.size() > 0) {
+				int i;
+				for (i = 0; i < dataObjectsArray.size(); i++) {
+					
+					JsonObject currentDO = dataObjectsArray.get(i);
+					String url = currentDO.getString("url");
+					
+					if (!currentDO.containsKey("objURL") && !dataObjectsUrl.contains(url)) {
+						//add to list
+						dataObjectsUrl.add(url);
+						
+						JsonObject toRemove = new JsonObject().put("url", url);
+						
+						
+						//JsonObject document = currentDO.getJsonObject("metadata");
+
+						//JsonObject toAdd = new JsonObject().put("url", url)
+						//		.put("metadata", document);
+						currentDO.remove("_id");
+		
+						mongoClient.removeDocuments(dataObjectsCollection, toRemove, deleteResult -> {
+							mongoClient.save(dataObjectsCollection, currentDO, resInsert -> {
+								logger.info("Setup complete - dataobjects + Insert" + resInsert.result().toString());
+							});
+						});
+						
+					}
+				}
+				logger.info("single do size:" + dataObjectsUrl.size());
+			}
+		
+		
+		/*
+		mongoClient.find(dataObjectsCollection, new JsonObject(), res2 -> {
+			if (res2.result().size() > 0) {
+				if (res2.result().get(0).containsKey("ratingType")) {
+					System.out.println("Setup complete - dataobjects + already exist");
+					dataPersisted.complete(true);
+				} else {
+					System.out.println("Setup complete - dataobjects + already exist, but ratingType undefined");
+					mongoClient.removeDocuments(dataObjectsCollection, toFind, deleteResult -> {
+						mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
+							System.out.println("Setup complete - dataobjects + Insert" + resInsert.result().toString());
+							dataPersisted.complete(resInsert.succeeded());
+						});
+					});
+				}
+	
+			} else {
+				mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
+					System.out.println("Setup complete - dataobjects + Insert" + resInsert.result().toString());
+					dataPersisted.complete(resInsert.succeeded());
+				});
+			}
+		});*/
+		});
 	}
 }

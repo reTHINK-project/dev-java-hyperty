@@ -76,7 +76,7 @@ class OfflineSubscriptionManagerTest {
 		config.put("mongoCluster", "NO");
 
 		// deploy
-		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(true);
+		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(false);
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(OfflineSubscriptionManagerHyperty.class.getName(), options, context.succeeding());
 
