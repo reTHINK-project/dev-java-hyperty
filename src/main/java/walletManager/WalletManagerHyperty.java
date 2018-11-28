@@ -1376,7 +1376,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				JsonObject wallet = res.result().get(0);
 				logger.debug(wallet);
 
-				sendMsgBody.put("code", 200).put("wallet", limitTransactions(wallet));
+				sendMsgBody.put("code", 200).put("wallet", wallet);
 				response.put("body", sendMsgBody);
 				msg.reply(response);
 			});
