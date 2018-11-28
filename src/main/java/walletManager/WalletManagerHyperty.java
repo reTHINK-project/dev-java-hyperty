@@ -332,7 +332,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					JsonObject query = new JsonObject();
 					query.put("identity", wallet.getJsonObject("identity"));
 					mongoClient.findOneAndReplace(collection, query, wallet, id -> {
-						logger.debug(logMessage + "generateRankings() document updated: " + wallet);
+						logger.debug(logMessage + "generateRankings() document updated");
 					});
 
 					// publish transaction in the event bus using the wallet address.
@@ -1370,8 +1370,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				response.put("body", sendMsgBody);
 				msg.reply(response);
 			}
-
-			mongoClient.find(walletsCollection, new JsonObject().put("identity", identity), res -> {
+			
+			JsonObject walletIdentity = msg.body().getJsonObject("identity");
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
 				JsonObject wallet = res.result().get(0);
 				logger.debug(wallet);
 
@@ -1387,7 +1388,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private void limitAux(JsonObject wallet) {
 		JsonArray transactions = wallet.getJsonArray("transactions");
 		if (transactions.size() > onReadMaxTransactions) {
-			for (int i = 0; i < transactions.size() - onReadMaxTransactions; i++) {
+			final int size= transactions.size(); 
+			for (int i = 0; i < size - onReadMaxTransactions; i++) {
 				transactions.remove(0);
 			}
 		}
