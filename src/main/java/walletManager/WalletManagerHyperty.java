@@ -423,6 +423,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		logger.debug(logMessage + "walletDelete(): " + msg.toString());
 
 		String walletAddress = msg.getJsonObject("body").getString("value");
+		if (walletAddress.equals("public-wallets")) {
+			return;
+		}
 		logger.debug(logMessage + "removing wallet for address " + walletAddress);
 
 		JsonObject query = new JsonObject();
@@ -1370,7 +1373,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				response.put("body", sendMsgBody);
 				msg.reply(response);
 			}
-			
+
 			JsonObject walletIdentity = msg.body().getJsonObject("identity");
 			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
 				JsonObject wallet = res.result().get(0);
@@ -1388,7 +1391,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private void limitAux(JsonObject wallet) {
 		JsonArray transactions = wallet.getJsonArray("transactions");
 		if (transactions.size() > onReadMaxTransactions) {
-			final int size= transactions.size(); 
+			final int size = transactions.size();
 			for (int i = 0; i < size - onReadMaxTransactions; i++) {
 				transactions.remove(0);
 			}
