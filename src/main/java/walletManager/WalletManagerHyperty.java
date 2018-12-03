@@ -823,7 +823,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				createdExists = true;
 		}
 
-		System.out.println("sumAccounts(): " + accounts);
 
 		if (!createdExists) {
 			// build "created" account

@@ -245,7 +245,7 @@ class ElearningTest {
 
 	}
 
-	int numWallets = 100;
+	int numWallets = 1000;
 	int created = 0;
 	int resumed = 0;
 
@@ -328,7 +328,6 @@ class ElearningTest {
 			JsonObject query = new JsonObject().put("address", "public-wallets");
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0).getJsonArray("wallets").getJsonObject(0);
-				System.out.println("public() : " + wallet);
 				JsonArray transactions = wallet.getJsonArray("transactions");
 				JsonArray accounts = wallet.getJsonArray("accounts");
 				// check accounts
