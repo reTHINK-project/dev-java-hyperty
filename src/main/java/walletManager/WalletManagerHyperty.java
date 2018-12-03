@@ -711,7 +711,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		Future<Void> transferFuture = Future.future();
 
 		sd.getLockWithTimeout("mongoLock", 5000, r -> {
-
+			
+			long startTime = System.currentTimeMillis();
+			
 			if (!r.succeeded()) {
 				transferFuture.complete();
 				logger.error("Error when accessing lock");
@@ -767,6 +769,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
 					logger.debug("[WalletManager] Transaction added to public wallet");
+					
+					long endTime = System.currentTimeMillis();
+					long timeElapsed = endTime - startTime;
+					logger.debug("Lock time: " + timeElapsed + " ms");
+					lock.release();
 
 					// send wallets update
 					JsonObject updateMessage = new JsonObject();
@@ -801,7 +808,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					publish(toSendChanges, updateMessage);
 					publish(publicWalletsOnChangesAddress, updateMessage);
 
-					lock.release();
 					transferFuture.complete();
 				});
 			});
