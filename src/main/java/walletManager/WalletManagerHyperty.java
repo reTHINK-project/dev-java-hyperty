@@ -503,7 +503,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 
 			// update accounts
-			updateAccounts(walletInfo);
+			updateAccounts(walletInfo, false);
 
 			JsonObject document = new JsonObject(walletInfo.toString());
 
@@ -572,7 +572,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		return source;
 	}
 
-	private JsonObject updateAccounts(JsonObject wallet) {
+	private JsonObject updateAccounts(JsonObject wallet, boolean publicWallet) {
 		JsonArray accounts = wallet.getJsonArray("accounts");
 		JsonArray transactions = wallet.getJsonArray("transactions");
 		if (transactions.size() == 1) {
@@ -585,7 +585,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		}
 
 		// transactions for this source
-		List<Object> transactionsForSource = getTransactionsForSource(transactions, source);
+		List<Object> transactionsForSource = getTransactionsForSource(transactions, source, publicWallet);
 		// get account for source
 		List<Object> res = accounts.stream().filter(account -> ((JsonObject) account).getString("name").equals(source))
 				.collect(Collectors.toList());
@@ -628,7 +628,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		return wallet;
 	}
 
-	private List<Object> getTransactionsForSource(JsonArray transactions, String source) {
+	private List<Object> getTransactionsForSource(JsonArray transactions, String source, boolean fromLast) {
+		if (fromLast) {
+			int num = 100;
+			JsonArray trAux = new JsonArray();
+			for (int i = transactions.size() - 1; i > transactions.size() - 1 - num && i >= 0; i--) {
+				trAux.add(transactions.getJsonObject(i));
+			}
+			transactions = trAux;
+		}
 		if (source.equals("walking") || source.equals("biking")) {
 			String newSource = "user_" + source + "_context";
 			return transactions.stream()
@@ -711,9 +719,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		Future<Void> transferFuture = Future.future();
 
 		sd.getLockWithTimeout("mongoLock", 5000, r -> {
-			
+
 			long startTime = System.currentTimeMillis();
-			
+
 			if (!r.succeeded()) {
 				transferFuture.complete();
 				logger.error("Error when accessing lock");
@@ -747,7 +755,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							JsonArray transactions = wallet.getJsonArray("transactions");
 							transactions.add(transaction);
 							// update accounts
-							JsonObject walletAux = updateAccounts(wallet);
+							JsonObject walletAux = updateAccounts(wallet, true);
 							walletAux = sumAccounts(walletAux);
 							wallet.put("balance", walletAux.getInteger("balance"));
 							wallet.put("accounts", walletAux.getJsonArray("accounts"));
@@ -769,7 +777,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
 					logger.debug("[WalletManager] Transaction added to public wallet");
-					
+
 					long endTime = System.currentTimeMillis();
 					long timeElapsed = endTime - startTime;
 					logger.debug("Lock time: " + timeElapsed + " ms");
@@ -830,13 +838,12 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				createdExists = true;
 		}
 
-
 		if (!createdExists) {
 			// build "created" account
 			Account created = new Account("created", "points");
 			// transactions for this source
 			List<Object> transactionsForSource = getTransactionsForSource(wallet.getJsonArray("transactions"),
-					"created");
+					"created", false);
 			created.totalBalance = sumTransactionsField(transactionsForSource, "value");
 			sum += created.totalBalance;
 			created.totalData = transactionsForSource.size();
@@ -1278,7 +1285,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		activities.add("energy-saving");
 		for (String source : activities) {
 			// get transactions of that source (watch out for user-activity!)
-			List<Object> transactionsForSource = getTransactionsForSource(transactions, source);
+			List<Object> transactionsForSource = getTransactionsForSource(transactions, source, false);
 			// get account for source
 			JsonArray accountsDefCopy = accountsDefault.copy();
 			logger.debug("[WalletManager] buildAccounts copy: " + accountsDefCopy);
