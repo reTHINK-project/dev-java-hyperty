@@ -570,16 +570,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		return source;
 	}
 
-	private void updateAccounts(JsonObject wallet) {
+	private JsonObject updateAccounts(JsonObject wallet) {
 		JsonArray accounts = wallet.getJsonArray("accounts");
 		JsonArray transactions = wallet.getJsonArray("transactions");
 		if (transactions.size() == 0) {
-			return;
+			return wallet;
 		}
 		JsonObject lastTransaction = transactions.getJsonObject(transactions.size() - 1);
 		String source = getSource(lastTransaction);
 		if (source.equals("created") || source.equals("bonus")) {
-			return;
+			return wallet;
 		}
 		// transactions for this source
 		List<Object> transactionsForSource = getTransactionsForSource(transactions, source);
@@ -623,7 +623,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 		}
 
-		return;
+		return wallet;
 	}
 
 	private List<Object> getTransactionsForSource(JsonArray transactions, String source) {
@@ -725,21 +725,22 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					int currentBalance = wallet.getInteger("balance");
 					if (transactionValue > 0) {
-						wallet.put("balance", currentBalance + transactionValue);
 						JsonArray transactions = wallet.getJsonArray("transactions");
 						transactions.add(transaction);
+						wallet = sumAccounts(wallet);
+						wallet.put("balance", wallet.getInteger("balance") + transactionValue);
 					} else {
 						wallet.put("balance", currentBalance);
 					}
+
+					// update accounts
+					wallet = updateAccounts(wallet);
 
 					// update counters
 					JsonObject countersObj = wallet.getJsonObject(counters);
 					if (!source.equals("created") && !source.equals("bonus")) {
 						countersObj.put(source, countersObj.getInteger(source) + transactionValue);
 					}
-
-					// update accounts
-					updateAccounts(wallet);
 
 					updatedWallet = wallet;
 				}
@@ -785,6 +786,38 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			});
 		});
 
+	}
+
+	private JsonObject sumAccounts(JsonObject wallet) {
+
+		JsonArray accounts = wallet.getJsonArray("accounts");
+		int sum = 0;
+		boolean createdExists = false;
+		for (Object object : accounts) {
+			JsonObject account = (JsonObject) object;
+			sum += account.getInteger("totalBalance");
+			if (account.getString("name").equals("created"))
+				createdExists = true;
+		}
+
+
+		if (!createdExists) {
+			// build "created" account
+			Account created = new Account("created", "points");
+			// transactions for this source
+			List<Object> transactionsForSource = getTransactionsForSource(wallet.getJsonArray("transactions"),
+					"created");
+			created.totalBalance = sumTransactionsField(transactionsForSource, "value");
+			sum += created.totalBalance;
+			created.totalData = transactionsForSource.size();
+			JsonArray lastTransactions = lastWeekTransactions(transactionsForSource);
+			created.lastBalance = sumTransactionsField(lastTransactions.getList(), "value");
+			created.lastData = lastTransactions.size();
+			accounts.add(created.toJsonObject());
+		}
+
+		wallet.put("balance", sum);
+		return wallet;
 	}
 
 	CompletableFuture<Boolean> result = new CompletableFuture<>();
