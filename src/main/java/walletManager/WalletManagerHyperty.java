@@ -17,6 +17,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.shareddata.Lock;
+import io.vertx.core.shareddata.SharedData;
 import io.vertx.ext.mongo.FindOptions;
 import runHyperties.Account;
 import util.DateUtilsHelper;
@@ -573,14 +575,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private JsonObject updateAccounts(JsonObject wallet) {
 		JsonArray accounts = wallet.getJsonArray("accounts");
 		JsonArray transactions = wallet.getJsonArray("transactions");
-		if (transactions.size() == 0) {
+		if (transactions.size() == 1) {
 			return wallet;
 		}
 		JsonObject lastTransaction = transactions.getJsonObject(transactions.size() - 1);
 		String source = getSource(lastTransaction);
-		if (source.equals("created") || source.equals("bonus")) {
+		if (source.equals("bonus")) {
 			return wallet;
 		}
+
 		// transactions for this source
 		List<Object> transactionsForSource = getTransactionsForSource(transactions, source);
 		// get account for source
@@ -612,7 +615,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 			account.lastData = lastData;
 		}
-		account.lastPeriod = "week";
 		accountJson = account.toJsonObject();
 		for (Object entry : accounts) {
 			JsonObject js = (JsonObject) entry;
@@ -704,87 +706,108 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	JsonObject updatedWallet;
 
-	private void transferToPublicWallet(String walletAddress, JsonObject transaction) {
-		logger.debug(logMessage + "transferToPublicWallet(): " + walletAddress + "\n" + transaction);
-		String source = transaction.getString("source");
-		int transactionValue = transaction.getInteger("value");
+	private Future<Void> transferToPublicWallet(String walletAddress, JsonObject transaction) {
+		SharedData sd = vertx.sharedData();
+		Future<Void> transferFuture = Future.future();
 
-		JsonObject query = new JsonObject().put("identity",
-				new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
-		// get wallets document
-		mongoClient.find(walletsCollection, query, res -> {
-			JsonObject result = res.result().get(0);
-			JsonArray wallets = result.getJsonArray("wallets");
+		sd.getLockWithTimeout("mongoLock", 5000, r -> {
 
-			updatedWallet = new JsonObject();
-			// update wallets
-			for (Object pWallet : wallets) {
-				// get wallet with that address
-				JsonObject wallet = (JsonObject) pWallet;
-				if (wallet.getString("address").equals(walletAddress)) {
-
-					int currentBalance = wallet.getInteger("balance");
-					if (transactionValue > 0) {
-						JsonArray transactions = wallet.getJsonArray("transactions");
-						transactions.add(transaction);
-						wallet = sumAccounts(wallet);
-						wallet.put("balance", wallet.getInteger("balance") + transactionValue);
-					} else {
-						wallet.put("balance", currentBalance);
-					}
-
-					// update accounts
-					wallet = updateAccounts(wallet);
-
-					// update counters
-					JsonObject countersObj = wallet.getJsonObject(counters);
-					if (!source.equals("created") && !source.equals("bonus")) {
-						countersObj.put(source, countersObj.getInteger(source) + transactionValue);
-					}
-
-					updatedWallet = wallet;
-				}
+			if (!r.succeeded()) {
+				transferFuture.complete();
+				logger.error("Error when accessing lock");
+				return;
 			}
+			// Got the lock!
+			Lock lock = r.result();
 
-			logger.debug(logMessage + "updating with: wallet" + result);
+			logger.debug(logMessage + "transferToPublicWallet(): " + walletAddress + "\n" + transaction);
+			String source = transaction.getString("source");
+			int transactionValue = transaction.getInteger("value");
 
-			mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
-				logger.debug("[WalletManager] Transaction added to public wallet");
+			JsonObject query = new JsonObject().put("identity",
+					new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
+			// get wallets document
+			mongoClient.find(walletsCollection, query, res -> {
+				JsonObject result = res.result().get(0);
+				JsonArray wallets = result.getJsonArray("wallets");
 
-				// send wallets update
-				JsonObject updateMessage = new JsonObject();
-				updateMessage.put("type", "update");
-				updateMessage.put("from", url);
-				updateMessage.put("to", walletAddress + "/changes");
-				JsonArray updateBody = new JsonArray();
-				JsonObject walletID = new JsonObject();
-				walletID.put("value", updatedWallet.getJsonObject("identity"));
-				walletID.put("attribute", "school-id");
-				updateBody.add(walletID);
-				JsonObject transactions = new JsonObject();
-				transactions.put("value", transaction);
-				transactions.put("attributeType", "array");
-				transactions.put("attribute", "transactions");
-				updateBody.add(transactions);
-				JsonObject accounts = new JsonObject();
-				accounts.put("value", updatedWallet.getJsonArray("accounts"));
-				accounts.put("attributeType", "array");
-				accounts.put("attribute", "accounts");
-				updateBody.add(accounts);
-				JsonObject value = new JsonObject();
-				value.put("value", updatedWallet.getInteger("balance"));
-				value.put("attribute", "value");
-				updateBody.add(value);
-				updateMessage.put("body", updateBody);
+				updatedWallet = new JsonObject();
+				// update wallets
+				for (Object pWallet : wallets) {
+					// get wallet with that address
+					JsonObject wallet = (JsonObject) pWallet;
+					if (wallet.getString("address").equals(walletAddress)) {
 
-				// publish transaction in the event bus using the wallet address.
-				String toSendChanges = walletAddress + "/changes";
-				logger.debug(logMessage + "publishing on " + toSendChanges);
+						int currentBalance = wallet.getInteger("balance");
 
-				publish(toSendChanges, updateMessage);
-				publish(publicWalletsOnChangesAddress, updateMessage);
+						logger.debug(logMessage + "transferToPublicWallet(): current balance " + currentBalance);
+						if (transactionValue > 0) {
+							JsonArray transactions = wallet.getJsonArray("transactions");
+							transactions.add(transaction);
+							// update accounts
+							wallet = updateAccounts(wallet);
+							wallet = sumAccounts(wallet);
+							wallet.put("balance", wallet.getInteger("balance"));
+						} else {
+							wallet.put("balance", currentBalance);
+						}
+
+						// update counters
+						JsonObject countersObj = wallet.getJsonObject(counters);
+						if (!source.equals("created") && !source.equals("bonus")) {
+							countersObj.put(source, countersObj.getInteger(source) + transactionValue);
+						}
+
+						updatedWallet = wallet;
+					}
+				}
+
+				logger.debug(logMessage + "updating with: wallet" + result);
+
+				mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
+					logger.debug("[WalletManager] Transaction added to public wallet");
+
+					// send wallets update
+					JsonObject updateMessage = new JsonObject();
+					updateMessage.put("type", "update");
+					updateMessage.put("from", url);
+					updateMessage.put("to", walletAddress + "/changes");
+					JsonArray updateBody = new JsonArray();
+					JsonObject walletID = new JsonObject();
+					walletID.put("value", updatedWallet.getJsonObject("identity"));
+					walletID.put("attribute", "school-id");
+					updateBody.add(walletID);
+					JsonObject transactions = new JsonObject();
+					transactions.put("value", transaction);
+					transactions.put("attributeType", "array");
+					transactions.put("attribute", "transactions");
+					updateBody.add(transactions);
+					JsonObject accounts = new JsonObject();
+					accounts.put("value", updatedWallet.getJsonArray("accounts"));
+					accounts.put("attributeType", "array");
+					accounts.put("attribute", "accounts");
+					updateBody.add(accounts);
+					JsonObject value = new JsonObject();
+					value.put("value", updatedWallet.getInteger("balance"));
+					value.put("attribute", "value");
+					updateBody.add(value);
+					updateMessage.put("body", updateBody);
+
+					// publish transaction in the event bus using the wallet address.
+					String toSendChanges = walletAddress + "/changes";
+					logger.debug(logMessage + "publishing on " + toSendChanges);
+
+					publish(toSendChanges, updateMessage);
+					publish(publicWalletsOnChangesAddress, updateMessage);
+
+					lock.release();
+					transferFuture.complete();
+				});
 			});
+
 		});
+
+		return transferFuture;
 
 	}
 
@@ -800,6 +823,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				createdExists = true;
 		}
 
+		System.out.println("sumAccounts(): " + accounts);
 
 		if (!createdExists) {
 			// build "created" account
@@ -1060,40 +1084,47 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
 						logger.debug("wallet created, reply" + response.toString());
 
+						Future<Void> transferPublic;
 						if (bal > 0) {
-							transferToPublicWallet(newWallet.getString(causeWalletAddress), newTransaction);
+							transferPublic = transferToPublicWallet(newWallet.getString(causeWalletAddress),
+									newTransaction);
+						} else {
+							transferPublic = Future.future();
+							transferPublic.complete();
 						}
 
-						String roleCode = profileInfo.getString("code");
-						if (roleCode != null) {
-							logger.debug(logMessage + "resolving role for code " + roleCode);
-							Future<Void> validateCause = Future.future();
+						transferPublic.setHandler(asyncResult -> {
+							String roleCode = profileInfo.getString("code");
+							if (roleCode != null) {
+								logger.debug(logMessage + "resolving role for code " + roleCode);
+								Future<Void> validateCause = Future.future();
 
-							JsonObject validationMessage = new JsonObject();
-							validationMessage.put("from", url);
-							validationMessage.put("identity", identity);
-							validationMessage.put("type", "forward");
-							validationMessage.put("code", roleCode);
-							send("resolve-role", validationMessage, reply -> {
-								logger.debug(
-										logMessage + "role validation result: " + reply.result().body().toString());
-								String role = new JsonObject(reply.result().body().toString()).getString("role");
-								response.put("role", role);
-								validateCause.complete();
-							});
+								JsonObject validationMessage = new JsonObject();
+								validationMessage.put("from", url);
+								validationMessage.put("identity", identity);
+								validationMessage.put("type", "forward");
+								validationMessage.put("code", roleCode);
+								send("resolve-role", validationMessage, reply -> {
+									logger.debug(
+											logMessage + "role validation result: " + reply.result().body().toString());
+									String role = new JsonObject(reply.result().body().toString()).getString("role");
+									response.put("role", role);
+									validateCause.complete();
+								});
 
-							validateCause.setHandler(asyncResult -> {
-								if (asyncResult.succeeded()) {
-									reply2.result().reply(response);
-								} else {
-									// oh ! we have a problem...
-								}
-							});
+								validateCause.setHandler(asyncResult2 -> {
+									if (asyncResult2.succeeded()) {
+										reply2.result().reply(response);
+									} else {
+										// oh ! we have a problem...
+									}
+								});
 
-						}
+							}
 
-						reply2.result().reply(response);
-						result.complete();
+							reply2.result().reply(response);
+							result.complete();
+						});
 
 					} else {
 						JsonObject wallet = res.result().get(0);

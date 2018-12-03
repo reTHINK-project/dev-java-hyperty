@@ -245,7 +245,7 @@ class ElearningTest {
 
 	}
 
-	int numWallets = 1000;
+	int numWallets = 100;
 	int created = 0;
 	int resumed = 0;
 
@@ -271,30 +271,13 @@ class ElearningTest {
 			createWallet(vertx, userID, null);
 		}
 
+		Future<Void> resumedWallets = Future.future();
 		checkNumWallets.setHandler(asyncResult -> {
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-//			for (int i = 0; i < numWallets; i++) {
-//				String userID = "user-guid://sharing-cities-dsm/" + i;
-//				submitQuiz(userID, vertx);
-//			}
-//			try {
-//				Thread.sleep(2000);
-//			} catch (InterruptedException e) {
-//				e.printStackTrace();
-//			}
-//
-//			for (int i = 0; i < numWallets; i++) {
-//				Future<Void> assertWallet = Future.future();
-//				String userID = "sharing-cities-dsm/" + i;
-//				JsonObject query = new JsonObject().put("address", userID);
-//				checkWallet(query, assertWallet);
-//			}
-//
-
 			resumed = 0;
 			long startTimeResume = System.currentTimeMillis();
 			for (int i = 0; i < numWallets; i++) {
@@ -314,10 +297,53 @@ class ElearningTest {
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
-						testContext.completeNow();
+
+						resumedWallets.complete();
+
 					}
 				});
 			}
+		});
+
+		resumedWallets.setHandler(asyncResult -> {
+			
+//			for (int i = 0; i < numWallets; i++) {
+//				String userID = "user-guid://sharing-cities-dsm/" + i;
+//				submitQuiz(userID, vertx);
+//			}
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+
+//			for (int i = 0; i < numWallets; i++) {
+//				Future<Void> assertWallet = Future.future();
+//				String userID = "sharing-cities-dsm/" + i;
+//				JsonObject query = new JsonObject().put("address", userID);
+//				checkWallet(query, assertWallet);
+//			}
+			
+			// TODO - assertion
+			JsonObject query = new JsonObject().put("address", "public-wallets");
+			mongoClient.find(walletsCollection, query, result -> {
+				JsonObject wallet = result.result().get(0).getJsonArray("wallets").getJsonObject(0);
+				System.out.println("public() : " + wallet);
+				JsonArray transactions = wallet.getJsonArray("transactions");
+				JsonArray accounts = wallet.getJsonArray("accounts");
+				// check accounts
+				List<Object> res = accounts.stream()
+						.filter(account -> ((JsonObject) account).getString("name").equals("created"))
+						.collect(Collectors.toList());
+				JsonObject accountCreated = (JsonObject) res.get(0);
+				assertEquals(numWallets * 50, (int) accountCreated.getInteger("totalBalance"));
+				assertEquals(numWallets, (int) accountCreated.getInteger("lastData"));
+				assertEquals(numWallets, transactions.size());
+				assertEquals(numWallets * 50 , (int) wallet.getInteger("balance"));
+				testContext.completeNow();
+			});
+
+
 		});
 
 	}
