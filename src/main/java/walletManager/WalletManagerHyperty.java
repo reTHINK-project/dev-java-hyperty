@@ -745,9 +745,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							JsonArray transactions = wallet.getJsonArray("transactions");
 							transactions.add(transaction);
 							// update accounts
-							wallet = updateAccounts(wallet);
-							wallet = sumAccounts(wallet);
-							wallet.put("balance", wallet.getInteger("balance"));
+							JsonObject walletAux = updateAccounts(wallet);
+							walletAux = sumAccounts(walletAux);
+							wallet.put("balance", walletAux.getInteger("balance"));
+							wallet.put("accounts", walletAux.getJsonArray("accounts"));
 						} else {
 							wallet.put("balance", currentBalance);
 						}
