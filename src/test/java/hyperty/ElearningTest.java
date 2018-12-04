@@ -2,6 +2,7 @@ package hyperty;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +36,7 @@ import walletManager.WalletManagerHyperty;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
-@Disabled
+//@Disabled
 class ElearningTest {
 
 	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";
@@ -245,13 +246,56 @@ class ElearningTest {
 
 	}
 
-	int numWallets = 1000;
+	int numWallets = 200;
+	int numWalletsLoop = 5;
 	int created = 0;
 	int resumed = 0;
+	int numQuizzes = 100;
 
 	@Test
 //	@Disabled
-	void createMany(VertxTestContext testContext, Vertx vertx) {
+	void createExtraWallets(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("TEST - createExtraWallets");
+
+		// create wallets
+		for (int i = 0; i < numWalletsLoop; i++) {
+
+			createMany(testContext, vertx, false);
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+			for (int i = 0; i < numQuizzes; i++) {
+				String userID = "user-guid://sharing-cities-dsm/" + i;
+				submitQuiz(userID, vertx);
+			}
+/*			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}*/
+
+//			for (int i = 0; i < numWallets; i++) {
+//				Future<Void> assertWallet = Future.future();
+//				String userID = "sharing-cities-dsm/" + i;
+//				JsonObject query = new JsonObject().put("address", userID);
+//				checkWallet(query, assertWallet);
+//			}
+	testContext.completeNow();
+
+	}
+
+	@Test
+	@Disabled
+	void createWallets(VertxTestContext testContext, Vertx vertx) {
+		createMany( testContext,  vertx, true);
+
+	}
+
+	void createMany(VertxTestContext testContext, Vertx vertx, boolean test) {
 		created = 0;
 		long startTime = System.currentTimeMillis();
 		Future<Void> checkNumWallets = Future.future();
@@ -273,11 +317,11 @@ class ElearningTest {
 
 		Future<Void> resumedWallets = Future.future();
 		checkNumWallets.setHandler(asyncResult -> {
-			try {
+/*			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
-			}
+			}*/
 			resumed = 0;
 			long startTimeResume = System.currentTimeMillis();
 			for (int i = 0; i < numWallets; i++) {
@@ -311,11 +355,11 @@ class ElearningTest {
 //				String userID = "user-guid://sharing-cities-dsm/" + i;
 //				submitQuiz(userID, vertx);
 //			}
-			try {
-				Thread.sleep(2000);
+/*			try {
+				Thread.sleep(10000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
-			}
+			}*/
 
 //			for (int i = 0; i < numWallets; i++) {
 //				Future<Void> assertWallet = Future.future();
@@ -335,13 +379,16 @@ class ElearningTest {
 						.filter(account -> ((JsonObject) account).getString("name").equals("created"))
 						.collect(Collectors.toList());
 				JsonObject accountCreated = (JsonObject) res.get(0);
-				assertEquals(numWallets * 50, (int) accountCreated.getInteger("totalBalance"));
-				assertEquals(numWallets, (int) accountCreated.getInteger("lastData"));
+				assertTrue((int) accountCreated.getInteger("totalBalance") >= numWallets * 50);
+				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
+				assertTrue(transactions.size() >= numWallets );
+				assertTrue((int) wallet.getInteger("balance") >= numWallets * 50 );
+/*				assertEquals(numWallets * 50, (int) accountCreated.getInteger("totalBalance"));
+				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
 				assertEquals(numWallets, transactions.size());
-				assertEquals(numWallets * 50 , (int) wallet.getInteger("balance"));
-				testContext.completeNow();
+				assertEquals(numWallets * 50 , (int) wallet.getInteger("balance"));*/
+				if (test) testContext.completeNow();
 			});
-
 
 		});
 
@@ -455,4 +502,5 @@ class ElearningTest {
 		msg.put("from", guid);
 		vertx.eventBus().publish("token-rating", msg);
 	}
-}
+
+	}

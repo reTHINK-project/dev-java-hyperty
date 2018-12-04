@@ -75,7 +75,7 @@ public class LoggerFactory {
 				break;
 			}
 		} else {
-			logLevel = Level.ALL;
+			logLevel = Level.OFF;
 		}
 
 		// Create loggerConfig
