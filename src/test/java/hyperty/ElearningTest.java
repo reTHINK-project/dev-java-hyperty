@@ -192,17 +192,17 @@ class ElearningTest {
 		question1.put("correctAnswer", 0);
 		question1.put("hint","");
 		JsonObject question2 = new JsonObject();
-		question1.put("id",2);
-		question1.put("question","question2?");
-		question1.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
-		question1.put("correctAnswer", 0);
-		question1.put("hint","");
+		question2.put("id",2);
+		question2.put("question","question2?");
+		question2.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
+		question2.put("correctAnswer", 0);
+		question2.put("hint","");
 		JsonObject question3 = new JsonObject();
-		question1.put("id",3);
-		question1.put("question","question3?");
-		question1.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
-		question1.put("correctAnswer", 0);
-		question1.put("hint","");
+		question3.put("id",3);
+		question3.put("question","question3?");
+		question3.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
+		question3.put("correctAnswer", 0);
+		question3.put("hint","");
 		
 		JsonArray questions = new JsonArray().add(question1).add(question2).add(question3);
 		quizz.put("questions", questions);
@@ -254,7 +254,7 @@ class ElearningTest {
 	int numWalletsLoop = 1;
 	int created = 0;
 	int resumed = 0;
-	int numQuizzes = 2;
+	int numQuizzes = 1;
 	int transactions = 0;
 
 	@Test
