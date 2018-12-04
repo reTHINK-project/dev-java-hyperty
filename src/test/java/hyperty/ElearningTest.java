@@ -40,6 +40,7 @@ import walletManager.WalletManagerHyperty;
 class ElearningTest {
 
 	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";
+	public static final String publicWalletsAddress = "public-wallets";
 	private static String guid = "user-guid://sharing-cities-dsm/guid";
 	private static String subscriptionsAddress = guid + "/subscription";
 	// mongo config
@@ -251,6 +252,7 @@ class ElearningTest {
 	int created = 0;
 	int resumed = 0;
 	int numQuizzes = 100;
+	int transactions = 0;
 
 	@Test
 //	@Disabled
@@ -268,23 +270,34 @@ class ElearningTest {
 			}
 		}
 
+		long startTime = System.currentTimeMillis();
+		Future<Void> checkQuizzes = Future.future();
+		transactions = 0;
+
 			for (int i = 0; i < numQuizzes; i++) {
 				String userID = "user-guid://sharing-cities-dsm/" + i;
+				vertx.eventBus().consumer(userID, message -> {
+					++transactions;
+					if (transactions == numQuizzes) {
+						long endTime = System.currentTimeMillis();
+						long timeElapsed = endTime - startTime;
+						System.out.println("\nQuizzes time: " + timeElapsed + " ms" + " - Num Quizzes: " + transactions);
+						checkQuizzes.complete();
+					}
+				});
 				submitQuiz(userID, vertx);
 			}
-/*			try {
-				Thread.sleep(10000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}*/
 
-//			for (int i = 0; i < numWallets; i++) {
-//				Future<Void> assertWallet = Future.future();
+		checkQuizzes.setHandler(asyncResult -> {
+				Future<Void> assertWallet = Future.future();
 //				String userID = "sharing-cities-dsm/" + i;
-//				JsonObject query = new JsonObject().put("address", userID);
-//				checkWallet(query, assertWallet);
-//			}
-	testContext.completeNow();
+				JsonObject query = new JsonObject().put("address", publicWalletsAddress);
+				checkWallet(query, assertWallet, 0);
+
+		testContext.completeNow();
+
+		});
+
 
 	}
 
@@ -467,18 +480,21 @@ class ElearningTest {
 		});
 	}
 
-	private void checkWallet(JsonObject query, Future<Void> assertWallet) {
+	private void checkWallet(JsonObject query, Future<Void> assertWallet, int walletNum) {
 		mongoClient.find(walletsCollection, query, result -> {
-			JsonObject wallet = result.result().get(0);
-			JsonArray quizzes = wallet.getJsonArray("transactions");
+			JsonObject wallets = result.result().get(0);
+			JsonObject wallet = wallets.getJsonArray("wallets")[walletNum];
+			int balance = wallet.getInteger("balance");
 			JsonArray accounts = wallet.getJsonArray("accounts");
 			List<Object> res = accounts.stream()
 					.filter(account -> ((JsonObject) account).getString("name").equals("elearning"))
 					.collect(Collectors.toList());
 			JsonObject accountElearning = (JsonObject) res.get(0);
-			assertEquals(30, (int) accountElearning.getInteger("totalBalance"));
-			assertEquals(1, (int) accountElearning.getInteger("lastData"));
-			assertEquals(2, quizzes.size());
+			assertEquals(30*numQuizzes, (int) accountElearning.getInteger("totalBalance"));
+			assertEquals(numQuizzes, (int) accountElearning.getInteger("lastData"));
+
+			assertEquals(numWallets*numWalletsLoop*50+30*numQuizzes, balance);
+//			assertEquals(2, quizzes.size());
 			assertWallet.complete();
 		});
 	}
