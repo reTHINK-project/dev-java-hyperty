@@ -62,7 +62,7 @@ class ElearningTest {
 
 		// reset DB
 		makeMongoConnection(vertx);
-		tearDownDB(context, vertx);
+		//tearDownDB(context, vertx);
 
 		String streamAddress = "vertx://sharing-cities-dsm/elearning";
 		JsonObject identity = new JsonObject().put("userProfile",
@@ -210,6 +210,7 @@ class ElearningTest {
 	}
 
 	@AfterAll
+	@Disabled
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(3);
@@ -251,7 +252,7 @@ class ElearningTest {
 	int numWalletsLoop = 5;
 	int created = 0;
 	int resumed = 0;
-	int numQuizzes = 100;
+	int numQuizzes = 5;
 	int transactions = 0;
 
 	@Test
@@ -471,7 +472,7 @@ class ElearningTest {
 		});
 		Future<Void> assertWallet = Future.future();
 		query = new JsonObject().put("address", "sharing-cities-dsm/0");
-		checkWallet(query, assertWallet);
+		checkWallet(query, assertWallet, 0);
 		List<Future> futures = new ArrayList<>();
 		futures.add(assertRates);
 		futures.add(assertWallet);
@@ -483,7 +484,8 @@ class ElearningTest {
 	private void checkWallet(JsonObject query, Future<Void> assertWallet, int walletNum) {
 		mongoClient.find(walletsCollection, query, result -> {
 			JsonObject wallets = result.result().get(0);
-			JsonObject wallet = wallets.getJsonArray("wallets")[walletNum];
+			JsonArray pubWallets = wallets.getJsonArray("wallets");
+			JsonObject wallet = pubWallets.getJsonObject(walletNum);
 			int balance = wallet.getInteger("balance");
 			JsonArray accounts = wallet.getJsonArray("accounts");
 			List<Object> res = accounts.stream()
