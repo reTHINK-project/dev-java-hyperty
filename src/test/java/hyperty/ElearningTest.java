@@ -146,6 +146,7 @@ class ElearningTest {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
 
+
 		vertx.eventBus().consumer(subscriptionsAddress, message -> {
 //			System.out.println("TEST - sub received: " + message.body().toString());
 			// send reply
@@ -248,10 +249,47 @@ class ElearningTest {
 		
 	}
 
+	@AfterAll
+	//@Disabled
+	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
+		CountDownLatch setupLatch = new CountDownLatch(3);
+
+		// remove from rates
+		JsonObject query = new JsonObject();
+//		query.put("user", guid);
+		mongoClient.removeDocuments(ratesCollection, query, res -> {
+			System.out.println("Rates removed from DB");
+			setupLatch.countDown();
+		});
+
+		// remove from wallets
+		query = new JsonObject();
+//		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", guid)));
+		mongoClient.removeDocuments(walletsCollection, query, res -> {
+			System.out.println("Wallets removed from DB");
+			setupLatch.countDown();
+		});
+
+		// remove from dataobjects
+		query = new JsonObject();
+//		query.put("url", guid);
+		mongoClient.removeDocuments(dataobjectsCollection, query, res -> {
+			System.out.println("Dataobjects removed from DB");
+			setupLatch.countDown();
+		});
+
+		try {
+			setupLatch.await();
+			testContext.completeNow();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+	}
 
 	int numWallets = 200;
-	int numWalletsLoop = 1;
+	int numWalletsLoop = 3;
 	int created = 0;
 	int resumed = 0;
 	int numQuizzes = 1;
@@ -262,10 +300,28 @@ class ElearningTest {
 	void createExtraWallets(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - createExtraWallets");
 
+		//		createWallet(vertx, guid, null);
+
+		JsonObject msg1 = new JsonObject();
+		JsonObject identityNow = new JsonObject().put("userProfile",
+				new JsonObject().put("guid", guid).put("info", profileInfo));
+		msg1.put("type", "create");
+		msg1.put("identity", identityNow);
+		msg1.put("from", "myself");
+			vertx.eventBus().send(walletManagerHypertyURL, msg1, res -> {
+//			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+				JsonObject newMsg = new JsonObject();
+				JsonObject body = new JsonObject().put("code", 200);
+				newMsg.put("body", body);
+				res.result().reply(newMsg);
+			});
+
+
 		// create wallets
 		for (int i = 0; i < numWalletsLoop; i++) {
 
-			createMany(testContext, vertx, false);
+
+			createMany(testContext, vertx, false, i*numWalletsLoop);
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e) {
@@ -278,8 +334,8 @@ class ElearningTest {
 		transactions = 0;
 
 			for (int i = 0; i < numQuizzes; i++) {
-				String userID = "user-guid://sharing-cities-dsm/" + i;
-				vertx.eventBus().consumer(userID, message -> {
+//				String userID = "user-guid://sharing-cities-dsm/" + i;
+				vertx.eventBus().consumer(publicWalletsOnChangesAddress, message -> {
 					++transactions;
 					if (transactions == numQuizzes) {
 						long endTime = System.currentTimeMillis();
@@ -307,11 +363,11 @@ class ElearningTest {
 	@Test
 	@Disabled
 	void createWallets(VertxTestContext testContext, Vertx vertx) {
-		createMany( testContext,  vertx, true);
+		createMany( testContext,  vertx, true, 0);
 
 	}
 
-	void createMany(VertxTestContext testContext, Vertx vertx, boolean test) {
+	void createMany(VertxTestContext testContext, Vertx vertx, boolean test, int n) {
 		created = 0;
 		long startTime = System.currentTimeMillis();
 		Future<Void> checkNumWallets = Future.future();
@@ -326,21 +382,16 @@ class ElearningTest {
 		});
 
 		// create wallets
-		for (int i = 0; i < numWallets; i++) {
+		for (int i = n; i < n+numWallets; i++) {
 			String userID = "user-guid://sharing-cities-dsm/" + i;
 			createWallet(vertx, userID, null);
 		}
 
 		Future<Void> resumedWallets = Future.future();
 		checkNumWallets.setHandler(asyncResult -> {
-/*			try {
-				Thread.sleep(2000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}*/
 			resumed = 0;
 			long startTimeResume = System.currentTimeMillis();
-			for (int i = 0; i < numWallets; i++) {
+			for (int i = n; i < numWallets+n; i++) {
 				String userID = "user-guid://sharing-cities-dsm/" + i;
 				createWallet(vertx, userID, res -> {
 					++resumed;
@@ -400,6 +451,7 @@ class ElearningTest {
 				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
 				assertTrue(transactions.size() >= numWallets );
 				assertTrue((int) wallet.getInteger("balance") >= numWallets * 50 );
+
 /*				assertEquals(numWallets * 50, (int) accountCreated.getInteger("totalBalance"));
 				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
 				assertEquals(numWallets, transactions.size());
@@ -494,10 +546,10 @@ class ElearningTest {
 					.filter(account -> ((JsonObject) account).getString("name").equals("elearning"))
 					.collect(Collectors.toList());
 			JsonObject accountElearning = (JsonObject) res.get(0);
-			assertEquals(30*numQuizzes, (int) accountElearning.getInteger("totalBalance"));
+			assertEquals(40*numQuizzes, (int) accountElearning.getInteger("totalBalance"));
 			assertEquals(numQuizzes, (int) accountElearning.getInteger("lastData"));
 
-			assertEquals(numWallets*numWalletsLoop*50+30*numQuizzes, balance);
+			assertEquals((numWallets*numWalletsLoop+1)*50+40*numQuizzes, balance);
 //			assertEquals(2, quizzes.size());
 			assertWallet.complete();
 		});
