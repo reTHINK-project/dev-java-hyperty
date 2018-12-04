@@ -173,6 +173,43 @@ class ElearningTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		
+		
+		JsonObject quizz = new JsonObject();
+		quizz.put("type", "default");
+		quizz.put("name", "Energia teste");
+		quizz.put("description", "");
+		quizz.put("picture", "");
+		quizz.put("classification", "Nível 1");
+		quizz.put("date", "2018-09-01");
+		quizz.put("category", "energia");
+		quizz.put("value", 65);
+		
+		JsonObject question1 = new JsonObject();
+		question1.put("id",1);
+		question1.put("question","question1?");
+		question1.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
+		question1.put("correctAnswer", 0);
+		question1.put("hint","");
+		JsonObject question2 = new JsonObject();
+		question1.put("id",2);
+		question1.put("question","question2?");
+		question1.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
+		question1.put("correctAnswer", 0);
+		question1.put("hint","");
+		JsonObject question3 = new JsonObject();
+		question1.put("id",3);
+		question1.put("question","question3?");
+		question1.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
+		question1.put("correctAnswer", 0);
+		question1.put("hint","");
+		
+		JsonArray questions = new JsonArray().add(question1).add(question2).add(question3);
+		quizz.put("questions", questions);
+		
+		mongoClient.insert("elearnings", quizz, result -> {
+			checkpoint.flag();
+		});
 
 		// create wallet
 //		Future<Void> walletCreation = Future.future();
@@ -193,7 +230,7 @@ class ElearningTest {
 //		});
 
 //		walletCreation.setHandler(asyncResult -> {
-		checkpoint.flag();
+		
 //		});
 
 	}
@@ -207,15 +244,17 @@ class ElearningTest {
 		mongoconfig.put("db_name", db_name);
 		mongoconfig.put("collection", ratesCollection);
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
+		
+		
 	}
 
 
 
 	int numWallets = 200;
-	int numWalletsLoop = 5;
+	int numWalletsLoop = 1;
 	int created = 0;
 	int resumed = 0;
-	int numQuizzes = 5;
+	int numQuizzes = 2;
 	int transactions = 0;
 
 	@Test
@@ -396,8 +435,8 @@ class ElearningTest {
 	void submitQuiz(String userID, Vertx vertx) {
 		
 		JsonObject message = new JsonObject();
-		JsonArray answers = new JsonArray().add(0).add(0).add(0).add(0).add(0).add(0).add(0).add(0).add(0);
-		message.put("id", "Power Quiz 7");
+		JsonArray answers = new JsonArray().add(0).add(0).add(0);
+		message.put("id", "Energia teste");
 		message.put("date", "2018-12-04T15:03:34.145Z");
 		message.put("answers", answers);
 		JsonArray toSend = new JsonArray();
