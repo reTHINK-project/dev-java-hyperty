@@ -209,44 +209,7 @@ class ElearningTest {
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 	}
 
-	@AfterAll
-	@Disabled
-	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
-		CountDownLatch setupLatch = new CountDownLatch(3);
-
-		// remove from rates
-		JsonObject query = new JsonObject();
-//		query.put("user", guid);
-		mongoClient.removeDocuments(ratesCollection, query, res -> {
-			System.out.println("Rates removed from DB");
-			setupLatch.countDown();
-		});
-
-		// remove from wallets
-		query = new JsonObject();
-//		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", guid)));
-		mongoClient.removeDocuments(walletsCollection, query, res -> {
-			System.out.println("Wallets removed from DB");
-			setupLatch.countDown();
-		});
-
-		// remove from dataobjects
-		query = new JsonObject();
-//		query.put("url", guid);
-		mongoClient.removeDocuments(dataobjectsCollection, query, res -> {
-			System.out.println("Dataobjects removed from DB");
-			setupLatch.countDown();
-		});
-
-		try {
-			setupLatch.await();
-			testContext.completeNow();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-	}
 
 	int numWallets = 200;
 	int numWalletsLoop = 5;
@@ -286,7 +249,7 @@ class ElearningTest {
 						checkQuizzes.complete();
 					}
 				});
-				submitQuiz(userID, vertx);
+				submitQuiz(guid, vertx);
 			}
 
 		checkQuizzes.setHandler(asyncResult -> {
@@ -393,6 +356,7 @@ class ElearningTest {
 						.filter(account -> ((JsonObject) account).getString("name").equals("created"))
 						.collect(Collectors.toList());
 				JsonObject accountCreated = (JsonObject) res.get(0);
+				
 				assertTrue((int) accountCreated.getInteger("totalBalance") >= numWallets * 50);
 				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
 				assertTrue(transactions.size() >= numWallets );
@@ -430,12 +394,11 @@ class ElearningTest {
 	}
 
 	void submitQuiz(String userID, Vertx vertx) {
+		
 		JsonObject message = new JsonObject();
-		JsonArray answers = new JsonArray().add(2).add(2).add(2);
-		message.put("identity", new JsonObject());
-		message.put("userID", userID);
-		message.put("id", "Energias Renováveis");
-		message.put("date", "2018-05-24");
+		JsonArray answers = new JsonArray().add(0).add(0).add(0).add(0).add(0).add(0).add(0).add(0).add(0);
+		message.put("id", "Power Quiz 7");
+		message.put("date", "2018-12-04T15:03:34.145Z");
 		message.put("answers", answers);
 		JsonArray toSend = new JsonArray();
 		toSend.add(message);
