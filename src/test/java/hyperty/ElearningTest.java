@@ -330,7 +330,7 @@ class ElearningTest {
 		// create wallets
 		for (int i = 0; i < numWalletsLoop; i++) {
 
-			createMany(testContext, vertx, false, i * numWalletsLoop);
+			createMany(testContext, vertx, false, i * numWallets);
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e) {
@@ -442,6 +442,8 @@ class ElearningTest {
 		// create wallets
 		for (int i = n; i < n + numWallets; i++) {
 			String userID = "user-guid://sharing-cities-dsm/" + i;
+			System.out.println("[ElearningTest.createMany] creating " + userID);
+
 			createWallet(vertx, userID, null);
 		}
 
@@ -613,11 +615,12 @@ class ElearningTest {
 
 			JsonObject accountElearning = (JsonObject) res.get(0);
 			int elearningBalance = (int) accountElearning.getInteger("totalBalance");
-			int elearningLastData = (int) accountElearning.getInteger("lastData");
+			int elearningTotalData = (int) accountElearning.getInteger("totalData");
 			System.out.println("[ElearningTest.checkWallet] elearningBalance " + elearningBalance);
-			System.out.println("[ElearningTest.checkWallet] lastData " + elearningLastData);
+			System.out.println("[ElearningTest.checkWallet] elearningLastData " + elearningTotalData);
+			System.out.println("[ElearningTest.checkWallet] balance " + balance);
 			assertEquals(40 * numQuizzes, elearningBalance);
-			assertEquals(numQuizzes, elearningLastData);
+			assertEquals(numQuizzes, elearningTotalData);
 
 //			assertEquals((numWallets * numWalletsLoop + 1) * 50 + 40 * numQuizzes, balance);
 			// assertEquals(2, quizzes.size());
