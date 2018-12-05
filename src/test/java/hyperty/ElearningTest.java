@@ -31,12 +31,14 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import tokenRating.ElearningRatingHyperty;
 import walletManager.WalletManagerHyperty;
+import io.vertx.core.shareddata.SharedData;
+import io.vertx.core.shareddata.Lock;
 
 /*
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
-//@Disabled
+// @Disabled
 class ElearningTest {
 
 	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";
@@ -132,7 +134,7 @@ class ElearningTest {
 		publicWallets.add(walletCause2);
 
 		configWalletManager.put("publicWallets", publicWallets);
-//		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
+		// configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 
 		// pass observers
 		JsonArray observers = new JsonArray();
@@ -146,9 +148,8 @@ class ElearningTest {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
 
-
 		vertx.eventBus().consumer(subscriptionsAddress, message -> {
-//			System.out.println("TEST - sub received: " + message.body().toString());
+			// System.out.println("TEST - sub received: " + message.body().toString());
 			// send reply
 			JsonObject reply = new JsonObject().put("body", new JsonObject().put("code", 200));
 			message.reply(reply);
@@ -174,8 +175,7 @@ class ElearningTest {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
-		
+
 		JsonObject quizz = new JsonObject();
 		quizz.put("type", "default");
 		quizz.put("name", "Energia teste");
@@ -185,54 +185,56 @@ class ElearningTest {
 		quizz.put("date", "2018-09-01");
 		quizz.put("category", "energia");
 		quizz.put("value", 65);
-		
+
 		JsonObject question1 = new JsonObject();
-		question1.put("id",1);
-		question1.put("question","question1?");
+		question1.put("id", 1);
+		question1.put("question", "question1?");
 		question1.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
 		question1.put("correctAnswer", 0);
-		question1.put("hint","");
+		question1.put("hint", "");
 		JsonObject question2 = new JsonObject();
-		question2.put("id",2);
-		question2.put("question","question2?");
+		question2.put("id", 2);
+		question2.put("question", "question2?");
 		question2.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
 		question2.put("correctAnswer", 0);
-		question2.put("hint","");
+		question2.put("hint", "");
 		JsonObject question3 = new JsonObject();
-		question3.put("id",3);
-		question3.put("question","question3?");
+		question3.put("id", 3);
+		question3.put("question", "question3?");
 		question3.put("answers", new JsonArray().add("answer1").add("answer2").add("answer3"));
 		question3.put("correctAnswer", 0);
-		question3.put("hint","");
-		
+		question3.put("hint", "");
+
 		JsonArray questions = new JsonArray().add(question1).add(question2).add(question3);
 		quizz.put("questions", questions);
-		
+
 		mongoClient.insert("elearnings", quizz, result -> {
 			checkpoint.flag();
 		});
 
 		// create wallet
-//		Future<Void> walletCreation = Future.future();
-//		msg = new JsonObject();
-//		// create identity
-//		JsonObject identityNow = new JsonObject().put("userProfile",
-//				new JsonObject().put("userURL", userURL).put("guid", guid).put("info", profileInfo));
-//		msg.put("type", "create");
-//		msg.put("identity", identityNow);
-//		msg.put("from", "myself");
-//		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
-//			System.out.println("Received reply from wallet!: " + res.result().body().toString());
-//			JsonObject newMsg = new JsonObject();
-//			JsonObject body = new JsonObject().put("code", 200);
-//			newMsg.put("body", body);
-//			res.result().reply(newMsg);
-//			walletCreation.complete();
-//		});
+		// Future<Void> walletCreation = Future.future();
+		// msg = new JsonObject();
+		// // create identity
+		// JsonObject identityNow = new JsonObject().put("userProfile",
+		// new JsonObject().put("userURL", userURL).put("guid", guid).put("info",
+		// profileInfo));
+		// msg.put("type", "create");
+		// msg.put("identity", identityNow);
+		// msg.put("from", "myself");
+		// vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+		// System.out.println("Received reply from wallet!: " +
+		// res.result().body().toString());
+		// JsonObject newMsg = new JsonObject();
+		// JsonObject body = new JsonObject().put("code", 200);
+		// newMsg.put("body", body);
+		// res.result().reply(newMsg);
+		// walletCreation.complete();
+		// });
 
-//		walletCreation.setHandler(asyncResult -> {
-		
-//		});
+		// walletCreation.setHandler(asyncResult -> {
+
+		// });
 
 	}
 
@@ -245,19 +247,18 @@ class ElearningTest {
 		mongoconfig.put("db_name", db_name);
 		mongoconfig.put("collection", ratesCollection);
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
-		
-		
+
 	}
 
 	@AfterAll
-	//@Disabled
+	// @Disabled
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
 		CountDownLatch setupLatch = new CountDownLatch(4);
 
 		// remove from rates
 		JsonObject query = new JsonObject();
-//		query.put("user", guid);
+		// query.put("user", guid);
 		mongoClient.removeDocuments(ratesCollection, query, res -> {
 			System.out.println("Rates removed from DB");
 			setupLatch.countDown();
@@ -265,7 +266,8 @@ class ElearningTest {
 
 		// remove from wallets
 		query = new JsonObject();
-//		query.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", guid)));
+		// query.put("identity", new JsonObject().put("userProfile", new
+		// JsonObject().put("guid", guid)));
 		mongoClient.removeDocuments(walletsCollection, query, res -> {
 			System.out.println("Wallets removed from DB");
 			setupLatch.countDown();
@@ -273,15 +275,15 @@ class ElearningTest {
 
 		// remove from dataobjects
 		query = new JsonObject();
-//		query.put("url", guid);
+		// query.put("url", guid);
 		mongoClient.removeDocuments(dataobjectsCollection, query, res -> {
 			System.out.println("Dataobjects removed from DB");
 			setupLatch.countDown();
 		});
-		
+
 		// remove from dataobjects
 		query = new JsonObject();
-//		query.put("url", guid);
+		// query.put("url", guid);
 		mongoClient.removeDocuments("elearnings", query, res -> {
 			System.out.println("elearnings removed from DB");
 			setupLatch.countDown();
@@ -297,18 +299,18 @@ class ElearningTest {
 	}
 
 	int numWallets = 200;
-	int numWalletsLoop = 1;
+	int numWalletsLoop = 2;
 	int created = 0;
 	int resumed = 0;
 	int numQuizzes = 100;
 	int transactions = 0;
 
 	@Test
-//	@Disabled
+	// @Disabled
 	void createExtraWallets(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - createExtraWallets");
 
-		//		createWallet(vertx, guid, null);
+		// createWallet(vertx, guid, null);
 
 		JsonObject msg1 = new JsonObject();
 		JsonObject identityNow = new JsonObject().put("userProfile",
@@ -316,20 +318,19 @@ class ElearningTest {
 		msg1.put("type", "create");
 		msg1.put("identity", identityNow);
 		msg1.put("from", "myself");
-			vertx.eventBus().send(walletManagerHypertyURL, msg1, res -> {
-//			System.out.println("Received reply from wallet!: " + res.result().body().toString());
-				JsonObject newMsg = new JsonObject();
-				JsonObject body = new JsonObject().put("code", 200);
-				newMsg.put("body", body);
-				res.result().reply(newMsg);
-			});
-
+		vertx.eventBus().send(walletManagerHypertyURL, msg1, res -> {
+			// System.out.println("Received reply from wallet!: " +
+			// res.result().body().toString());
+			JsonObject newMsg = new JsonObject();
+			JsonObject body = new JsonObject().put("code", 200);
+			newMsg.put("body", body);
+			res.result().reply(newMsg);
+		});
 
 		// create wallets
 		for (int i = 0; i < numWalletsLoop; i++) {
 
-
-			createMany(testContext, vertx, false, i*numWalletsLoop);
+			createMany(testContext, vertx, false, i * numWalletsLoop);
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e) {
@@ -337,7 +338,6 @@ class ElearningTest {
 			}
 		}
 
-		
 		try {
 			Thread.sleep(10000);
 		} catch (InterruptedException e) {
@@ -347,72 +347,81 @@ class ElearningTest {
 		Future<Void> checkQuizzes = Future.future();
 		transactions = 0;
 
-		
 		vertx.eventBus().consumer(publicWalletsOnChangesAddress, message -> {
 			++transactions;
 			System.out.println("NOVO QUIzz:" + transactions);
-			
+
 			if (transactions == numQuizzes) {
 				long endTime = System.currentTimeMillis();
 				long timeElapsed = endTime - startTime;
 				System.out.println("\nQuizzes time: " + timeElapsed + " ms" + " - Num Quizzes: " + transactions);
-				
-				mongoClient.find(walletsCollection, new JsonObject().put("address", "public-wallets"), result -> {
-					JsonObject wallet = result.result().get(0).getJsonArray("wallets").getJsonObject(0);
-					JsonArray transactions = wallet.getJsonArray("transactions");
-					JsonArray accounts = wallet.getJsonArray("accounts");
-					
-					int balance = wallet.getInteger("balance");
-					// check accounts
-					List<Object> res = accounts.stream()
-							.filter(account -> ((JsonObject) account).getString("name").equals("created"))
-							.collect(Collectors.toList());
-					JsonObject accountCreated = (JsonObject) res.get(0);
-					
-					System.out.println("total balance:" + balance);
-					assertTrue((int) accountCreated.getInteger("totalBalance") >= numWallets * 50);
-					assertTrue((int) accountCreated.getInteger("lastData") >= 100);
-					assertTrue(transactions.size() >= numWallets );
-					assertTrue((int) wallet.getInteger("balance") >= numWallets * 50 );
 
-				});
-				
-				
-				
-				
+				/*
+				 * mongoClient.find(walletsCollection, new JsonObject().put("address",
+				 * "public-wallets"), result -> { JsonObject wallet =
+				 * result.result().get(0).getJsonArray("wallets").getJsonObject(0); JsonArray
+				 * transactions = wallet.getJsonArray("transactions"); JsonArray accounts =
+				 * wallet.getJsonArray("accounts");
+				 * 
+				 * int balance = wallet.getInteger("balance"); // check accounts List<Object>
+				 * res = accounts.stream() .filter(account -> ((JsonObject)
+				 * account).getString("name").equals("created")) .collect(Collectors.toList());
+				 * JsonObject accountCreated = (JsonObject) res.get(0);
+				 * 
+				 * System.out.println("total balance:" + balance); assertTrue((int)
+				 * accountCreated.getInteger("totalBalance") >= numWallets * 50);
+				 * assertTrue((int) accountCreated.getInteger("lastData") >= 100);
+				 * assertTrue(transactions.size() >= numWallets); assertTrue((int)
+				 * wallet.getInteger("balance") >= numWallets * 50);
+				 * 
+				 * });
+				 */
+
 				checkQuizzes.complete();
-				
-				
-				
-				
-				
-				
+
 			}
 		});
-		
-			for (int i = 0; i < numQuizzes; i++) {
-//				String userID = "user-guid://sharing-cities-dsm/" + i;
-				
-				submitQuiz(guid, vertx);
-			}
+
+		for (int i = 0; i < numQuizzes; i++) {
+			// String userID = "user-guid://sharing-cities-dsm/" + i;
+
+			submitQuiz(guid, vertx);
+		}
 
 		checkQuizzes.setHandler(asyncResult -> {
-				Future<Void> assertWallet = Future.future();
-//				String userID = "sharing-cities-dsm/" + i;
-				JsonObject query = new JsonObject().put("address", publicWalletsAddress);
-				checkWallet(query, assertWallet, 0);
+			Future<Void> assertWallet = Future.future();
+			// String userID = "sharing-cities-dsm/" + i;
+			JsonObject query = new JsonObject().put("address", publicWalletsAddress);
+			SharedData sd = vertx.sharedData();
 
-		testContext.completeNow();
+			System.out.println("\nQuizzes Submitted and Wallet updates received. Waiting Mongo Lock release ");
+
+			sd.getLock("mongoLock", lockRes -> {
+				if (lockRes.succeeded()) {
+					System.out.println("\nMongo Lock released. Checking Wallet ");
+					Lock asyncLock = lockRes.result();
+
+					checkWallet(query, assertWallet, 0);
+
+					assertWallet.setHandler(done -> {
+						asyncLock.release();
+						testContext.completeNow();
+					});
+
+				} else {
+					System.out.println("\nError: Mongo Lock not released. ");
+					assertWallet.fail(lockRes.cause());
+				}
+			});
 
 		});
-
 
 	}
 
 	@Test
 	@Disabled
 	void createWallets(VertxTestContext testContext, Vertx vertx) {
-		createMany( testContext,  vertx, true, 0);
+		createMany(testContext, vertx, true, 0);
 
 	}
 
@@ -431,7 +440,7 @@ class ElearningTest {
 		});
 
 		// create wallets
-		for (int i = n; i < n+numWallets; i++) {
+		for (int i = n; i < n + numWallets; i++) {
 			String userID = "user-guid://sharing-cities-dsm/" + i;
 			createWallet(vertx, userID, null);
 		}
@@ -440,7 +449,7 @@ class ElearningTest {
 		checkNumWallets.setHandler(asyncResult -> {
 			resumed = 0;
 			long startTimeResume = System.currentTimeMillis();
-			for (int i = n; i < numWallets+n; i++) {
+			for (int i = n; i < numWallets + n; i++) {
 				String userID = "user-guid://sharing-cities-dsm/" + i;
 				createWallet(vertx, userID, res -> {
 					++resumed;
@@ -466,24 +475,23 @@ class ElearningTest {
 		});
 
 		resumedWallets.setHandler(asyncResult -> {
-			
-//			for (int i = 0; i < numWallets; i++) {
-//				String userID = "user-guid://sharing-cities-dsm/" + i;
-//				submitQuiz(userID, vertx);
-//			}
-/*			try {
-				Thread.sleep(10000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}*/
 
-//			for (int i = 0; i < numWallets; i++) {
-//				Future<Void> assertWallet = Future.future();
-//				String userID = "sharing-cities-dsm/" + i;
-//				JsonObject query = new JsonObject().put("address", userID);
-//				checkWallet(query, assertWallet);
-//			}
-			
+			// for (int i = 0; i < numWallets; i++) {
+			// String userID = "user-guid://sharing-cities-dsm/" + i;
+			// submitQuiz(userID, vertx);
+			// }
+			/*
+			 * try { Thread.sleep(10000); } catch (InterruptedException e) {
+			 * e.printStackTrace(); }
+			 */
+
+			// for (int i = 0; i < numWallets; i++) {
+			// Future<Void> assertWallet = Future.future();
+			// String userID = "sharing-cities-dsm/" + i;
+			// JsonObject query = new JsonObject().put("address", userID);
+			// checkWallet(query, assertWallet);
+			// }
+
 			// TODO - assertion
 			JsonObject query = new JsonObject().put("address", "public-wallets");
 			mongoClient.find(walletsCollection, query, result -> {
@@ -495,20 +503,23 @@ class ElearningTest {
 						.filter(account -> ((JsonObject) account).getString("name").equals("created"))
 						.collect(Collectors.toList());
 				JsonObject accountCreated = (JsonObject) res.get(0);
-				
-/*
-				assertTrue((int) accountCreated.getInteger("totalBalance") >= numWallets * 50);
-				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
-				assertTrue(transactions.size() >= numWallets );
-				assertTrue((int) wallet.getInteger("balance") >= numWallets * 50 );
-*/
-				
-				
-/*				assertEquals(numWallets * 50, (int) accountCreated.getInteger("totalBalance"));
-				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
-				assertEquals(numWallets, transactions.size());
-				assertEquals(numWallets * 50 , (int) wallet.getInteger("balance"));*/
-				if (test) testContext.completeNow();
+
+				/*
+				 * assertTrue((int) accountCreated.getInteger("totalBalance") >= numWallets *
+				 * 50); assertTrue((int) accountCreated.getInteger("lastData") >= 100);
+				 * assertTrue(transactions.size() >= numWallets ); assertTrue((int)
+				 * wallet.getInteger("balance") >= numWallets * 50 );
+				 */
+
+				/*
+				 * assertEquals(numWallets * 50, (int)
+				 * accountCreated.getInteger("totalBalance")); assertTrue((int)
+				 * accountCreated.getInteger("lastData") >= 100); assertEquals(numWallets,
+				 * transactions.size()); assertEquals(numWallets * 50 , (int)
+				 * wallet.getInteger("balance"));
+				 */
+				if (test)
+					testContext.completeNow();
 			});
 
 		});
@@ -526,7 +537,8 @@ class ElearningTest {
 			vertx.eventBus().send(walletManagerHypertyURL, msg, handler);
 		} else {
 			vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
-//			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+				// System.out.println("Received reply from wallet!: " +
+				// res.result().body().toString());
 				JsonObject newMsg = new JsonObject();
 				JsonObject body = new JsonObject().put("code", 200);
 				newMsg.put("body", body);
@@ -537,7 +549,7 @@ class ElearningTest {
 	}
 
 	void submitQuiz(String userID, Vertx vertx) {
-		
+
 		JsonObject message = new JsonObject();
 		JsonArray answers = new JsonArray().add(0).add(0).add(0);
 		message.put("id", "Energia teste");
@@ -546,13 +558,14 @@ class ElearningTest {
 		JsonArray toSend = new JsonArray();
 		toSend.add(message);
 		String changesAddress = userID + "/changes";
-		/*vertx.eventBus().consumer(changesAddress, msg -> {
-			System.out.println("changesAddress" + msg.body().toString());
-		});*/
+		/*
+		 * vertx.eventBus().consumer(changesAddress, msg -> {
+		 * System.out.println("changesAddress" + msg.body().toString()); });
+		 */
 
-		vertx.eventBus().send(userID + "/changes", toSend, reply -> {
+		vertx.eventBus().send(userID + "/changes", toSend /*, reply -> {
 			System.out.println("quiz submited: " + reply.toString());
-		});
+		}*/);
 	}
 
 	@Test
@@ -598,11 +611,11 @@ class ElearningTest {
 					.filter(account -> ((JsonObject) account).getString("name").equals("elearning"))
 					.collect(Collectors.toList());
 			JsonObject accountElearning = (JsonObject) res.get(0);
-			assertEquals(40*numQuizzes, (int) accountElearning.getInteger("totalBalance"));
+			assertEquals(40 * numQuizzes, (int) accountElearning.getInteger("totalBalance"));
 			assertEquals(numQuizzes, (int) accountElearning.getInteger("lastData"));
 
-			assertEquals((numWallets*numWalletsLoop+1)*50+40*numQuizzes, balance);
-//			assertEquals(2, quizzes.size());
+			assertEquals((numWallets * numWalletsLoop + 1) * 50 + 40 * numQuizzes, balance);
+			// assertEquals(2, quizzes.size());
 			assertWallet.complete();
 		});
 	}
@@ -627,4 +640,4 @@ class ElearningTest {
 		vertx.eventBus().publish("token-rating", msg);
 	}
 
-	}
+}
