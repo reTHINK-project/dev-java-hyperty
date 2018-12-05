@@ -718,7 +718,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		SharedData sd = vertx.sharedData();
 		Future<Void> transferFuture = Future.future();
 
-		sd.getLockWithTimeout("mongoLock", 5000, r -> {
+		sd.getLockWithTimeout("mongoLock", 10000, r -> {
 
 			long startTime = System.currentTimeMillis();
 

@@ -38,7 +38,7 @@ import io.vertx.core.shareddata.Lock;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
-// @Disabled
+ @Disabled
 class ElearningTest {
 
 	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";
@@ -64,7 +64,7 @@ class ElearningTest {
 
 		// reset DB
 		makeMongoConnection(vertx);
-		tearDownDB(context, vertx);
+		//tearDownDB(context, vertx);
 
 		String streamAddress = "vertx://sharing-cities-dsm/elearning";
 		JsonObject identity = new JsonObject().put("userProfile",
@@ -250,7 +250,7 @@ class ElearningTest {
 
 	}
 
-	@AfterAll
+/*	@AfterAll
 	// @Disabled
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
@@ -296,13 +296,13 @@ class ElearningTest {
 			e.printStackTrace();
 		}
 
-	}
+	}*/
 
 	int numWallets = 200;
-	int numWalletsLoop = 5;
+	int numWalletsLoop = 2;
 	int created = 0;
 	int resumed = 0;
-	int numQuizzes = 105;
+	int numQuizzes = 50;
 	int transactions = 0;
 
 	@Test
