@@ -62,7 +62,7 @@ class ElearningTest {
 
 		// reset DB
 		makeMongoConnection(vertx);
-		//tearDownDB(context, vertx);
+		tearDownDB(context, vertx);
 
 		String streamAddress = "vertx://sharing-cities-dsm/elearning";
 		JsonObject identity = new JsonObject().put("userProfile",
@@ -253,7 +253,7 @@ class ElearningTest {
 	//@Disabled
 	static void tearDownDB(VertxTestContext testContext, Vertx vertx) {
 
-		CountDownLatch setupLatch = new CountDownLatch(3);
+		CountDownLatch setupLatch = new CountDownLatch(4);
 
 		// remove from rates
 		JsonObject query = new JsonObject();
@@ -278,6 +278,14 @@ class ElearningTest {
 			System.out.println("Dataobjects removed from DB");
 			setupLatch.countDown();
 		});
+		
+		// remove from dataobjects
+		query = new JsonObject();
+//		query.put("url", guid);
+		mongoClient.removeDocuments("elearnings", query, res -> {
+			System.out.println("elearnings removed from DB");
+			setupLatch.countDown();
+		});
 
 		try {
 			setupLatch.await();
@@ -289,10 +297,10 @@ class ElearningTest {
 	}
 
 	int numWallets = 200;
-	int numWalletsLoop = 3;
+	int numWalletsLoop = 1;
 	int created = 0;
 	int resumed = 0;
-	int numQuizzes = 1;
+	int numQuizzes = 100;
 	int transactions = 0;
 
 	@Test
@@ -329,21 +337,62 @@ class ElearningTest {
 			}
 		}
 
+		
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		long startTime = System.currentTimeMillis();
 		Future<Void> checkQuizzes = Future.future();
 		transactions = 0;
 
+		
+		vertx.eventBus().consumer(publicWalletsOnChangesAddress, message -> {
+			++transactions;
+			System.out.println("NOVO QUIzz:" + transactions);
+			
+			if (transactions == numQuizzes) {
+				long endTime = System.currentTimeMillis();
+				long timeElapsed = endTime - startTime;
+				System.out.println("\nQuizzes time: " + timeElapsed + " ms" + " - Num Quizzes: " + transactions);
+				
+				mongoClient.find(walletsCollection, new JsonObject().put("address", "public-wallets"), result -> {
+					JsonObject wallet = result.result().get(0).getJsonArray("wallets").getJsonObject(0);
+					JsonArray transactions = wallet.getJsonArray("transactions");
+					JsonArray accounts = wallet.getJsonArray("accounts");
+					
+					int balance = wallet.getInteger("balance");
+					// check accounts
+					List<Object> res = accounts.stream()
+							.filter(account -> ((JsonObject) account).getString("name").equals("created"))
+							.collect(Collectors.toList());
+					JsonObject accountCreated = (JsonObject) res.get(0);
+					
+					System.out.println("total balance:" + balance);
+					assertTrue((int) accountCreated.getInteger("totalBalance") >= numWallets * 50);
+					assertTrue((int) accountCreated.getInteger("lastData") >= 100);
+					assertTrue(transactions.size() >= numWallets );
+					assertTrue((int) wallet.getInteger("balance") >= numWallets * 50 );
+
+				});
+				
+				
+				
+				
+				checkQuizzes.complete();
+				
+				
+				
+				
+				
+				
+			}
+		});
+		
 			for (int i = 0; i < numQuizzes; i++) {
 //				String userID = "user-guid://sharing-cities-dsm/" + i;
-				vertx.eventBus().consumer(publicWalletsOnChangesAddress, message -> {
-					++transactions;
-					if (transactions == numQuizzes) {
-						long endTime = System.currentTimeMillis();
-						long timeElapsed = endTime - startTime;
-						System.out.println("\nQuizzes time: " + timeElapsed + " ms" + " - Num Quizzes: " + transactions);
-						checkQuizzes.complete();
-					}
-				});
+				
 				submitQuiz(guid, vertx);
 			}
 
@@ -447,11 +496,14 @@ class ElearningTest {
 						.collect(Collectors.toList());
 				JsonObject accountCreated = (JsonObject) res.get(0);
 				
+/*
 				assertTrue((int) accountCreated.getInteger("totalBalance") >= numWallets * 50);
 				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
 				assertTrue(transactions.size() >= numWallets );
 				assertTrue((int) wallet.getInteger("balance") >= numWallets * 50 );
-
+*/
+				
+				
 /*				assertEquals(numWallets * 50, (int) accountCreated.getInteger("totalBalance"));
 				assertTrue((int) accountCreated.getInteger("lastData") >= 100);
 				assertEquals(numWallets, transactions.size());
@@ -494,9 +546,9 @@ class ElearningTest {
 		JsonArray toSend = new JsonArray();
 		toSend.add(message);
 		String changesAddress = userID + "/changes";
-		vertx.eventBus().consumer(changesAddress, msg -> {
+		/*vertx.eventBus().consumer(changesAddress, msg -> {
 			System.out.println("changesAddress" + msg.body().toString());
-		});
+		});*/
 
 		vertx.eventBus().send(userID + "/changes", toSend, reply -> {
 			System.out.println("quiz submited: " + reply.toString());
