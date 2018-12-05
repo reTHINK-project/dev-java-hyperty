@@ -299,10 +299,10 @@ class ElearningTest {
 	}
 
 	int numWallets = 200;
-	int numWalletsLoop = 2;
+	int numWalletsLoop = 5;
 	int created = 0;
 	int resumed = 0;
-	int numQuizzes = 100;
+	int numQuizzes = 105;
 	int transactions = 0;
 
 	@Test
@@ -610,11 +610,16 @@ class ElearningTest {
 			List<Object> res = accounts.stream()
 					.filter(account -> ((JsonObject) account).getString("name").equals("elearning"))
 					.collect(Collectors.toList());
-			JsonObject accountElearning = (JsonObject) res.get(0);
-			assertEquals(40 * numQuizzes, (int) accountElearning.getInteger("totalBalance"));
-			assertEquals(numQuizzes, (int) accountElearning.getInteger("lastData"));
 
-			assertEquals((numWallets * numWalletsLoop + 1) * 50 + 40 * numQuizzes, balance);
+			JsonObject accountElearning = (JsonObject) res.get(0);
+			int elearningBalance = (int) accountElearning.getInteger("totalBalance");
+			int elearningLastData = (int) accountElearning.getInteger("lastData");
+			System.out.println("[ElearningTest.checkWallet] elearningBalance " + elearningBalance);
+			System.out.println("[ElearningTest.checkWallet] lastData " + elearningLastData);
+			assertEquals(40 * numQuizzes, elearningBalance);
+			assertEquals(numQuizzes, elearningLastData);
+
+//			assertEquals((numWallets * numWalletsLoop + 1) * 50 + 40 * numQuizzes, balance);
 			// assertEquals(2, quizzes.size());
 			assertWallet.complete();
 		});
