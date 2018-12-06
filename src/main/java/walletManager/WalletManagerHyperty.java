@@ -589,6 +589,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// get account for source
 		List<Object> res = accounts.stream().filter(account -> ((JsonObject) account).getString("name").equals(source))
 				.collect(Collectors.toList());
+		System.out.println("SOurce:" + source);
 		JsonObject accountJson = (JsonObject) res.get(0);
 		Account account = Account.toAccount(accountJson);
 		int value = lastTransaction.getInteger("value");
@@ -755,7 +756,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							JsonArray transactions = wallet.getJsonArray("transactions");
 							transactions.add(transaction);
 							// update accounts
-							JsonObject walletAux = updateAccounts(wallet, true);
+							JsonObject withCreated = checkCreated(wallet);
+							JsonObject walletAux = updateAccounts(withCreated, true);
 							walletAux = sumAccounts(walletAux);
 							wallet.put("balance", walletAux.getInteger("balance"));
 							wallet.put("accounts", walletAux.getJsonArray("accounts"));
@@ -824,6 +826,33 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		return transferFuture;
 
+	}
+
+	private JsonObject checkCreated(JsonObject wallet) {
+		boolean createdExists = false;
+		JsonArray accounts = wallet.getJsonArray("accounts");
+		for (Object object : accounts) {
+			JsonObject account = (JsonObject) object;
+			if (account.getString("name").equals("created"))
+				createdExists = true;
+		}
+		
+		if (!createdExists) {
+			System.out.println("UPDATING WITH CREATED");
+			// build "created" account
+			Account created = new Account("created", "points");
+			// transactions for this source
+			List<Object> transactionsForSource = getTransactionsForSource(wallet.getJsonArray("transactions"),
+					"created", false);
+			created.totalBalance = sumTransactionsField(transactionsForSource, "value");
+			created.totalData = transactionsForSource.size();
+			JsonArray lastTransactions = lastWeekTransactions(transactionsForSource);
+			created.lastBalance = sumTransactionsField(lastTransactions.getList(), "value");
+			created.lastData = lastTransactions.size();
+			accounts.add(created.toJsonObject());
+		}
+		return wallet;
+		
 	}
 
 	private JsonObject sumAccounts(JsonObject wallet) {
