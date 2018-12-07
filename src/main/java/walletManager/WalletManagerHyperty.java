@@ -859,29 +859,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		JsonArray accounts = wallet.getJsonArray("accounts");
 		int sum = 0;
-		boolean createdExists = false;
 		for (Object object : accounts) {
 			JsonObject account = (JsonObject) object;
 			sum += account.getInteger("totalBalance");
-			if (account.getString("name").equals("created"))
-				createdExists = true;
+	
 		}
-
-		if (!createdExists) {
-			// build "created" account
-			Account created = new Account("created", "points");
-			// transactions for this source
-			List<Object> transactionsForSource = getTransactionsForSource(wallet.getJsonArray("transactions"),
-					"created", false);
-			created.totalBalance = sumTransactionsField(transactionsForSource, "value");
-			sum += created.totalBalance;
-			created.totalData = transactionsForSource.size();
-			JsonArray lastTransactions = lastWeekTransactions(transactionsForSource);
-			created.lastBalance = sumTransactionsField(lastTransactions.getList(), "value");
-			created.lastData = lastTransactions.size();
-			accounts.add(created.toJsonObject());
-		}
-
 		wallet.put("balance", sum);
 		return wallet;
 	}
@@ -1053,11 +1035,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		message.reply(msg, reply2 -> {
 
-			logger.debug("Reply from P2P stub " + reply2.result().body().toString());
+			logger.debug("Reply from P2P stub " + reply2.succeeded());
 
 			JsonObject rep = new JsonObject(reply2.result().body().toString());
 
-			logger.debug("rep " + rep.toString());
+			
 			// check if 200
 			int code = rep.getJsonObject("body").getInteger("code");
 			if (code == 200) {
@@ -1204,6 +1186,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 					}
 				});
+			} else {
+				logger.debug("code != 200" );
 			}
 		});
 

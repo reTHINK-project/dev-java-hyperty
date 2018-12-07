@@ -463,16 +463,19 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 										mongoClient.updateCollection(this.collection,
 												new JsonObject().put("guid", guid), update, res2 -> {
-													logger.debug(
-															"{{SmartIOTProtostub}} result>" + res2.succeeded());
+													logger.debug("{{SmartIOTProtostub}} result>" + res2.succeeded());
+													logger.debug(("message:" + message.body().toString());
+													responseBodyOK.put("description", "new stream created");
+													responseBodyOK.put("stream", currentStream);
+													JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
+													logger.debug("response:" + responseOK.toString());
+													message.reply(responseOK);
 												});
+										
 										inviteHyperty(thirdPtyUserId, thirdPtyPlatformId,
 												messageToCreate.getJsonObject("identity"),
 												currentStream.getString("id"), ratingType);
-										responseBodyOK.put("description", "new stream created");
-										responseBodyOK.put("stream", currentStream);
-										JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
-										message.reply(responseOK);
+										
 
 										// logger.debug("{{SmartIOTProtostub}} subscription result " +
 										// createSubscription(
@@ -480,16 +483,18 @@ public class SmartIotProtostub extends AbstractVerticle {
 									}
 								}
 
+							} else {
+								message.reply(responseDenied);
 							}
 						}
 					});
 
-					fillRates(guid);
+					//fillRates(guid);
 
 				}
 			});
 
-			message.reply(responseDenied);
+			
 
 			return;
 		}
