@@ -20,6 +20,7 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import runHyperties.Account;
 import tokenRating.UserActivityRatingHyperty;
 import walletManager.WalletManagerHyperty;
 
@@ -58,6 +59,8 @@ class UserActivityTest {
 		configUserActivity.put("db_name", "test");
 		configUserActivity.put("collection", "rates");
 		configUserActivity.put("mongoHost", mongoHost);
+		configUserActivity.put("mongoPorts", "27017");
+		configUserActivity.put("mongoCluster", "NO");
 
 		// tokens per activity
 		configUserActivity.put("tokens_per_walking_km", 10);
@@ -70,7 +73,7 @@ class UserActivityTest {
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configUserActivity.put("hyperty", "123");
 		configUserActivity.put("stream", streamAddress);
-		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(true);
+		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(false);
 
 		Checkpoint checkpoint = context.checkpoint();
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, context.succeeding());
@@ -81,10 +84,13 @@ class UserActivityTest {
 		configWalletManager.put("db_name", "test");
 		configWalletManager.put("collection", "wallets");
 		configWalletManager.put("mongoHost", mongoHost);
+		configWalletManager.put("mongoPorts", "27017");
+		configWalletManager.put("mongoCluster", "NO");
 
 		configWalletManager.put("observers", new JsonArray().add(""));
-		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
+		configWalletManager.put("siot_stub_url", "");
 		configWalletManager.put("rankingTimer", 2000);
+		configWalletManager.put("onReadMaxTransactions", 10);
 
 		// public wallets
 		String wallet0Address = "school0-wallet";
@@ -120,7 +126,7 @@ class UserActivityTest {
 		configWalletManager.put("publicWallets", publicWallets);
 
 		DeploymentOptions optionsconfigWalletManager = new DeploymentOptions().setConfig(configWalletManager)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(WalletManagerHyperty.class.getName(), optionsconfigWalletManager, res -> {
 			System.out.println("WalletManagerHyperty Result->" + res.result());
 		});
@@ -171,6 +177,10 @@ class UserActivityTest {
 			newWallet.put("created", new Date().getTime());
 			newWallet.put("balance", 0);
 			newWallet.put("transactions", new JsonArray());
+			JsonArray accounts = new JsonArray();
+			accounts.add(new Account("walking", "km").toJsonObject());
+			accounts.add(new Account("biking", "km").toJsonObject());
+			newWallet.put("accounts", accounts);
 			newWallet.put("status", "active");
 			newWallet.put("ranking", 0);
 			newWallet.put("bonus-credit", 30);
@@ -241,7 +251,6 @@ class UserActivityTest {
 	}
 
 	@Test
-	@Disabled
 	void sessionWithoutTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session without tokens");
 		JsonObject activityMessage = new JsonObject();
@@ -307,7 +316,7 @@ class UserActivityTest {
 			mongoClient.find(ratesCollection, query, result -> {
 				JsonObject rates = result.result().get(0);
 				JsonArray sessions = rates.getJsonArray("user-activity");
-				assertEquals(2, sessions.size());
+				assertEquals(1, sessions.size());
 				assertEquals(true, sessions.getJsonObject(0).getBoolean("processed"));
 				assertEquals(true, sessions.getJsonObject(1).getBoolean("processed"));
 				assertions.countDown();
@@ -360,36 +369,35 @@ class UserActivityTest {
 
 		// wait for op
 		try {
-			Thread.sleep(5000);
+			Thread.sleep(2000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 
-//		CountDownLatch assertions = new CountDownLatch(1);
-//
-//
-//		new Thread(() -> {
-//
-//			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
-//			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
-//				JsonObject walletInfo = res.result().get(0);
-//
-//				// check balance updated
-//				int currentBalance = walletInfo.getInteger("balance");
-//				assertEquals(5, currentBalance);
-//
-//				// check if transaction in transactions array
-//				JsonArray transactions = walletInfo.getJsonArray("transactions");
-//				assertEquals(2, transactions.size());
-//				assertions.countDown();
-//			});
-//		}).start();
-//
-//		try {
-//			assertions.await();
-//		} catch (InterruptedException e) {
-//			e.printStackTrace();
-//		}
+		CountDownLatch assertions = new CountDownLatch(1);
+
+		new Thread(() -> {
+
+			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
+			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
+				JsonObject walletInfo = res.result().get(0);
+
+				// check balance updated
+				int currentBalance = walletInfo.getInteger("balance");
+				assertEquals(500, currentBalance);
+
+				// check if transaction in transactions array
+				JsonArray transactions = walletInfo.getJsonArray("transactions");
+				assertEquals(2, transactions.size());
+				assertions.countDown();
+			});
+		}).start();
+
+		try {
+			assertions.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 		testContext.completeNow();
 

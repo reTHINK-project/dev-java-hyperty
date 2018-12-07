@@ -20,7 +20,7 @@ public class DataObjectReporter {
 			Handler<Message<JsonObject>> readHandler) {
 		this.eb = vertx.eventBus();
 		this.eb.consumer(dataObjectUrl + "/subscription", onSubscribe());
-		System.out.println("Reporter listening in " + dataObjectUrl + "/subscription");
+		//System.out.println("Reporter listening in " + dataObjectUrl + "/subscription");
 		this.eb.consumer(dataObjectUrl, onRead());
 		this.onSubscriptionHandler = subscriptionHandler;
 		this.onReadHandler = readHandler;
@@ -37,7 +37,7 @@ public class DataObjectReporter {
 
 	/**
 	 * Receive subscribe message and pass it on to the handler.
-	 * 
+	 *
 	 * @param msg
 	 */
 	private Handler<Message<JsonObject>> onSubscribe() {

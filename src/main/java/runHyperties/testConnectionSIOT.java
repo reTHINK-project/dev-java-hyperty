@@ -18,12 +18,12 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 
 public class testConnectionSIOT {
-	
+
 	static String smartIotUrl = "https://iot.alticelabs.com/api";
 	static String currentToken;
 	private static Vertx vertx;
 	protected static MongoClient mongoClient = null;
-	
+
 	public static void main(String[] args) throws ParseException {
 		// TODO Auto-generated method stub
 		String name = "newDeviceName1";
@@ -38,11 +38,11 @@ public class testConnectionSIOT {
 		registerNewStream("9b42a603-e1a0-499c-a763-ee5340ecddc4", "test8");
 	/*	getStreamsList(newDevice.getString("id"));
 		deleteStream(newDevice.getString("id"), streamName);
-	
+
 		JsonObject subscription = createSubscription("suscriptionName", "subscriptionDescription", appID, newDevice.getString("id"), streamName, pointOfContact);
-		System.out.println("subscription result" + subscription.toString());
+		//System.out.println("subscription result" + subscription.toString());
 */
-		
+
 
 	}
 
@@ -67,8 +67,8 @@ public class testConnectionSIOT {
 	            received.append(Character.toChars(c));
 
 	        conn.disconnect();
-	        System.out.println("[newToken]("+conn.getResponseCode()+")" + received.toString());
-	        
+	        //System.out.println("[newToken]("+conn.getResponseCode()+")" + received.toString());
+
 	        if (conn.getResponseCode() == 200) {
 	        	return received.toString();
 	        } else return null;
@@ -77,16 +77,16 @@ public class testConnectionSIOT {
 			return null;
 		}
 	}
-	
+
 	private static JsonObject registerNewDevice(String name, String description) {
-	
+
 		try {
 
 			StringBuilder received = new StringBuilder();
 			JsonObject toCreateDevice   = new JsonObject();
 			toCreateDevice.put("name", name);
 			toCreateDevice.put("description", description);
-			
+
 			URL url = new URL(smartIotUrl+"/devices");
 			HttpURLConnection conn = (HttpURLConnection)url.openConnection();
 			conn.setDoOutput(true);
@@ -94,31 +94,31 @@ public class testConnectionSIOT {
 			conn.setRequestProperty("Content-Type", "application/json");
 	        conn.setRequestProperty("authorization","Bearer " + currentToken);
 	        conn.setRequestMethod("POST");
-	        
+
 	        //add payload Json
 			OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
 			wr.write(toCreateDevice.toString());
 			wr.flush();
-	        
+
 	        Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-	        
+
 	        for (int c; (c = in.read()) >= 0;)
 	            received.append(Character.toChars(c));
 
 	        conn.disconnect();
-	        System.out.println("[newDevice]("+conn.getResponseCode()+")" + received.toString());
+	        //System.out.println("[newDevice]("+conn.getResponseCode()+")" + received.toString());
 	        return new JsonObject(received.toString());
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
-		
-		
+
+
 	}
-	
+
 	private static void registerNewStream(String deviceID, String streamName) {
-		
+
 		try {
 			StringBuilder received = new StringBuilder();
 			URL url = new URL(smartIotUrl+"/devices/"+ deviceID + "/streams/" + streamName);
@@ -133,17 +133,17 @@ public class testConnectionSIOT {
 	            received.append(Character.toChars(c));
 
 	        conn.disconnect();
-	        System.out.println("[newStream]("+conn.getResponseCode()+")" + received.toString());
+	        //System.out.println("[newStream]("+conn.getResponseCode()+")" + received.toString());
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 	}
-	
+
 	private static JsonObject createSubscription(String subscriptionName, String subscriptionDescription, String appID, String deviceID,
 			String streamName, String pointOfContact) {
-		
+
 		try {
 			StringBuilder received = new StringBuilder();
 			JsonObject toCreateDevice   = new JsonObject();
@@ -152,7 +152,7 @@ public class testConnectionSIOT {
 			toCreateDevice.put("device_id", deviceID);
 			toCreateDevice.put("stream", streamName);
 			toCreateDevice.put("point_of_contact", pointOfContact);
-			
+
 			URL url = new URL(smartIotUrl+"/subscriptions");
 			HttpURLConnection conn = (HttpURLConnection)url.openConnection();
 			conn.setDoOutput(true);
@@ -160,30 +160,30 @@ public class testConnectionSIOT {
 			conn.setRequestProperty("Content-Type", "application/json");
 	        conn.setRequestProperty("authorization","Bearer " + currentToken);
 	        conn.setRequestMethod("POST");
-	        
+
 	        //add payload Json
 			OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
 			wr.write(toCreateDevice.toString());
 			wr.flush();
-	        
+
 	        Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-	        
+
 	        for (int c; (c = in.read()) >= 0;)
 	            received.append(Character.toChars(c));
-  
+
 	        conn.disconnect();
 
-	        System.out.println("[newSubscription]("+conn.getResponseCode()+")" + received.toString());
+	        //System.out.println("[newSubscription]("+conn.getResponseCode()+")" + received.toString());
 	        return new JsonObject(received.toString());
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return null;		
+		return null;
 	}
-	
+
 	private static void getStreamsList(String deviceID) {
-		
+
 		try {
 			StringBuilder received = new StringBuilder();
 			URL url = new URL(smartIotUrl+"/devices/"+ deviceID + "/streams/");
@@ -198,20 +198,20 @@ public class testConnectionSIOT {
 	            received.append(Character.toChars(c));
 
 	        conn.disconnect();
-	        System.out.println("[STREAMSLIST]("+conn.getResponseCode()+")" + received.toString());
+	        //System.out.println("[STREAMSLIST]("+conn.getResponseCode()+")" + received.toString());
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 	}
-	
+
 	private static boolean deleteStream(String deviceID, String streamName) {
 
 		try {
 			StringBuilder received = new StringBuilder();
 			String urlToDelete = smartIotUrl + "/devices/" + deviceID + "/streams/" + streamName;
-			System.out.println("{{SmartIOTProtostub}} delete with url " + urlToDelete +"\nwithtoken->" + currentToken);
+			//System.out.println("{{SmartIOTProtostub}} delete with url " + urlToDelete +"\nwithtoken->" + currentToken);
 			URL url = new URL(urlToDelete);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
@@ -219,7 +219,7 @@ public class testConnectionSIOT {
 
 			conn.disconnect();
 
-			System.out.println("{{SmartIOTProtostub}} [deleteStream](" + conn.getResponseCode() + ")" + received.toString());
+			//System.out.println("{{SmartIOTProtostub}} [deleteStream](" + conn.getResponseCode() + ")" + received.toString());
 			if (conn.getResponseCode() == 204) {
 				return true;
 			}

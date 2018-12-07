@@ -24,9 +24,11 @@ Collection of Data Objects handled by the Hyperty:
 
 ```
 {
-  <objectURL>: {
-    userUrl: <URL>,
-    type: <reporter|observer>
+  <hypertyUrl>: {
+    <objectURL>: {
+      userUrl: <URL>,
+      type: <reporter|observer>
+      }
   }
 }
 ```

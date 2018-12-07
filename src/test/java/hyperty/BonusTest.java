@@ -136,7 +136,7 @@ class BonusTest {
 		causes.add(new JsonObject().put("cause", cause2ID));
 		config.put("causes", causes);
 		config.put("bonusID", bonusID);
-		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(true);
+		DeploymentOptions options = new DeploymentOptions().setConfig(config).setWorker(false);
 		vertx.deployVerticle(BonusScript.class.getName(), options, context.succeeding());
 		System.out.println(log + "deployed");
 

@@ -51,7 +51,7 @@ class SmartIotStubTest {
 
 
 		DeploymentOptions optionsconfigSmartIotStub = new DeploymentOptions().setConfig(configSmartIotStub)
-				.setWorker(true);
+				.setWorker(false);
 		vertx.deployVerticle(SmartIotProtostub.class.getName(), optionsconfigSmartIotStub, res -> {
 			System.out.println("SmartIOTProtustub Result->" + res.result());
 		});
@@ -81,7 +81,7 @@ class SmartIotStubTest {
 		configUserActivity.put("stream", "vertx://sharing-cities-dsm/user-activity");
 		
 		
-		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(true);
+		DeploymentOptions optionsUserActivity = new DeploymentOptions().setConfig(configUserActivity).setWorker(false);
 		vertx.deployVerticle(UserActivityRatingHyperty.class.getName(), optionsUserActivity, res -> {
 			System.out.println("UserActivityRatingHyperty Result->" + res.result());
 		});
@@ -99,7 +99,7 @@ class SmartIotStubTest {
 		configEnergySaving.put("db_name", "test");
 		configEnergySaving.put("mongoHost", mongoHost);
 
-		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(true);
+		DeploymentOptions optionsEnergy = new DeploymentOptions().setConfig(configEnergySaving).setWorker(false);
 		vertx.deployVerticle(EnergySavingRatingHyperty.class.getName(), optionsEnergy, res -> {
 			System.out.println("EnergySavingRatingHyperty Result->" + res.result());
 		});

@@ -3,27 +3,21 @@ package hyperty;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.CountDownLatch;
 
-import com.mongodb.operation.UserExistsOperation;
-
-import data_objects.DataObjectReporter;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.FindOptions;
 
 /**
  * This runtime feature is responsible to keep track of the status of users
  * (online / offline) using hyperties executed in the Vertx Runtime, based on
  * status events published by Vertx Runtime Protostub.
- * 
+ *
  * @author felgueiras
  */
 public class RegistryHyperty extends AbstractHyperty {
-
-
 
 	private static final String logMessage = "[Registry] ";
 
@@ -33,18 +27,17 @@ public class RegistryHyperty extends AbstractHyperty {
 	int checkStatusTimer;
 	String CRMHypertyStatus;
 	String offlineSMStatus;
-	boolean userExist;
 
 	@Override
 	public void start() {
 
 		super.start();
-		handleRequestsOnStatus();
-		
+		handleRequests();
+
 		checkStatusTimer = config().getInteger("checkStatusTimer");
 		CRMHypertyStatus = config().getString("CRMHypertyStatus");
 		offlineSMStatus = config().getString("offlineSMStatus");
-		
+
 		Timer timer = new Timer();
 		timer.schedule(new CheckStatusTimer(), 0, checkStatusTimer);
 
@@ -58,7 +51,7 @@ public class RegistryHyperty extends AbstractHyperty {
 
 	/**
 	 * This function is executed by a timer every config.checkStatusTimer seconds.
-	 * 
+	 *
 	 * For each entry in the registry collection where timeNow - lastModified >
 	 * config.checkStatusTimer it updates its status to offline, and publishes its
 	 * new status (ensure this event is not processed by the registry status handler
@@ -66,7 +59,7 @@ public class RegistryHyperty extends AbstractHyperty {
 	 */
 	private void checkStatus() {
 
-		System.out.println(logMessage + "checkStatus()");
+		logger.debug(logMessage + "checkStatus()");
 		Long timeNow = new Date().getTime();
 
 		mongoClient.find(collection, new JsonObject(), res -> {
@@ -75,42 +68,42 @@ public class RegistryHyperty extends AbstractHyperty {
 				String status = entry.getString("status");
 				if (status.equals("online")) {
 					Long lastModified = entry.getLong("lastModified");
-					System.out.println("test" + "\nlm:" + lastModified + " \ntimenow" + timeNow );
+					logger.debug("test" + "\nlm:" + lastModified + " \ntimenow" + timeNow);
 					if (timeNow - lastModified > checkStatusTimer) {
-						
-							entry.put("status", "offline");
-							entry.put("lastModified", timeNow);
-							mongoClient.findOneAndReplace(collection, new JsonObject().put("guid", entry.getString("guid")),
-									entry, id -> {
-										System.out.println(logMessage + "checkStatus() document updated: " + entry);
-									});
-							
-							JsonObject body = new JsonObject();
-							body.put("resource", entry.getString("guid"));
-							body.put("status", "offline");
-							
-							JsonObject updateMessage = new JsonObject().put("type", "update");
-							updateMessage.put("body", body);
-							publish(CRMHypertyStatus, updateMessage);
-							publish(offlineSMStatus, updateMessage);
-							
+
+						entry.put("status", "offline");
+						entry.put("lastModified", timeNow);
+						mongoClient.findOneAndReplace(collection, new JsonObject().put("guid", entry.getString("guid")),
+								entry, id -> {
+									logger.debug(logMessage + "checkStatus() document updated: " + entry);
+								});
+
+						JsonObject body = new JsonObject();
+						body.put("resource", entry.getString("guid"));
+						body.put("status", "offline");
+
+						JsonObject updateMessage = new JsonObject().put("type", "update");
+						updateMessage.put("body", body);
+						publish(CRMHypertyStatus, updateMessage);
+						publish(offlineSMStatus, updateMessage);
+
 					}
 				}
 			}
 		});
 	}
 
-
 	/**
 	 * Handle requests.
 	 */
-	private void handleRequestsOnStatus() {
-		System.out.println("Waiting on ->" + config().getString("url") + "/status");
-		vertx.eventBus().<JsonObject>consumer(config().getString("url") + "/status", message -> {
+	private void handleRequests() {
+		logger.debug("Waiting on ->" + config().getString("url") + "/registry");
+		vertx.eventBus().<JsonObject>consumer(config().getString("url") + "/registry", message -> {
 			mandatoryFieldsValidator(message);
-			System.out.println(logMessage + "handleRequests(): " + message.body().toString());
+			logger.debug(logMessage + "handleRequests(): " + message.body().toString());
 
 			JsonObject msg = new JsonObject(message.body().toString());
+			JsonObject response = new JsonObject();
 
 			switch (msg.getString("type")) {
 			case "update":
@@ -123,9 +116,17 @@ public class RegistryHyperty extends AbstractHyperty {
 					retrieveStatus(msg, message);
 				}
 				break;
+			case "create":
+				if (msg.getJsonObject("body") != null) {
+					handleCreationRequest(msg, message);
+					JsonObject body = new JsonObject().put("code", 200);
+					response.put("body", body);
+					message.reply(response);
+				}
+				break;
 
 			default:
-				System.out.println("Incorrect message type: " + msg.getString("type"));
+				logger.debug("Incorrect message type: " + msg.getString("type"));
 				break;
 			}
 		});
@@ -134,193 +135,174 @@ public class RegistryHyperty extends AbstractHyperty {
 	/**
 	 * It updates the registry collection with received info including last modified
 	 * timestamp.
-	 * 
+	 *
 	 * @param msg
-	 * @param message 
+	 * @param message
 	 */
-	private void updateStatus(JsonObject msg, Message<JsonObject> message) {
-		System.out.println(logMessage + "updateStatus(): " + msg.toString());
+	private Future<Void> updateStatus(JsonObject msg, Message<JsonObject> message) {
+		logger.debug(logMessage + "updateStatus(): " + msg.toString());
 		JsonObject body = msg.getJsonObject("body");
 		String guid = body.getString("resource");
 		String status = body.getString("status");
-		long lastMofidified = new Date().getTime();;
+		long lastMofidified = new Date().getTime();
 
 		// get entry for that cguid
-		CountDownLatch registryLatch = new CountDownLatch(1);
+		Future<Void> statusUpdate = Future.future();
 		// check if no user allocated to this code
-		new Thread(() -> {
-			JsonObject query = new JsonObject().put("guid", guid);
-			mongoClient.find(collection, query, res -> {
-				JsonObject entry = new JsonArray(res.result()).getJsonObject(0);
-				// set identity
-				entry.put("status", status);
-				entry.put("lastModified", lastMofidified);
-				JsonObject document = new JsonObject(entry.toString());
-				mongoClient.findOneAndReplace(collection, new JsonObject().put("guid", entry.getString("guid")),
-						document, id -> {
-							System.out.println(logMessage + "updateStatus(): registry updated" + document);
-						});
-				//publish message to crmStatus and offlineSMstatus
-				publish(CRMHypertyStatus, msg);
-				publish(offlineSMStatus, msg);
-				
-				registryLatch.countDown();
-				JsonObject response = new JsonObject().put("code",200);
-				message.reply(response);
-			});
-		}).start();
-		try {
-			registryLatch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		JsonObject query = new JsonObject().put("guid", guid);
+		mongoClient.find(collection, query, res -> {
+			JsonObject entry = new JsonArray(res.result()).getJsonObject(0);
+			// set identity
+			entry.put("status", status);
+			entry.put("lastModified", lastMofidified);
+			JsonObject document = new JsonObject(entry.toString());
+			mongoClient.findOneAndReplace(collection, new JsonObject().put("guid", entry.getString("guid")), document,
+					id -> {
+						logger.debug(logMessage + "updateStatus(): registry updated" +
+						 document);
+					});
+			// publish message to crmStatus and offlineSMstatus
+			publish(CRMHypertyStatus, msg);
+			publish(offlineSMStatus, msg);
+
+			JsonObject response = new JsonObject().put("code", 200);
+			message.reply(response);
+			statusUpdate.complete();
+		});
+
+		return statusUpdate;
+
 	}
-	
-	
-	
-	
-	private void retrieveStatus(JsonObject msg, Message<JsonObject> message) {
-		System.out.println(logMessage + "updateStatus(): " + msg.toString());
+
+	private Future<Void> retrieveStatus(JsonObject msg, Message<JsonObject> message) {
+		logger.debug(logMessage + "updateStatus(): " + msg.toString());
 		JsonObject body = msg.getJsonObject("body");
 		String guid = body.getString("resource");
 
 		// get entry for that cguid
-		CountDownLatch statusLatch = new CountDownLatch(1);
+		Future<Void> statusRetrieved = Future.future();
 		// check if no user allocated to this code
-		new Thread(() -> {
-			JsonObject query = new JsonObject().put("guid", guid);
-			mongoClient.find(collection, query, res -> {
-				JsonObject response ;
-				if (res.result().size() > 0) {
-					JsonObject entry = new JsonArray(res.result()).getJsonObject(0);
-					response = new JsonObject().put("code",200).put("value", entry);
-					
-				} else {
-					response = new JsonObject().put("code",404).put("value", new JsonObject());
-				}
-				message.reply(response);
+		JsonObject query = new JsonObject().put("guid", guid);
+		mongoClient.find(collection, query, res -> {
+			JsonObject response;
+			if (res.result().size() > 0) {
+				JsonObject entry = new JsonArray(res.result()).getJsonObject(0);
+				response = new JsonObject().put("code", 200).put("value", entry);
 
-				statusLatch.countDown();
-			});
-		}).start();
-		try {
-			statusLatch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+			} else {
+				response = new JsonObject().put("code", 404).put("value", new JsonObject());
+			}
+			message.reply(response);
+
+			statusRetrieved.complete();
+		});
+
+		return statusRetrieved;
+
 	}
-	
+
 	@Override
 	public Handler<Message<JsonObject>> onMessage() {
 
 		return message -> {
 
-
-			System.out.println(logMessage + "New message -> " + message.body().toString());
+			logger.debug(logMessage + "New message -> " + message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 
-				System.out.println(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
+				logger.debug(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
 						+ "\n[Data] " + message.body());
-
-				final String type = new JsonObject(message.body().toString()).getString("type");
-				final JsonObject identity = new JsonObject(message.body().toString()).getJsonObject("identity");
-
-				JsonObject response = new JsonObject();
-				JsonObject body = new JsonObject().put("code", 200);
-				response.put("body", body);
-				switch (type) {
-
-				case "create":
-
-					JsonObject msg = new JsonObject(message.body().toString());
-					handleCreationRequest(msg, message);
-					message.reply(response);
-					break;
-				default:
-					break;
-				}
+				/*
+				 * final String type = new
+				 * JsonObject(message.body().toString()).getString("type"); final JsonObject
+				 * identity = new
+				 * JsonObject(message.body().toString()).getJsonObject("identity");
+				 * 
+				 * JsonObject response = new JsonObject(); JsonObject body = new
+				 * JsonObject().put("code", 200); response.put("body", body); switch (type) {
+				 * 
+				 * case "create":
+				 * 
+				 * JsonObject msg = new JsonObject(message.body().toString());
+				 * handleCreationRequest(msg, message); message.reply(response); break; default:
+				 * break; }
+				 */
 
 			}
 		};
-		
-}
-	
+
+	}
+
 	@Override
-	public void handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
-		System.out.println("REGISTRY HANDLE NEW ENTRY->" + msg.toString());
+	public Future<Void> handleCreationRequest(JsonObject msg, Message<JsonObject> message) {
+		logger.debug("REGISTRY HANDLE NEW ENTRY->" + msg.toString());
+
+		Future<Void> creationRequest = Future.future();
 		if (msg.containsKey("identity")) {
 			final String guid = msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid");
-			if(!userExists(guid)) {
-				addNewUser(guid);
-				
-			} else {
-				System.out.println("user already exist");
-			}
-		}
-	}
-	
-
-	private boolean userExists(String guid) {
-		userExist = false;
-		
-		CountDownLatch getUserStatus= new CountDownLatch(1);
-
-
-		new Thread(() -> {
-
-			JsonObject query = new JsonObject().put("guid",guid);
-
-			mongoClient.find(this.collection, query, res -> {
-
-				JsonArray users = new JsonArray(res.result());
-				if (users.size() != 0)
-					userExist = true;
-				getUserStatus.countDown();
+			Future<Boolean> userExists = userExists(guid);
+			userExists.setHandler(asyncResult -> {
+				if (asyncResult.succeeded()) {
+					if (!userExists.result()) {
+						Future<Void> newUserAdded = addNewUser(guid);
+						newUserAdded.setHandler(asyncResult2 -> {
+							if (asyncResult.succeeded()) {
+								creationRequest.complete();
+							} else {
+								// oh ! we have a problem...
+							}
+						});
+					} else {
+						logger.debug("user already exist");
+						creationRequest.complete();
+					}
+				} else {
+					// oh ! we have a problem...
+				}
 			});
-		}).start();
 
-		try {
-			getUserStatus.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		} else {
+			creationRequest.complete();
 		}
-		
+
+		return creationRequest;
+	}
+
+	private Future<Boolean> userExists(String guid) {
+
+		Future<Boolean> userExist = Future.future();
+
+		JsonObject query = new JsonObject().put("guid", guid);
+
+		mongoClient.find(this.collection, query, res -> {
+
+			JsonArray users = new JsonArray(res.result());
+
+			userExist.complete(users.size() != 0);
+		});
+
 		return userExist;
 	}
-	
-	private void addNewUser(String guid) {
 
-		
-		CountDownLatch addUser= new CountDownLatch(1);
+	private Future<Void> addNewUser(String guid) {
 
+		Future<Void> addUser = Future.future();
 
-		new Thread(() -> {
+		Long date = new Date().getTime();
+		JsonObject newUser = new JsonObject().put("guid", guid).put("status", "online").put("lastModified", date);
+		JsonObject toUpdate = new JsonObject();
+		toUpdate.put("type", "update");
 
-			Long date = new Date().getTime();
-			JsonObject newUser = new JsonObject().put("guid",guid)
-					.put("status", "online")
-					.put("lastModified", date);
-			JsonObject toUpdate = new JsonObject();
-			toUpdate.put("type", "update");
-			
-			mongoClient.save(this.collection, newUser, id -> {
-				System.out.println(logMessage + " new user " + id);
-				newUser.remove("lastModified");
-				toUpdate.put("body", newUser);
-				publish(CRMHypertyStatus, toUpdate);
-				publish(offlineSMStatus, toUpdate);
-				addUser.countDown();
-			});
+		mongoClient.save(this.collection, newUser, id -> {
+			logger.debug(logMessage + " new user " + id);
+			newUser.remove("lastModified");
+			toUpdate.put("body", newUser);
+			publish(CRMHypertyStatus, toUpdate);
+			publish(offlineSMStatus, toUpdate);
+			addUser.complete();
+		});
 
-		}).start();
-
-		try {
-			addUser.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		return addUser;
 
 	}
-
 
 }

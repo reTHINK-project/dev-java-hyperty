@@ -3,7 +3,7 @@
 
 | Master                                   |
 | ---------------------------------------- |
-| [![Build Status](https://travis-ci.org/reTHINK-project/dev-java-hyperty.svg?branch=master)](https://travis-ci.org/reTHINK-project/dev-java-hyperty) |
+| [![Build Status](https://travis-ci.org/reTHINK-project/dev-java-hyperty.svg?branch=master)](https://travis-ci.org/reTHINK-project/dev-java-hyperty) | 
 
 
 ## Overview

@@ -1,9 +1,7 @@
 package tokenRating;
 
 import java.util.Date;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
@@ -25,20 +23,21 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	 */
 	private int tokensPerCorrectAnswer;
 
-	private CountDownLatch getQuizLatch;
-	private CountDownLatch findUserID;
-	private String userIDToReturn = null;
-
 	private String dataSource = "elearning";
 
 	@Override
 	public void start() {
 		super.start();
+		
+		ratingType = "elearning";
+		
 		// read config
 		tokensPerCompletedQuiz = config().getInteger("tokens_per_completed_quiz");
 		tokensPerCorrectAnswer = config().getInteger("tokens_per_correct_answer");
 
 		createStreams();
+		
+		resumeDataObjects(ratingType);
 	}
 
 	private void createStreams() {
@@ -51,7 +50,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Handler for read requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> readHandler() {
@@ -71,7 +70,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 	/**
 	 * Handler for subscription requests.
-	 * 
+	 *
 	 * @return
 	 */
 	private Handler<Message<JsonObject>> subscriptionHandler() {
@@ -96,16 +95,16 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	}
 
 	@Override
-	int rate(Object data) {
+	Future<Integer> rate(Object data) {
 
 		// reset latch
-		tokenAmount = -3;
+		tokenAmount = -5;
 		Long currentTimestamp = new Date().getTime();
 
 		// check unprocessed sessions
 
 		JsonObject message = (JsonObject) data;
-		System.out.println("ELEARNING MESSAGE " + message.toString());
+		logger.debug("ELEARNING MESSAGE " + message.toString());
 
 		String user = message.getString("guid");
 
@@ -113,51 +112,36 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		message.remove("identity");
 		persistData(dataSource, user, currentTimestamp, message.getString("id"), null, message);
 
-		tokenAmount = getTokensForAnswer(message);
-		return tokenAmount;
+		Future<Integer> tokensForAnswer = getTokensForAnswer(message);
+		return tokensForAnswer;
 	}
 
 	private String elearningsCollection = "elearnings";
 
 	/**
 	 * Get amount of tokens for a Quiz.
-	 * 
-	 * @param answer
-	 *            quiz answer object
+	 *
+	 * @param answer quiz answer object
 	 * @return
 	 */
-	private int getTokensForAnswer(JsonObject answer) {
-		System.out.println("getTokensForAnswer: " + answer);
+	private Future<Integer> getTokensForAnswer(JsonObject answer) {
+		logger.debug("getTokensForAnswer: " + answer);
 		JsonArray userAnswers = answer.getJsonArray("answers");
-		int tokens = 0;
 
 		String quizID = answer.getString("id");
-		System.out.println("Quiz id: " + quizID);
+		logger.debug("Quiz id: " + quizID);
 
 		// query mongo for quiz info
-		getQuizLatch = new CountDownLatch(1);
-		new Thread(() -> {
-			// get shop with that ID
-			mongoClient.find(elearningsCollection, new JsonObject().put("name", quizID), elearningForIdResult -> {
-				JsonObject quizInfo = elearningForIdResult.result().get(0);
-				System.out.println("1 - Received elearning info: " + quizInfo.toString());
-				// quiz questions
-				JsonArray questions = quizInfo.getJsonArray("questions");
-				boolean isMiniQuiz = quizInfo.getString("type").equals("mini-quiz");
-				tokenAmount = validateUserAnswers(userAnswers, questions, isMiniQuiz);
-				getQuizLatch.countDown();
-				return;
-			});
-		}).start();
-
-		try {
-			getQuizLatch.await(5L, TimeUnit.SECONDS);
-			System.out.println("3 - return from latch quiz info");
-			return tokenAmount;
-		} catch (InterruptedException e) {
-			System.out.println("3 - interrupted exception");
-		}
-		System.out.println("3 - return other");
+		Future<Integer> tokens = Future.future();
+		// get shop with that ID
+		mongoClient.find(elearningsCollection, new JsonObject().put("name", quizID), elearningForIdResult -> {
+			JsonObject quizInfo = elearningForIdResult.result().get(0);
+			logger.debug("1 - Received elearning info: " + quizInfo.toString());
+			// quiz questions
+			JsonArray questions = quizInfo.getJsonArray("questions");
+			boolean isMiniQuiz = quizInfo.getString("type").equals("mini-quiz");
+			tokens.complete(validateUserAnswers(userAnswers, questions, isMiniQuiz));
+		});
 
 		return tokens;
 	}
@@ -167,13 +151,13 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		if (questions.size() != userAnswers.size())
 			return 0;
 		int tokens = 0;
-		if (!isMiniQuiz) 
+		if (!isMiniQuiz)
 			tokens += tokensPerCompletedQuiz;
 		for (int i = 0; i < questions.size(); i++) {
 			JsonObject currentQuestion = questions.getJsonObject(i);
 			int correctAnswer = currentQuestion.getInteger("correctAnswer");
 			int userAnswer = userAnswers.getInteger(i);
-			System.out.println("correctAnswer:" + correctAnswer + "/" + userAnswer);
+			logger.debug("correctAnswer:" + correctAnswer + "/" + userAnswer);
 			if (userAnswer == correctAnswer)
 				tokens += tokensPerCorrectAnswer;
 		}
@@ -185,19 +169,28 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address) {
 
 		final String address_changes = address + "/changes";
-		System.out.println("waiting for changes to user activity on ->" + address_changes);
+		logger.info("[ELEARNING] waiting for changes->" + address_changes);
 		eb.consumer(address_changes, message -> {
-			System.out.println("User activity on changes msg: " + message.body().toString());
+			logger.info("[Elearning] data");
+			logger.debug("elearning data msg-> " + message.body().toString());
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
-					System.out.println("CHANGES" + data.toString());
+					logger.debug("CHANGES" + data.toString());
 					JsonObject messageToRate = data.getJsonObject(0);
-					messageToRate.put("guid", getUserURL(address));
-
-					int numTokens = rate(messageToRate);
-					System.out.println("rate tokens: " + numTokens);
-					mine(numTokens, messageToRate, "elearning");
+					Future<String> userURL = getUserURL(address);
+					userURL.setHandler(asyncResult -> {
+						logger.debug("URL " + userURL.result());
+						messageToRate.put("guid", userURL.result());
+						Future<Integer> numTokens = rate(messageToRate);
+						numTokens.setHandler(res -> {
+							if (res.succeeded()) {
+								mine(numTokens.result(), messageToRate, "elearning");
+							} else {
+								// oh ! we have a problem...
+							}
+						});
+					});
 
 				}
 
