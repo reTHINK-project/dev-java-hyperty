@@ -464,7 +464,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 										mongoClient.updateCollection(this.collection,
 												new JsonObject().put("guid", guid), update, res2 -> {
 													logger.debug("{{SmartIOTProtostub}} result>" + res2.succeeded());
-													logger.debug(("message:" + message.body().toString());
+													logger.debug("message:" + message.body().toString());
 													responseBodyOK.put("description", "new stream created");
 													responseBodyOK.put("stream", currentStream);
 													JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
