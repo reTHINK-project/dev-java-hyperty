@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -22,17 +24,20 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import runHyperties.Account;
 import tokenRating.UserActivityRatingHyperty;
+import util.DateUtilsHelper;
 import walletManager.WalletManagerHyperty;
 
 @ExtendWith(VertxExtension.class)
 @Disabled
 class UserActivityTest {
 
-	private static String userID = "test-userID";
+	private static String userID = "user-guid://test-userID";
 	private static String subscriptionsAddress = userID + "/subscription";
 	private static String changesAddress = userID + "/changes";
 	private static String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
 	private static String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
+	private static JsonObject profileInfo = new JsonObject().put("age", 24).put("cause", "user-guid://school-0")
+			.put("balance", 10);
 	// mongo config
 	private static MongoClient mongoClient;
 	// collections
@@ -163,43 +168,6 @@ class UserActivityTest {
 			e.printStackTrace();
 		}
 
-		CountDownLatch setupLatch = new CountDownLatch(1);
-
-		new Thread(() -> { // create wallet
-			System.out.println("no wallet yet, creating");
-
-			// build wallet document
-			JsonObject newWallet = new JsonObject();
-
-			String address = "walletAddress";
-			newWallet.put("address", address);
-			newWallet.put("identity", new JsonObject().put("userProfile", new JsonObject().put("guid", userID)));
-			newWallet.put("created", new Date().getTime());
-			newWallet.put("balance", 0);
-			newWallet.put("transactions", new JsonArray());
-			JsonArray accounts = new JsonArray();
-			accounts.add(new Account("walking", "km").toJsonObject());
-			accounts.add(new Account("biking", "km").toJsonObject());
-			newWallet.put("accounts", accounts);
-			newWallet.put("status", "active");
-			newWallet.put("ranking", 0);
-			newWallet.put("bonus-credit", 30);
-			newWallet.put("wallet2bGranted", "school0-wallet");
-
-			JsonObject document = new JsonObject(newWallet.toString());
-
-			mongoClient.save(walletsCollection, document, id -> {
-				System.out.println("New wallet with ID:" + id);
-				setupLatch.countDown();
-			});
-		}).start();
-
-		try {
-			setupLatch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
 		checkpoint.flag();
 	}
 
@@ -251,6 +219,7 @@ class UserActivityTest {
 	}
 
 	@Test
+	@Disabled
 	void sessionWithoutTokens(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session without tokens");
 		JsonObject activityMessage = new JsonObject();
@@ -354,6 +323,27 @@ class UserActivityTest {
 	@Test
 	void sessionMax(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session with too big distance");
+
+		JsonObject msg = new JsonObject();
+		// create identity
+		msg.put("type", "create");
+		msg.put("identity",
+				new JsonObject().put("userProfile", new JsonObject().put("guid", userID).put("info", profileInfo)));
+		msg.put("from", "myself");
+		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+			JsonObject newMsg = new JsonObject();
+			JsonObject body = new JsonObject().put("code", 200);
+			newMsg.put("body", body);
+			res.result().reply(newMsg);
+		});
+
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
 		JsonObject activityMessage = new JsonObject();
 
 		activityMessage.put("identity", new JsonObject());
@@ -378,16 +368,19 @@ class UserActivityTest {
 
 		new Thread(() -> {
 
-			JsonObject walletIdentity = new JsonObject().put("userProfile", new JsonObject().put("guid", userID));
-			mongoClient.find(walletsCollection, new JsonObject().put("identity", walletIdentity), res -> {
-				JsonObject walletInfo = res.result().get(0);
+			JsonObject query = new JsonObject().put("address", "public-wallets");
 
-				// check balance updated
-				int currentBalance = walletInfo.getInteger("balance");
-				assertEquals(500, currentBalance);
-
-				// check if transaction in transactions array
-				JsonArray transactions = walletInfo.getJsonArray("transactions");
+			mongoClient.find(walletsCollection, query, result -> {
+				JsonObject wallet = result.result().get(0).getJsonArray("wallets").getJsonObject(0);
+				JsonArray transactions = wallet.getJsonArray("transactions");
+				JsonArray accounts = wallet.getJsonArray("accounts");
+				// check accounts
+				List<Object> res = accounts.stream()
+						.filter(account -> ((JsonObject) account).getString("name").equals("created"))
+						.collect(Collectors.toList());
+				JsonObject accountCreated = (JsonObject) res.get(0);
+				assertEquals(10, (int) accountCreated.getInteger("totalBalance"));
+				assertEquals(1, (int) accountCreated.getInteger("lastData"));
 				assertEquals(2, transactions.size());
 				assertions.countDown();
 			});

@@ -71,7 +71,7 @@ public class LoggerFactory {
 				logLevel = Level.OFF;
 				break;
 			default:
-				logLevel = Level.ALL;
+				logLevel = Level.OFF;
 				break;
 			}
 		} else {
