@@ -238,7 +238,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					newWallet.put("identity", walletIdentity);
 					newWallet.put("created", new Date().getTime());
 					newWallet.put("balance", 0);
-					newWallet.put("transactions", new JsonArray());
+					// TODO - remove
+//					newWallet.put("transactions", new JsonArray());
 					newWallet.put("status", "active");
 					newWallet.put("accounts", accountsDefault.copy());
 
@@ -494,8 +495,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 
 			// store transaction
-			JsonArray transactions = walletInfo.getJsonArray("transactions");
-			transactions.add(transaction);
+			// TODO - transaction added to other collection
+//			JsonArray transactions = walletInfo.getJsonArray("transactions");
+//			transactions.add(transaction);
 			// update bonus-credit
 			walletInfo.put("bonus-credit", bonusCredit + transactionValue);
 			if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
@@ -522,7 +524,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				balance.put("value", walletInfo.getInteger("balance"));
 				balance.put("attribute", "balance");
 				updateBody.add(balance);
-				// transaction
+				// TODO - get last transaction
 				JsonArray currentTransactions = walletInfo.getJsonArray("transactions");
 				JsonObject transactionMsg = new JsonObject();
 				transactionMsg.put("value", currentTransactions.getJsonObject(currentTransactions.size() - 1));
@@ -574,6 +576,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private JsonObject updateAccounts(JsonObject wallet, boolean publicWallet) {
 		JsonArray accounts = wallet.getJsonArray("accounts");
+		// TODO - get from transactions collection
 		JsonArray transactions = wallet.getJsonArray("transactions");
 		if (transactions.size() == 1) {
 			return wallet;
@@ -753,8 +756,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 						logger.debug(logMessage + "transferToPublicWallet(): current balance " + currentBalance);
 						if (transactionValue > 0) {
-							JsonArray transactions = wallet.getJsonArray("transactions");
-							transactions.add(transaction);
+							// TODO - transactions stored in other collection
+//							JsonArray transactions = wallet.getJsonArray("transactions");
+//							transactions.add(transaction);
 							// update accounts
 							JsonObject withCreated = checkCreated(wallet);
 							JsonObject walletAux = updateAccounts(withCreated, true);
@@ -836,7 +840,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			if (account.getString("name").equals("created"))
 				createdExists = true;
 		}
-		
+
 		if (!createdExists) {
 			System.out.println("UPDATING WITH CREATED");
 			// build "created" account
@@ -852,7 +856,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			accounts.add(created.toJsonObject());
 		}
 		return wallet;
-		
+
 	}
 
 	private JsonObject sumAccounts(JsonObject wallet) {
@@ -862,7 +866,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		for (Object object : accounts) {
 			JsonObject account = (JsonObject) object;
 			sum += account.getInteger("totalBalance");
-	
+
 		}
 		wallet.put("balance", sum);
 		return wallet;
@@ -1039,7 +1043,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			JsonObject rep = new JsonObject(reply2.result().body().toString());
 
-			
 			// check if 200
 			int code = rep.getJsonObject("body").getInteger("code");
 			if (code == 200) {
@@ -1080,6 +1083,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("created", new Date().getTime());
 						newWallet.put("balance", bal);
 						newWallet.put("bonus-credit", bal);
+						// TODO - remove
 						newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						newWallet.put("ranking", 0);
@@ -1187,7 +1191,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					}
 				});
 			} else {
-				logger.debug("code != 200" );
+				logger.debug("code != 200");
 			}
 		});
 
@@ -1286,6 +1290,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// default value
 		logger.debug("[WalletManager] buildAccounts");
 		// for each activity
+		// TODO - get from transactions collection
 		JsonArray transactions = wallet.getJsonArray("transactions");
 		wallet.put("accounts", accountsDefault.copy());
 		JsonArray accounts = wallet.getJsonArray("accounts");
@@ -1479,6 +1484,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	}
 
 	private void limitAux(JsonObject wallet) {
+		// TODO - get from transactions collection
 		JsonArray transactions = wallet.getJsonArray("transactions");
 		if (transactions.size() > onReadMaxTransactions) {
 			final int size = transactions.size();
