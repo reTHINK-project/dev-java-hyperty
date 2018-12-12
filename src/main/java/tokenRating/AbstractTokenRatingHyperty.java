@@ -69,8 +69,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 
 				// create transaction object
 				JsonObject transaction = new JsonObject();
-				// TODO: add this on walletmanager
-				//transaction.put("recipient", asyncResult.result());
 				transaction.put("source", source);
 				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 				transaction.put("value", numTokens);

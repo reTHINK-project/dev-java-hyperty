@@ -470,6 +470,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				JsonObject walletInfo = asyncResult.result();
 				JsonObject transaction = body.getJsonObject("value");
 				transaction.put("recipient", walletInfo.getString("_id"));
+				transaction.put("wallet2bGranted", walletInfo.getString("wallet2bGranted"));
 				validateTransaction(transaction, walletInfo.getString("address"));
 			} 
 		});
@@ -506,6 +507,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				profile.put(smartMeterEnabled, true);
 				walletInfo.put("profile", profile);
 			}
+			
+			// TODO insert transaction to transactionsCollection	
+			mongoClient.insert(transactionsCollection, transaction, insertionResult -> {
+				if (insertionResult.succeeded()) {
+					logger.debug(logMessage + "new transaction added to collection");
+				} else {
+					logger.debug(logMessage + "error on new transaction");
+				}
+			});
 
 			Account account = getAccount(transaction.getString("source"), walletInfo.getJsonObject("accounts"));
 			account = updateAccountTotals(account, transaction);
@@ -1685,7 +1695,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		send(this.url, msg, reply -> {
 
 			JsonObject walletresult = new JsonObject().put("address", reply.result().body().getString("address"))
-					.put("_id",(String) reply.result().body().getValue("_id"));
+														.put("_id",(String) reply.result().body().getValue("_id"))
+														.put("wallet2bGranted", reply.result().body().getString("wallet2bGranted"));
 			logger.debug("sending reply from getwalletInfo" + walletresult.toString());
 			walletInfo.complete(walletresult);
 		});
