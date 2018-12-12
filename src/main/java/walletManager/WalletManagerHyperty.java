@@ -479,7 +479,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// reporter.setReadHandler(readHandler);
 	}
 
-	Future<JsonObject> transferToPrivateWallet(String walletAddress, JsonObject transaction, Future<Void> future) {
+	Future<JsonObject> transferToPrivateWallet(String walletAddress, JsonObject transaction) {
 		logger.debug(logMessage + "transferToPrivateWallet() \n " + transaction.toString());
 		// get wallet document
 		Future<JsonObject> walletToReturn = Future.future();
@@ -515,8 +515,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			// update accounts
 //			updateAccounts(walletInfo, false);
+			final JsonObject walletResult =  walletInfo;
 
-			JsonObject document = new JsonObject(walletInfo.toString());
+			JsonObject document = new JsonObject(walletResult.toString());
 
 			JsonObject query = new JsonObject().put("address", walletAddress);
 			mongoClient.findOneAndReplace(walletsCollection, query, document, id -> {
@@ -530,29 +531,29 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				JsonArray updateBody = new JsonArray();
 				// balance
 				JsonObject balance = new JsonObject();
-				balance.put("value", walletInfo.getInteger("balance"));
+				balance.put("value", walletResult.getInteger("balance"));
 				balance.put("attribute", "balance");
 				updateBody.add(balance);
 				// TODO - get last transaction
-				JsonArray currentTransactions = walletInfo.getJsonArray("transactions");
+				JsonArray currentTransactions = walletResult.getJsonArray("transactions");
 				JsonObject transactionMsg = new JsonObject();
 				transactionMsg.put("value", currentTransactions.getJsonObject(currentTransactions.size() - 1));
 				transactionMsg.put("attribute", "transaction");
 				updateBody.add(transactionMsg);
 				// accounts
-				JsonArray accounts = walletInfo.getJsonArray("accounts");
+				JsonArray accounts = walletResult.getJsonArray("accounts");
 				JsonObject accountsMsg = new JsonObject();
 				accountsMsg.put("value", accounts);
 				accountsMsg.put("attribute", "accounts");
 				updateBody.add(accountsMsg);
 				// ranking
 				JsonObject ranking = new JsonObject();
-				ranking.put("value", walletInfo.getInteger("ranking"));
+				ranking.put("value", walletResult.getInteger("ranking"));
 				ranking.put("attribute", "rankings");
 				updateBody.add(ranking);
 				// bonus-credit
 				JsonObject bonusCreditMsg = new JsonObject();
-				bonusCreditMsg.put("value", walletInfo.getInteger("bonus-credit"));
+				bonusCreditMsg.put("value", walletResult.getInteger("bonus-credit"));
 				bonusCreditMsg.put("attribute", "bonus-credit");
 				updateBody.add(bonusCreditMsg);
 				updateMessage.put("body", updateBody);
@@ -1029,13 +1030,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					}
 
 				}
-				Future<JsonObject> updatedTransaction = transferToPrivateWallet(walletAddress, transaction, transferFuture);
+				Future<JsonObject> updatedTransaction = transferToPrivateWallet(walletAddress, transaction);
 
 				updatedTransaction.setHandler(asyncResult -> {
 					String publicWalletAddress = wallet.getString(causeWalletAddress);
 					if (publicWalletAddress != null) {
 						// update wallet2bGranted balance
-						transferToPublicWallet(publicWalletAddress, updatedTransaction);
+						transferToPublicWallet(publicWalletAddress, asyncResult.result());
 					}
 	
 				});

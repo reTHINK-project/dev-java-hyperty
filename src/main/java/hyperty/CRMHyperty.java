@@ -410,7 +410,6 @@ public class CRMHyperty extends AbstractHyperty {
 				});
 			}
 		});
-
 	}
 
 	/**
