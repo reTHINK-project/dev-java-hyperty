@@ -1196,7 +1196,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								.getJsonObject("info");
 						if (info.containsKey("balance")) {
 							bal = info.getInteger("balance");
-
+							//TODO: add _id to transaction on recipient
 							newTransaction.put("recipient", address);
 							newTransaction.put("source", "created");
 							newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
@@ -1206,7 +1206,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							JsonObject data = new JsonObject();
 							data.put("created", "true");
 							newTransaction.put("data", data);
-							transactions.add(newTransaction);
+							//transactions.add(newTransaction);
 						}
 						// build wallet document
 						JsonObject newWallet = new JsonObject();
@@ -1217,7 +1217,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("balance", bal);
 						newWallet.put("bonus-credit", bal);
 						// TODO - remove
-						newWallet.put("transactions", transactions);
+						//newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");
 						newWallet.put("ranking", 0);
 						newWallet.put("accounts", accountsDefault.copy());
@@ -1229,7 +1229,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						if (profileInfo != null) {
 							causeID = profileInfo.getString("cause");
 							newWallet.put("profile", profileInfo);
-							newWallet.put(causeWalletAddress, getPublicWalletAddress(causeID));
+							String wallet2bGranted = getPublicWalletAddress(causeID);
+							newWallet.put(causeWalletAddress, wallet2bGranted);
+							newTransaction.put(causeWalletAddress, wallet2bGranted);
 						} else {
 							JsonObject response = new JsonObject().put("code", 400).put("reason",
 									"you must provide user info (i.e. cause)");
@@ -1240,6 +1242,25 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						JsonObject document = new JsonObject(newWallet.toString());
 						mongoClient.save(walletsCollection, document, id -> {
 							logger.debug("[WalletManager] new wallet with ID:" + id);
+							if (id.succeeded()) {
+								newTransaction.put("recipient", id.result());
+								transactions.add(newTransaction);
+								newWallet.put("transactions", transactions);
+								
+								mongoClient.findOneAndReplace(walletsCollection, new JsonObject().put("_id", id.result()), new JsonObject(newWallet.toString()), resultHandler -> {
+									if (resultHandler.succeeded()) {
+										
+										mongoClient.insert(transactionsCollection, newTransaction, insertionResult -> {
+											if (insertionResult.succeeded()) {
+												logger.debug(logMessage + "new transaction added to collection");
+											} else {
+												logger.debug(logMessage + "error on new transaction");
+											}
+										});
+									}
+								});
+								
+							}					
 							inviteObservers(msg.getJsonObject("identity"), address, requestsHandler(), readHandler());
 						});
 						JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
