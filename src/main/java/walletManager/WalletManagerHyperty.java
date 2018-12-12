@@ -872,7 +872,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							account = updateAccountLasts(account, wallet.getJsonArray("transactions"), transaction);
 
 							// update wallet
-							wallet = updateLastTransactions(wallet, transaction);
+//							wallet = updateLastTransactions(wallet, transaction);
 							wallet = updateAccounts(wallet, account);
 							wallet = sumAccounts(wallet);
 						} else {
