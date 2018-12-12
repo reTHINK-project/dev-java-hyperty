@@ -489,10 +489,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		// reporter.setReadHandler(readHandler);
 	}
 
-	Future<JsonObject> transferToPrivateWallet(String walletAddress, JsonObject transaction) {
+	Future<Void> transferToPrivateWallet(String walletAddress, JsonObject transaction) {
 		logger.debug(logMessage + "transferToPrivateWallet() \n " + transaction.toString());
 		// get wallet document
-		Future<JsonObject> walletToReturn = Future.future();
+		Future<Void> walletToReturn = Future.future();
 		
 		mongoClient.find(walletsCollection, new JsonObject().put("address", walletAddress), res -> {
 			JsonObject walletInfo = res.result().get(0);
@@ -1059,13 +1059,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					}
 
 				}
-				Future<JsonObject> updatedTransaction = transferToPrivateWallet(walletAddress, transaction);
+				Future<Void> updatedTransaction = transferToPrivateWallet(walletAddress, transaction);
 
 				updatedTransaction.setHandler(asyncResult -> {
 					String publicWalletAddress = wallet.getString(causeWalletAddress);
 					if (publicWalletAddress != null) {
 						// update wallet2bGranted balance
-						transferToPublicWallet(publicWalletAddress, asyncResult.result());
+						transferToPublicWallet(publicWalletAddress, transaction);
 					}
 	
 				});
