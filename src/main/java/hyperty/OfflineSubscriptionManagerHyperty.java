@@ -141,7 +141,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 */
 	private void statusUpdate(JsonObject msg) {
-		logger.debug(logMessage + "statusUpdate() " + msg.toString());
+		logger.debug(logMessage + "statusUpdate()  new msg, msg too long");
 		if (msg.getString("status").equals("online")) {
 
 			JsonObject query = new JsonObject().put("user", msg.getString("resource"));
@@ -219,11 +219,12 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	 * @param subscribeMsg
 	 */
 	private void processPendingSubscription(JsonObject subscribeMsg) {
-		logger.debug(logMessage + "processPendingSubscription(): " + subscribeMsg.toString());
+		
 		// Subscribe message is forwarded to subscribeMsg.to and in case a 200 Ok
 		// response is received it executes the subscribeMsg is removed from
 		// pendingSubscription collection.
-		if (subscribeMsg.containsKey("to")) {
+		if (subscribeMsg != null && subscribeMsg.containsKey("to")) {
+			logger.debug(logMessage + "processPendingSubscription(): " + subscribeMsg.toString());
 			String forwardAddress = subscribeMsg.getString("to");
 			send(forwardAddress, subscribeMsg, reply -> {
 				JsonObject body = reply.result().body().getJsonObject("body");
@@ -232,7 +233,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 					removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
 				}
 			});
-		}
+		} 
 	}
 
 	/**

@@ -517,21 +517,26 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				}
 			});
 
-			Account account = getAccount(transaction.getString("source"), walletInfo.getJsonObject("accounts"));
+			logger.debug(logMessage +  "transferToPrivateWallet - 1");
+			Account account = getAccount(transaction.getString("source"), walletInfo);
+			logger.debug(logMessage +  "transferToPrivateWallet - 2");
 			account = updateAccountTotals(account, transaction);
-
+			logger.debug(logMessage +  "transferToPrivateWallet - 3");
 			account = updateAccountLasts(account, walletInfo.getJsonArray("transactions"), transaction);
-
+			logger.debug(logMessage +  "transferToPrivateWallet - 4");
 			// update wallet
 			walletInfo = updateLastTransactions(walletInfo, transaction);
-
+			logger.debug(logMessage +  "transferToPrivateWallet - 5");
 			// update bonus-credit
 			walletInfo.put("bonus-credit", bonusCredit + transactionValue);
 			if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
+				logger.debug(logMessage +  "transferToPrivateWallet - 5.1");
 				walletInfo = updateAccounts(walletInfo, account);
+				logger.debug(logMessage +  "transferToPrivateWallet - 5.2");
 				walletInfo = sumAccounts(walletInfo);
+				logger.debug(logMessage +  "transferToPrivateWallet - 5.3");
 				}
-
+			logger.debug(logMessage +  "transferToPrivateWallet - 6");
 			// update accounts
 //			updateAccounts(walletInfo, false);
 			final JsonObject walletResult =  walletInfo;
@@ -690,7 +695,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		for (Object account : accounts) {
 			if (((JsonObject)account).getString("name").equals(newAccount.name)) {
-				accAux.add(newAccount);
+				accAux.add(newAccount.toJsonObject());
 			} else {
 				accAux.add((JsonObject)account);
 			}
@@ -884,17 +889,22 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 						logger.debug(logMessage + "transferToPublicWallet(): current balance " + currentBalance);
 						if (transactionValue > 0) {
+							logger.debug(logMessage +  "transferToPublicWallet - 1");
 							// update accounts
 							JsonObject withCreated = checkCreated(wallet);
-							Account account = getAccount(transaction.getString("source"), withCreated.getJsonObject("accounts"));
+							logger.debug(logMessage +  "transferToPublicWallet - 2");
+							Account account = getAccount(transaction.getString("source"), withCreated);
+							logger.debug(logMessage +  "transferToPublicWallet - 3");
 							account = updateAccountTotals(account, transaction);
-
+							logger.debug(logMessage +  "transferToPublicWallet - 4");
 							account = updateAccountLasts(account, wallet.getJsonArray("transactions"), transaction);
-
+							logger.debug(logMessage +  "transferToPublicWallet - 5");
 							// update wallet
 //							wallet = updateLastTransactions(wallet, transaction);
 							wallet = updateAccounts(wallet, account);
+							logger.debug(logMessage +  "transferToPublicWallet - 6");
 							wallet = sumAccounts(wallet);
+							logger.debug(logMessage +  "transferToPublicWallet - 7");
 						} else {
 							wallet.put("balance", currentBalance);
 						}
@@ -909,7 +919,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					}
 				}
 
-				logger.debug(logMessage + "updating with: wallet" + result);
+				logger.debug(logMessage + "updating with: wallet  pubwallet toolong"  );
 
 				mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
 					logger.debug("[WalletManager] Transaction added to public wallet");
