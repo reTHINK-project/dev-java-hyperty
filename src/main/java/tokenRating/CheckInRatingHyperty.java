@@ -305,7 +305,6 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 							valid = false;
 						}
 					}
-					// TODO - hour ?
 				}
 				if (valid) {
 					findRates.complete(bonusInfo.getInteger("cost") * -1);

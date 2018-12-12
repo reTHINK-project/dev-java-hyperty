@@ -52,6 +52,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	public static final String publicWalletGuid = "user-guid://public-wallets";
 
 	private static final Integer MaxNumLastTransactions = 100;
+	
+	private static final String transactionsCollection = "transactions";
 
 	@Override
 	public void start() {
@@ -185,8 +187,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					String address = wallet.getString("address");
 					String identity = wallet.getString("identity");
 					JsonArray externalFeeds = wallet.getJsonArray("externalFeeds");
-					// TODO - For each public wallet, a new device and a new sensor is created at
-					// the Smart IoT Stub
 					JsonObject walletIdentity = new JsonObject().put("userProfile",
 							new JsonObject().put("guid", identity));
 
@@ -240,8 +240,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					newWallet.put("identity", walletIdentity);
 					newWallet.put("created", new Date().getTime());
 					newWallet.put("balance", 0);
-					// TODO - remove
-//					newWallet.put("transactions", new JsonArray());
+					// TODO - removed transactions from priv wallet
+					newWallet.put("transactions", new JsonArray());
 					newWallet.put("status", "active");
 					newWallet.put("accounts", accountsDefault.copy());
 
@@ -462,10 +462,19 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		logger.debug(logMessage + "handleTransfer()");
 		JsonObject body = msg.getJsonObject("body");
-		String walletAddress = body.getString("resource").split("wallet/")[1];
-		JsonObject transaction = body.getJsonObject("value");
-
-		validateTransaction(transaction, walletAddress);
+		String userID = body.getString("resource");
+		Future<JsonObject> walletAddressFut = getWalletInfo(userID);
+		walletAddressFut.setHandler(asyncResult -> {
+			
+			if (asyncResult.succeeded()) {
+				JsonObject walletInfo = asyncResult.result();
+				JsonObject transaction = body.getJsonObject("value");
+				transaction.put("recipient", walletInfo.getString("_id"));
+				validateTransaction(transaction, walletInfo.getString("address"));
+			} 
+		});
+		
+		
 	}
 
 	public void inviteObservers(JsonObject identity, String dataObjectUrl,
@@ -1656,6 +1665,33 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		}
 
 		return "";
+	}
+	
+	Future<JsonObject> getWalletInfo(String userId) {
+		logger.debug("Getting WalletAddress Info:" + userId);
+		// send message to Wallet Manager address
+		/*
+		 * type: read, from: <rating address>, body: { resource: 'user/<userId>'}
+		 */
+		// build message and convert to JSON string
+		JsonObject msg = new JsonObject();
+		msg.put("type", "read");
+		msg.put("from", this.url);
+		msg.put("body", new JsonObject().put("resource", "user").put("value", userId));
+		msg.put("identity", new JsonObject());
+
+		Future<JsonObject> walletInfo = Future.future();
+
+		send(this.url, msg, reply -> {
+
+			JsonObject walletresult = new JsonObject().put("address", reply.result().body().getString("address"))
+					.put("_id",(String) reply.result().body().getValue("_id"));
+			logger.debug("sending reply from getwalletInfo" + walletresult.toString());
+			walletInfo.complete(walletresult);
+		});
+
+		return walletInfo;
+
 	}
 
 }

@@ -494,7 +494,6 @@ class ElearningTest {
 			// checkWallet(query, assertWallet);
 			// }
 
-			// TODO - assertion
 			JsonObject query = new JsonObject().put("address", "public-wallets");
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0).getJsonArray("wallets").getJsonObject(0);
