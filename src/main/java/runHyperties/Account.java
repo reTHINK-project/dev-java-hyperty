@@ -1,5 +1,6 @@
 package runHyperties;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 public class Account {
@@ -34,6 +35,8 @@ public class Account {
 	public String lastPeriod;
 	public String description;
 
+	public JsonArray lastTransactions;
+
 	public Account(String name, String dataUnit) {
 		this.name = name;
 		this.totalBalance = 0;
@@ -43,6 +46,7 @@ public class Account {
 		this.dataUnit = dataUnit;
 		this.lastPeriod = name.equals("energy-saving") ? "month" : "week";
 		this.description = "";
+		this.lastTransactions = new JsonArray();
 	}
 
 	public JsonObject toJsonObject() {
