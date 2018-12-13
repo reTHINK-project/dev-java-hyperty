@@ -54,6 +54,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private static final Integer MaxNumLastTransactions = 100;
 	
 	private static final String transactionsCollection = "transactions";
+	
+	private static final int initialBalance = 50;
 
 	@Override
 	public void start() {
@@ -533,7 +535,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				logger.debug(logMessage +  "transferToPrivateWallet - 5.1");
 				walletInfo = updateAccounts(walletInfo, account);
 				logger.debug(logMessage +  "transferToPrivateWallet - 5.2");
-				walletInfo = sumAccounts(walletInfo);
+				walletInfo = sumAccounts(walletInfo, true);
 				logger.debug(logMessage +  "transferToPrivateWallet - 5.3");
 				}
 			logger.debug(logMessage +  "transferToPrivateWallet - 6");
@@ -900,10 +902,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							account = updateAccountLasts(account, wallet.getJsonArray("transactions"), transaction);
 							logger.debug(logMessage +  "transferToPublicWallet - 5");
 							// update wallet
-//							wallet = updateLastTransactions(wallet, transaction);
+							wallet = updateLastTransactions(wallet, transaction);
 							wallet = updateAccounts(wallet, account);
 							logger.debug(logMessage +  "transferToPublicWallet - 6");
-							wallet = sumAccounts(wallet);
+							wallet = sumAccounts(wallet, false);
 							logger.debug(logMessage +  "transferToPublicWallet - 7");
 						} else {
 							wallet.put("balance", currentBalance);
@@ -999,7 +1001,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
-	private JsonObject sumAccounts(JsonObject wallet) {
+	private JsonObject sumAccounts(JsonObject wallet, boolean isPrivate) {
 
 		JsonArray accounts = wallet.getJsonArray("accounts");
 		int sum = 0;
@@ -1007,6 +1009,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			JsonObject account = (JsonObject) object;
 			sum += account.getInteger("totalBalance");
 
+		}
+		if (isPrivate) {
+			sum += initialBalance;
 		}
 		wallet.put("balance", sum);
 		return wallet;
@@ -1199,18 +1204,18 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						logger.debug("no wallet yet, creating");
 
 						String address = generateWalletAddressv2(msg.getJsonObject("identity"));
-						int bal = 0;
+						int bal = initialBalance;
 						JsonArray transactions = new JsonArray();
 						JsonObject newTransaction = new JsonObject();
 						JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile")
 								.getJsonObject("info");
 						if (info.containsKey("balance")) {
-							bal = info.getInteger("balance");
+							//bal = info.getInteger("balance");
 							//TODO: add _id to transaction on recipient
 							newTransaction.put("recipient", address);
 							newTransaction.put("source", "created");
 							newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-							newTransaction.put("value", bal);
+							newTransaction.put("value", initialBalance);
 							newTransaction.put("description", "valid");
 							newTransaction.put("nonce", 1);
 							JsonObject data = new JsonObject();
@@ -1224,8 +1229,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						newWallet.put("address", address);
 						newWallet.put("identity", identity);
 						newWallet.put("created", new Date().getTime());
-						newWallet.put("balance", bal);
-						newWallet.put("bonus-credit", bal);
+						newWallet.put("balance", initialBalance);
+						newWallet.put("bonus-credit", initialBalance);
 						// TODO - remove
 						//newWallet.put("transactions", transactions);
 						newWallet.put("status", "active");

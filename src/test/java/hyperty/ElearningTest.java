@@ -298,11 +298,11 @@ class ElearningTest {
 
 	}*/
 
-	int numWallets = 200;
-	int numWalletsLoop = 2;
+	int numWallets = 10;
+	int numWalletsLoop = 1;
 	int created = 0;
 	int resumed = 0;
-	int numQuizzes = 50;
+	int numQuizzes = 91;
 	int transactions = 0;
 
 	@Test
@@ -441,7 +441,7 @@ class ElearningTest {
 
 		// create wallets
 		for (int i = n; i < n + numWallets; i++) {
-			String userID = "user-guid://sharing-cities-dsm/" + i;
+			String userID = "user-guid://sharing-cities-dsm/new8" + i;
 			System.out.println("[ElearningTest.createMany] creating " + userID);
 
 			createWallet(vertx, userID, null);
@@ -452,7 +452,7 @@ class ElearningTest {
 			resumed = 0;
 			long startTimeResume = System.currentTimeMillis();
 			for (int i = n; i < numWallets + n; i++) {
-				String userID = "user-guid://sharing-cities-dsm/" + i;
+				String userID = "user-guid://sharing-cities-dsm/new8" + i;
 				createWallet(vertx, userID, res -> {
 					++resumed;
 					JsonObject newMsg = new JsonObject();
