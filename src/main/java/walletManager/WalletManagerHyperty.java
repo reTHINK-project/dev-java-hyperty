@@ -49,6 +49,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	// public wallets
 	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";
+	public static final String publicWalletsAddress = "public-wallets";
 
 	public static final String publicWalletGuid = "user-guid://public-wallets";
 
@@ -144,25 +145,49 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			 public void run(){
 				logger.info("updateAccountsScheduler started ..."+new Date());
 
-			// get wallets document
-			// check if public wallets already exist
-			JsonObject query = new JsonObject().put("identity",
-					new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
-			mongoClient.find(walletsCollection, query, res -> {
+			// get wallets documents
+			mongoClient.find(walletsCollection, new JsonObject(), res -> {
 				JsonObject result = res.result().get(0);
-				JsonArray wallets = result.getJsonArray("wallets");
+				List<JsonObject> wallets = res.result();
 
 			for (Object wallet : wallets) {
-				JsonArray accounts = ((JsonObject) wallet).getJsonArray("accounts");
-				for ( Object account : accounts) {
-					account = updateAccountLastTransactions(Account.toAccount((JsonObject) account));
-				}
+
+				if (!((JsonObject) wallet).getString("address").equals(publicWalletsAddress) ) {
+					JsonArray accounts = ((JsonObject) wallet).getJsonArray("accounts");
+					for ( Object account : accounts) {
+						account = updateAccountLastTransactions(Account.toAccount((JsonObject) account));
+					}
+					String guid = ((JsonObject) wallet).getJsonObject("identity").getJsonObject("userProfile").getString("guid");
+					JsonObject query = new JsonObject().put("identity",
+					new JsonObject().put("userProfile", new JsonObject().put("guid", guid)));
+					mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
+						logger.info("[updateAccountsScheduler] updated for "+guid);
+		
+					});
+			
+				}else {
+					JsonArray pWallets = ((JsonObject) wallet).getJsonArray("wallets");
+					for (Object pWallet : pWallets) {
+						JsonArray accounts = ((JsonObject) pWallet).getJsonArray("accounts");
+						for ( Object account : accounts) {
+							account = updateAccountLastTransactions(Account.toAccount((JsonObject) account));
+						}
+						String guid = ((JsonObject) pWallet).getJsonObject("identity").getJsonObject("userProfile").getString("guid");
+						JsonObject query = new JsonObject().put("identity",
+						new JsonObject().put("userProfile", new JsonObject().put("guid", guid)));
+						mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
+							logger.info("[updateAccountsScheduler] updated for "+guid);
+			
+						});
+	
+					}
+
+				} 
+
 			}
+			logger.info("[updateAccountsScheduler] finished ..."+new Date());
 
-			mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
-				logger.info("updateAccountsScheduler started ..."+new Date());
 
-			});
 
 
 
