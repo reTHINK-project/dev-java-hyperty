@@ -866,7 +866,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			mongoClient.find(transactionsCollection, new JsonObject().put("_id", id), res -> {
 				JsonObject transaction = res.result().get(0);
 				if (DateUtilsHelper.isDateInCurrentWeek(DateUtilsHelper.stringToDate(transaction.getString("date")))) {
-					lastWeek.add(transaction);
+					lastWeek.add(transaction.getString("_id"));
 				}
 			});
 		}
@@ -880,7 +880,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				// res.result().get(0) tem o JsonObject com a transaction
 				JsonObject transaction = res.result().get(0);
 				if (DateUtilsHelper.isDateInCurrentMonth(DateUtilsHelper.stringToDate(transaction.getString("date")))) {
-					lastMonth.add(transaction);
+					lastMonth.add(transaction.getString("_id"));
 				}
 			});
 		}
