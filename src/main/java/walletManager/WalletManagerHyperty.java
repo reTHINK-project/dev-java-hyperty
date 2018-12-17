@@ -59,8 +59,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private static final int initialBalance = 50;
 
-	private static final int updateAccountsMinutes = 0;
-	private static final int updateAccountsHour = 2;
+	private static final int updateAccountsMinutes = 03;
+	private static final int updateAccountsHour = 15;
 
 	@Override
 	public void start() {
@@ -91,7 +91,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			String publicWalletAddress = getPublicWalletAddress(walletID);
 			Future<JsonObject> publicWallet = getPublicWallet(publicWalletAddress);
 			publicWallet.setHandler(asyncResult -> {
-				message.reply(new JsonObject().put("wallet", limitTransactions(publicWallet.result())));
+				//message.reply(new JsonObject().put("wallet", limitTransactions(publicWallet.result())));
+				message.reply(new JsonObject().put("wallet", publicWallet.result()));
+				
 			});
 		});
 
@@ -716,7 +718,11 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	// Update total values of Account with new transaction
 
 	private Account updateAccount(Account account, JsonObject transaction) {
+		logger.debug("UpdateACCOUNT acc:" + account.toJsonObject().toString());
+		logger.debug("UpdateACCOUNT tran:" + transaction.toString());
 		int value = transaction.getInteger("value");
+		
+		
 		account.totalBalance += value;
 		account.lastBalance += value;
 		account.lastTransactions.add(transaction.getString("_id"));
@@ -731,6 +737,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			account.lastData += transaction.getJsonObject("data").getInteger("distance");
 		}
 
+		logger.debug("UpdateACCOUNT:" + account.toString());
 		return account;
 	}
 
@@ -961,15 +968,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							 * "transferToPublicWallet - 2");
 							 */
 							Account account = getAccount(transaction.getString("source"), wallet);
-							logger.debug(logMessage + "transferToPublicWallet - 3");
+							logger.debug(logMessage + "transferToPublicWallet - 3" + account.toJsonObject().toString());
 							account = updateAccount(account, transaction);
-							logger.debug(logMessage + "transferToPublicWallet - 5");
+							logger.debug(logMessage + "transferToPublicWallet - 5"+ account.toJsonObject().toString());
 							// update wallet
 							// wallet = updateLastTransactions(wallet, transaction);
 							wallet = updateWalletAccounts(wallet, account);
-							logger.debug(logMessage + "transferToPublicWallet - 6");
+							logger.debug(logMessage + "transferToPublicWallet - 6" + wallet.toString());
 							wallet = sumAccounts(wallet, false);
-							logger.debug(logMessage + "transferToPublicWallet - 7");
+							logger.debug(logMessage + "transferToPublicWallet - 7" + wallet.toString());
 						} else {
 							wallet.put("balance", currentBalance);
 						}
@@ -1394,8 +1401,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						 * logger.debug("[WalletManager] accounts added to wallet"); }); // update
 						 * public wallet updatePublicWalletAccountsNewUser(wallet, newAccounts); }
 						 */
-						JsonObject response = new JsonObject().put("code", 200).put("wallet",
-								limitTransactions(wallet));
+						
+						//JsonObject response = new JsonObject().put("code", 200).put("wallet", limitTransactions(wallet));
+						JsonObject response = new JsonObject().put("code", 200).put("wallet", wallet);
+						
 						// check its status
 						switch (wallet.getString("status")) {
 						case "active":

@@ -58,7 +58,8 @@ public class Account {
 		toJson.put("lastData", lastData);
 		toJson.put("dataUnit", dataUnit);
 		toJson.put("lastPeriod", lastPeriod);
-		toJson.put("description ", description);
+		toJson.put("description", description);
+		toJson.put("lastTransactions", lastTransactions);
 		return toJson;
 	}
 
@@ -70,6 +71,7 @@ public class Account {
 		account.lastData = json.getInteger("lastData");
 		account.lastPeriod = json.getString("lastPeriod");
 		account.description = json.getString("description");
+		account.lastTransactions = json.getJsonArray("lastTransactions");
 		return account;
 	}
 
