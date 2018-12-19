@@ -155,18 +155,20 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			for (Object wallet : wallets) {
 
 				if (!((JsonObject) wallet).getString("address").equals(publicWalletsAddress) ) {
+					
 					JsonArray accounts = ((JsonObject) wallet).getJsonArray("accounts");
 					for ( Object account : accounts) {
 						account = updateAccountLastTransactions(Account.toAccount((JsonObject) account));
 					}
-					String guid = ((JsonObject) wallet).getJsonObject("identity").getJsonObject("userProfile").getString("guid");
-					JsonObject query = new JsonObject().put("identity",
-					new JsonObject().put("userProfile", new JsonObject().put("guid", guid)));
-					mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
-						logger.info("[updateAccountsScheduler] updated for "+guid);
+					String walletID = ((JsonObject) wallet).getString("_id");
+					JsonObject query = new JsonObject().put("_id", walletID);
+					
+					mongoClient.findOneAndReplace(walletsCollection, query, (JsonObject) wallet, id -> {
+						logger.info("[updateAccountsScheduler] updated for "+walletID);
 		
 					});
 			
+				
 				}else {
 					JsonArray pWallets = ((JsonObject) wallet).getJsonArray("wallets");
 					for (Object pWallet : pWallets) {
