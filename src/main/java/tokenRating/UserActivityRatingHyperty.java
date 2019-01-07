@@ -263,9 +263,8 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		default:
 			break;
 		}
-		int doubleTokens = tokens * 2;
-		logger.debug(logMessage + "getTokensForDistance(): " + activity + "/" + distance + " - " + doubleTokens);
-		return doubleTokens;
+		logger.debug(logMessage + "getTokensForDistance(): " + activity + "/" + distance + " - " + tokens);
+		return tokens;
 	}
 
 	@Override
