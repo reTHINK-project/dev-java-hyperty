@@ -59,8 +59,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private static final int initialBalance = 50;
 
-	private static final int updateAccountsMinutes = 55;
-	private static final int updateAccountsHour = 9;
+	private static final int updateAccountsMinutes = 00;
+	private static final int updateAccountsHour = 12;
 
 	@Override
 	public void start() {
@@ -186,7 +186,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 
 			 }
-		},startScheduler, 24*60*60*1000);
+		},startScheduler, 15*60*1000);
 	}
 
 	private void reCreateDOs() {
