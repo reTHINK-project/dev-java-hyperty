@@ -59,8 +59,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private static final int initialBalance = 50;
 
-	private static final int updateAccountsMinutes = 03;
-	private static final int updateAccountsHour = 15;
+	private static final int updateAccountsMinutes = 55;
+	private static final int updateAccountsHour = 9;
 
 	@Override
 	public void start() {
@@ -154,8 +154,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			for (Object wallet : wallets) {
 				JsonObject currentWallet = (JsonObject) wallet;
-				if (!(currentWallet.equals(publicWalletsAddress))) {
-					
+				String walletAddress = currentWallet.getString("address");
+				if (!(walletAddress.equals(publicWalletsAddress))) {
 					JsonArray accounts = ((JsonObject) wallet).getJsonArray("accounts");
 					for ( Object account : accounts) {
 						updateAccountLastTransactions(Account.toAccount((JsonObject) account), currentWallet);
@@ -163,19 +163,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				
 				
 				}else {
-					JsonArray pWallets = ((JsonObject) wallet).getJsonArray("wallets");
+					JsonObject pubDocWallet = (JsonObject) wallet;
+					JsonArray pWallets = pubDocWallet.getJsonArray("wallets");
 					for (Object pWallet : pWallets) {
 						JsonArray accounts = ((JsonObject) pWallet).getJsonArray("accounts");
 						for ( Object account : accounts) {
-							updateAccountLastTransactions(Account.toAccount((JsonObject) account), (JsonObject)pWallet);
+							updateAccountLastTransactions(Account.toAccount((JsonObject) account), pubDocWallet);
 						}
-						String guid = ((JsonObject) pWallet).getJsonObject("identity").getJsonObject("userProfile").getString("guid");
-						JsonObject query = new JsonObject().put("identity",
-						new JsonObject().put("userProfile", new JsonObject().put("guid", guid)));
-						mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
-							logger.info("[updateAccountsScheduler] updated for "+guid);
-			
-						});
 	
 					}
 
@@ -882,17 +876,19 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						}
 
 					}
-					account.lastBalance = lastBalance;
-					account.lastData=lastData;
-					account.lastTransactions = lastMonth;
-					String walletID = wallet.getString("_id");
-					JsonObject queryWallet = new JsonObject().put("_id", walletID);
-					
-					mongoClient.findOneAndReplace(walletsCollection, queryWallet, (JsonObject) wallet, id -> {
-						logger.info("[updateAccountsScheduler] updated for "+walletID);
-		
-					});
-
+					//only update when lastTransactions exist
+					if (lastMonth.size()>0) {
+						account.lastBalance = lastBalance;
+						account.lastData=lastData;
+						account.lastTransactions = lastMonth;
+						String walletID = wallet.getString("_id");
+						JsonObject queryWallet = new JsonObject().put("_id", walletID);
+						
+						mongoClient.findOneAndReplace(walletsCollection, queryWallet, (JsonObject) wallet, id -> {
+							logger.info("[updateAccountsScheduler] updated for "+walletID);
+			
+						});
+					}
 				}
 			});
 
