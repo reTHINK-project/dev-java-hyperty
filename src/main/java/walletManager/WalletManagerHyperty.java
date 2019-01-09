@@ -186,7 +186,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 
 			 }
-		},startScheduler, 15*60*1000);
+		},5*60*1000, 15*60*1000);
 	}
 
 	private void reCreateDOs() {
