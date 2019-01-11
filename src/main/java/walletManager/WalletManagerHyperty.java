@@ -59,9 +59,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private static final int initialBalance = 50;
 
-	private static final int updateAccountsMinutes = 00;
-	private static final int updateAccountsHour = 12;
-
 	@Override
 	public void start() {
 
@@ -121,6 +118,25 @@ public class WalletManagerHyperty extends AbstractHyperty {
  
         // Set time of execution. Here, we have to run every day 4:20 PM; so,
         // setting all parameters.
+        int updateAccountsMinutes = 0;
+    	int updateAccountsHour = 0;
+    	boolean testingSchedule = true;
+        
+        
+		String envUpdateHour = System.getenv("SCHEDULE_HOUR");
+		String envUpdateMinute = System.getenv("SCHEDULE_MINUTE");
+		
+
+		if (envUpdateHour != null && envUpdateMinute != null) {
+			updateAccountsMinutes = Integer.parseInt(System.getenv("SCHEDULE_MINUTE"));
+			updateAccountsHour = Integer.parseInt(System.getenv("SCHEDULE_HOUR"));
+			System.out.println("Schedule start at:" + updateAccountsHour + ":" +  updateAccountsMinutes);
+			testingSchedule = false;
+		}
+		
+		
+    	
+        
         calendar.set(Calendar.HOUR, updateAccountsHour);
         calendar.set(Calendar.MINUTE, updateAccountsMinutes);
         calendar.set(Calendar.SECOND, 0);
@@ -137,7 +153,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
  
         // Calendar is scheduled for future; so, it's time is higher than
         // current time.
-        long startScheduler = calendar.getTime().getTime() - currentTime;
+        long startScheduler;
+        long timeBetweenEach;
+        if(testingSchedule) {
+        	startScheduler = 5*60*1000;
+        	timeBetweenEach = 15*60*1000;
+        } else {
+        	startScheduler = calendar.getTime().getTime() - currentTime;
+        	timeBetweenEach = 24*60*60*1000;
+        }
+        
  
  
         // Get an instance of scheduler
@@ -188,7 +213,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 
 			 }
-		},2*60*1000, 15*60*1000);
+		},startScheduler, timeBetweenEach);
 	}
 
 	private void reCreateDOs() {
