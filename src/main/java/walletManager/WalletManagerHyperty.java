@@ -156,9 +156,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				JsonObject currentWallet = (JsonObject) wallet;
 				String walletAddress = currentWallet.getString("address");
 				if (!(walletAddress.equals(publicWalletsAddress))) {
-					JsonArray accounts = ((JsonObject) wallet).getJsonArray("accounts");
+					JsonArray accounts = currentWallet.getJsonArray("accounts");
 					for ( Object account : accounts) {
-						updateAccountLastTransactions(Account.toAccount((JsonObject) account), currentWallet);
+						JsonObject currentAccount = (JsonObject) account;
+						updateAccountLastTransactions(currentAccount, currentWallet);
 					}
 				
 				
@@ -168,7 +169,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					for (Object pWallet : pWallets) {
 						JsonArray accounts = ((JsonObject) pWallet).getJsonArray("accounts");
 						for ( Object account : accounts) {
-							updateAccountLastTransactions(Account.toAccount((JsonObject) account), pubDocWallet);
+							JsonObject currentAccount = (JsonObject) account;
+							updateAccountLastTransactions(currentAccount, pubDocWallet);
 						}
 	
 					}
@@ -186,7 +188,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 
 			 }
-		},5*60*1000, 15*60*1000);
+		},2*60*1000, 15*60*1000);
 	}
 
 	private void reCreateDOs() {
@@ -839,8 +841,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			return transaction.getJsonObject("data").getString("activity").equals(source);
 	}
 
-	private void updateAccountLastTransactions(Account account, JsonObject wallet) {
-		JsonArray transactions = account.lastTransactions;
+	private void updateAccountLastTransactions(JsonObject account, JsonObject wallet) {
+		JsonArray transactions = account.getJsonArray("lastTransactions");
 		
 			JsonObject query = new JsonObject().put("_id", new JsonObject().put("$in", transactions));
 			Future<JsonArray> transactionsFuture = getTransactions(query);
@@ -848,6 +850,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				if (asyncResult.succeeded()) {
 					JsonArray lastMonth = new JsonArray();
 					JsonArray allTransactions = asyncResult.result();
+					String walletID = wallet.getString("_id");
+					
 					int lastData=0;
 					int lastBalance=0;
 					for (Object transaction: allTransactions) {
@@ -857,7 +861,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						
 						
 						//Week or month update?!
-						if (account.lastPeriod.equals("month")) {
+						String lastPeriod = account.getString("lastPeriod");
+						if (lastPeriod.equals("month")) {
 							onLast = DateUtilsHelper.isDateInCurrentMonth(DateUtilsHelper.stringToDate(current.getString("date")));
 						} else {
 							onLast = DateUtilsHelper.isDateInCurrentWeek(DateUtilsHelper.stringToDate(current.getString("date")));
@@ -876,15 +881,24 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						}
 
 					}
+					//e33b9462071ee871f40440465c04ed53cd8e38bb89972e62ede87bde042f1693
 					//only update when lastTransactions exist
 					if (lastMonth.size()>0) {
-						account.lastBalance = lastBalance;
-						account.lastData=lastData;
-						account.lastTransactions = lastMonth;
-						String walletID = wallet.getString("_id");
+						
+						account.remove("lastBalance");
+						account.put("lastBalance", lastBalance);
+						
+						account.remove("lastData");
+						account.put("lastData", lastData);
+						
+						account.remove("lastTransactions");
+						account.put("lastTransactions", lastMonth);
+
+						
 						JsonObject queryWallet = new JsonObject().put("_id", walletID);
 						
-						mongoClient.findOneAndReplace(walletsCollection, queryWallet, (JsonObject) wallet, id -> {
+						mongoClient.findOneAndReplace(walletsCollection, queryWallet, wallet, id -> {
+
 							logger.info("[updateAccountsScheduler] updated for "+walletID);
 			
 						});
