@@ -908,7 +908,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					}
 					//e33b9462071ee871f40440465c04ed53cd8e38bb89972e62ede87bde042f1693
 					//only update when lastTransactions exist
-					if (lastMonth.size()>0) {
+					if (lastMonth.size()>0 || lastMonth.size() != allTransactions.size()) {
 						
 						account.remove("lastBalance");
 						account.put("lastBalance", lastBalance);
