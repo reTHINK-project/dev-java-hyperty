@@ -395,7 +395,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 	}
 
 	private void handleStreamCreationRequest(Message<JsonObject> message) {
-		// TODO Auto-generated method stub
+		
 		final JsonObject messageToCreate = new JsonObject(message.body().toString());
 
 		final JsonObject userProfile = messageToCreate.getJsonObject("identity").getJsonObject("userProfile");

@@ -287,7 +287,6 @@ public class AbstractHyperty extends AbstractVerticle {
 			JsonObject resultBody = new JsonObject(reply.result().body().toString());
 			int code = resultBody.getJsonObject("body").getInteger("code");
 			if (code == 200) {
-				// TODO: associate DataObjectURL to an identity of invite
 				Future<Boolean> canHandleData = checkIfCanHandleData(guid);
 				Future<Boolean> persisted = persistDataObjUserURL(ObjURL, guid, "observer");
 				List<Future> futures = new ArrayList<>();
@@ -462,7 +461,7 @@ public class AbstractHyperty extends AbstractVerticle {
 				+ "\nourUserURL:" + this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:"
 				+ collection);
 		
-		// TODO - just for testing
+
 		return true;
 
 //		if (observers.getList().contains(from)) {
@@ -505,7 +504,7 @@ public class AbstractHyperty extends AbstractVerticle {
 //
 //		}
 
-		// return false;
+//		 return false;
 	}
 
 	/**

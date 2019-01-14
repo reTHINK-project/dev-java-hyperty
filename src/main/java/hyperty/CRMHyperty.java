@@ -253,7 +253,6 @@ public class CRMHyperty extends AbstractHyperty {
 			mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document, id -> {
 				message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
 
-				// TODO - change opened tickets to other agents
 			});
 
 		});
@@ -392,7 +391,6 @@ public class CRMHyperty extends AbstractHyperty {
 	 * @param agent
 	 */
 	private void forwardPendingTickets(JsonObject agent) {
-		// TODO
 		logger.debug(logMessage + "forwardPendingTickets() for agent " + agent);
 		String guid = agent.getString("user");
 
@@ -410,7 +408,6 @@ public class CRMHyperty extends AbstractHyperty {
 				});
 			}
 		});
-
 	}
 
 	/**

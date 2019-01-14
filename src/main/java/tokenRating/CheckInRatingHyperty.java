@@ -53,7 +53,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 
 		createStreams();
 		resumeDataObjects(ratingType);
-		cleanDuplicatedDataObjects();
+		//cleanDuplicatedDataObjects();
 	}
 
 	private void createStreams() {
@@ -305,7 +305,6 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 							valid = false;
 						}
 					}
-					// TODO - hour ?
 				}
 				if (valid) {
 					findRates.complete(bonusInfo.getInteger("cost") * -1);
