@@ -80,7 +80,6 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		logger.debug(logMessage + "rate(): " + data.toString());
 		Long currentTimestamp = new Date().getTime();
 
-		// TODO : -1
 		Future<Integer> tokenAmount = Future.future();
 
 		// data contains shopID, users's location

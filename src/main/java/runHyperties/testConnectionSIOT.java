@@ -25,7 +25,6 @@ public class testConnectionSIOT {
 	protected static MongoClient mongoClient = null;
 
 	public static void main(String[] args) throws ParseException {
-		// TODO Auto-generated method stub
 		String name = "newDeviceName1";
 		String description = "newDeviceDescription1";
 		currentToken = getNewToken();

@@ -58,17 +58,17 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		String userId = msgOriginal.getString("guid");
 
 		// store transaction by sending it to wallet through wallet manager
-		Future<String> walletAddress = getWalletAddress(userId);
+/*		Future<String> walletAddress = getWalletAddress(userId);
 		walletAddress.setHandler(asyncResult -> {
+			
 			if (asyncResult.succeeded()) {
+		*/
 				JsonObject msgToWallet = new JsonObject();
 				msgToWallet.put("type", "create");
 				msgToWallet.put("identity", this.identity);
 
 				// create transaction object
 				JsonObject transaction = new JsonObject();
-				// transaction.put("address", walletAddress);
-				transaction.put("recipient", walletAddress.result());
 				transaction.put("source", source);
 				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 				transaction.put("value", numTokens);
@@ -140,16 +140,18 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 				}
 
 				transaction.put("nonce", 1);
-				JsonObject body = new JsonObject().put("resource", "wallet/" + walletAddress.result()).put("value",
+				JsonObject body = new JsonObject().put("resource", userId).put("value",
 						transaction);
 
 				msgToWallet.put("body", body);
 
 				transfer(msgToWallet);
-			} else {
+				
+				
+	/*		} else {
 				// oh ! we have a problem...
 			}
-		});
+		});*/
 
 	}
 
