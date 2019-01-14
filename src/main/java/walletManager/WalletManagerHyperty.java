@@ -625,12 +625,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
 					logger.debug(logMessage + "error on new transaction");
 				}
 			});
-
+			Account account = null;
 			logger.debug(logMessage + "transferToPrivateWallet - 1");
-			Account account = getAccount(transaction.getString("source"), walletInfo);
-			logger.debug(logMessage + "transferToPrivateWallet - 2");
-			account = updateAccount(account, transaction);
-			logger.debug(logMessage + "transferToPrivateWallet - 4");
+			if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
+				logger.debug(logMessage + "transferToPrivateWallet - 1.1");
+				account = getAccount(transaction.getString("source"), walletInfo);
+				logger.debug(logMessage + "transferToPrivateWallet - 2");
+				account = updateAccount(account, transaction);
+				logger.debug(logMessage + "transferToPrivateWallet - 4");				
+			}
+
 			// update wallet
 			walletInfo = updateLastTransactions(walletInfo, transaction);
 			logger.debug(logMessage + "transferToPrivateWallet - 5");
