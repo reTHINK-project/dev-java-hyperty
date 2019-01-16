@@ -90,6 +90,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		if (appData != null) {
 			appID = appData.getString("id");
 			appSecret = appData.getString("secret");
+			System.out.println("{{SmartIOTProtostub}} appID:" + appID + "\n{{SmartIOTProtostub}} appSecret:" + appSecret);
 		}
 
 	}
@@ -403,12 +404,12 @@ public class SmartIotProtostub extends AbstractVerticle {
 		final String guid = userProfile.containsKey("guid") ? userProfile.getString("guid") : null;
 		JsonObject responseDenied = new JsonObject().put("body", new JsonObject().put("code", 406));
 		JsonObject responseBodyOK = new JsonObject().put("code", 200);
-
+		
 		if (guid != null) {
+			final String onlyGuid = guid.split("://")[1];
 			// logger.debug("{{SmartIOTProtostub}}creationRequest search Device of
 			// guid->" + guid);
 			final JsonObject body = messageToCreate.getJsonObject("body");
-			final String thirdPtyUserId = body.containsKey("platformUID") ? body.getString("platformUID") : null;
 			final String thirdPtyPlatformId = body.containsKey("platformID") ? body.getString("platformID") : null;
 			final String ratingType = body.containsKey("ratingType") ? body.getString("ratingType") : null;
 			Future<String> deviceIDFuture = findDevice(guid);
@@ -418,8 +419,9 @@ public class SmartIotProtostub extends AbstractVerticle {
 				// logger.debug(
 				// "{{SmartIOTProtostub}} DeviceID returned->" + deviceID + " ->streamName:" +
 				// thirdPtyUserId);
-				if (deviceID != null && thirdPtyUserId != null && thirdPtyPlatformId != null && ratingType != null) {
-					String objURL = "context://sharing-cities-dsm/" + thirdPtyPlatformId + "/" + thirdPtyUserId;
+
+				if (deviceID != null && thirdPtyPlatformId != null && ratingType != null) {
+					String objURL = "context://sharing-cities-dsm/" + thirdPtyPlatformId + "/" + onlyGuid;
 					Future<String> checkStreamIDFuture = findStream(objURL, guid);
 					checkStreamIDFuture.setHandler(res -> {
 						String checkStreamID = checkStreamIDFuture.result();
@@ -427,17 +429,17 @@ public class SmartIotProtostub extends AbstractVerticle {
 						if (checkStreamID != null) {
 							// logger.debug("{{SmartIOTProtostub}} stream already created->" +
 							// objURL);
-							inviteHyperty(thirdPtyUserId, thirdPtyPlatformId, messageToCreate.getJsonObject("identity"),
+							inviteHyperty(onlyGuid, thirdPtyPlatformId, messageToCreate.getJsonObject("identity"),
 									checkStreamID, ratingType);
 
 							responseBodyOK.put("description", "stream already exist");
 							JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
 							message.reply(responseOK);
 						} else {
-							boolean streamCreated1st = registerNewStream(deviceID, thirdPtyUserId);
+							boolean streamCreated1st = registerNewStream(deviceID, thirdPtyPlatformId);
 							boolean streamCreated2nd = false;
 							if (!streamCreated1st) {
-								streamCreated2nd = registerNewStream(deviceID, thirdPtyUserId);
+								streamCreated2nd = registerNewStream(deviceID, thirdPtyPlatformId);
 							}
 
 							if (streamCreated1st || streamCreated2nd) {
@@ -449,7 +451,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 								int x;
 								for (x = 0; x < streamList.size(); x++) {
 									JsonObject currentStream = streamList.getJsonObject(x);
-									if (currentStream.getString("name").equals(thirdPtyUserId)) {
+									if (currentStream.getString("name").equals(thirdPtyPlatformId)) {
 										logger.debug(
 												"{{SmartIOTProtostub}} stream created was" + currentStream.toString());
 										JsonObject ctx = new JsonObject().put("contextValue", "");
@@ -472,7 +474,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 													message.reply(responseOK);
 												});
 										
-										inviteHyperty(thirdPtyUserId, thirdPtyPlatformId,
+										inviteHyperty(onlyGuid, thirdPtyPlatformId,
 												messageToCreate.getJsonObject("identity"),
 												currentStream.getString("id"), ratingType);
 										
@@ -737,9 +739,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 			conn.disconnect();
 
-			// System.out
-			// .println("{{SmartIOTProtostub}} [newToken](" + conn.getResponseCode() + ")" +
-			// received.toString());
+			System.out.println("{{SmartIOTProtostub}} [newToken](" + conn.getResponseCode() + ")" + received.toString());
 			if (conn.getResponseCode() == 200) {
 				newToken = received.toString();
 			}
@@ -785,9 +785,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 			}
 			conn.disconnect();
 
-			// System.out
-			// .println("{{SmartIOTProtostub}} [newDevice](" + conn.getResponseCode() + ")"
-			// + received.toString());
+			 System.out.println("{{SmartIOTProtostub}} [newDevice](" + conn.getResponseCode() + ")" + received.toString());
 			conn.disconnect();
 			return new JsonObject(received.toString());
 
@@ -811,9 +809,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 			conn.setRequestMethod("PUT");
 			conn.setRequestProperty("authorization", "Bearer " + currentToken);
 
-			// System.out
-			// .println("{{SmartIOTProtostub}} [newStream](" + conn.getResponseCode() + ")"
-			// + received.toString());
+			System.out.println("{{SmartIOTProtostub}} [newStream](" + conn.getResponseCode() + ")" + received.toString());
 			if (conn.getResponseCode() == 204) {
 				return true;
 			} else {
