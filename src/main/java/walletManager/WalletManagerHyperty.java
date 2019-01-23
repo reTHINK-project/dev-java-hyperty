@@ -627,9 +627,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			});
 			Account account = null;
 			logger.debug(logMessage + "transferToPrivateWallet - 1");
-			if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
+			String source = getSource(transaction);
+			if (!source.equals("bonus") && transactionValue > 0) {
 				logger.debug(logMessage + "transferToPrivateWallet - 1.1");
-				account = getAccount(transaction.getString("source"), walletInfo);
+				account = getAccount(source, walletInfo);
 				logger.debug(logMessage + "transferToPrivateWallet - 2");
 				account = updateAccount(account, transaction);
 				logger.debug(logMessage + "transferToPrivateWallet - 4");				
@@ -725,7 +726,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private Account getAccount(String source, JsonObject wallet) {
 		JsonArray accounts = wallet.getJsonArray("accounts");
-
+		
 		// get account for source
 		List<Object> res = accounts.stream().filter(account -> ((JsonObject) account).getString("name").equals(source))
 				.collect(Collectors.toList());
@@ -1002,7 +1003,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			Lock lock = r.result();
 
 			logger.debug(logMessage + "transferToPublicWallet(): " + walletAddress + "\n" + transaction);
-			String source = transaction.getString("source");
+			String source = getSource(transaction);;
 			int transactionValue = transaction.getInteger("value");
 
 			JsonObject query = new JsonObject().put("identity",
@@ -1029,7 +1030,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							 * JsonObject withCreated = checkCreated(wallet); logger.debug(logMessage +
 							 * "transferToPublicWallet - 2");
 							 */
-							Account account = getAccount(transaction.getString("source"), wallet);
+							Account account = getAccount(source, wallet);
 							logger.debug(logMessage + "transferToPublicWallet - 3" + account.toJsonObject().toString());
 							account = updateAccount(account, transaction);
 							logger.debug(logMessage + "transferToPublicWallet - 5"+ account.toJsonObject().toString());
