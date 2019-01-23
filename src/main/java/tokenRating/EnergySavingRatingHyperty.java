@@ -130,9 +130,11 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		// get values for every cause
 		for (int i = 0; i < values.size(); i++) {
 			final JsonObject valObject = values.getJsonObject(i).getJsonObject("value");
+			System.out.println(logMessage + "val id(" + i + ")" + valObject.toString());
 			int causeReductionPercentage = valObject.getInteger("value");
 			String id = valObject.getString("id");
-			transferToPublicWallet(causeReductionPercentage, id);
+			String walletGuid = "user-guid://" + id;
+			transferToPublicWallet(causeReductionPercentage, walletGuid);
 
 			if (causeReductionPercentage > biggestReductionPercentage) {
 				biggestReductionPercentage = causeReductionPercentage;
@@ -146,11 +148,11 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		// get wallet from wallet manager
 		Future<JsonObject> readPublicWallet = Future.future();
 
+		String walletGuid = "user-guid://" + values.getJsonObject(biggestReductionIndex).getJsonObject("value").getString("id");
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
 		msg.put("from", "myself");
-		JsonObject body = new JsonObject().put("resource", "wallet").put("value",
-				Integer.toString(biggestReductionIndex));
+		JsonObject body = new JsonObject().put("resource", "wallet").put("value",walletGuid);
 		JsonObject identity = new JsonObject();
 		msg.put("body", body);
 		msg.put("identity", identity);
@@ -180,7 +182,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				transaction.put("source", "energy-saving");
 				transaction.put("value", monthlyPoints);
 				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-				msg.put("transaction", transaction);
+				msgEnergySaving.put("transaction", transaction);
 				vertx.eventBus().send("wallet-cause-transfer", msgEnergySaving);
 
 				// reset counters
@@ -259,12 +261,11 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			logger.info("[Energy]");
 			logger.debug(logMessage + "onChanges(): received message" + message.body());
 			try {
-				JsonArray data = new JsonArray(message.body().toString());
-				if (data.size() == 1) {
+				JsonObject data = new JsonObject(message.body().toString());
 					JsonObject changes = new JsonObject();
 
 					changes.put("ratingType", ratingType);
-					changes.put("message", data.getJsonObject(0));
+					changes.put("message", data);
 					Future<String> userGuid = getUserGuid(address);
 
 					userGuid.setHandler(asyncResult -> {
@@ -282,7 +283,6 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 						});
 					});
 
-				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

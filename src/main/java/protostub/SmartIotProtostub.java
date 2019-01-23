@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.logging.log4j.core.Logger;
@@ -15,9 +16,14 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import io.vertx.ext.web.Route;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import runHyperties.LoggerFactory;
 
 public class SmartIotProtostub extends AbstractVerticle {
@@ -37,7 +43,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 	@Override
 	public void start() {
-		// logger.debug("{{SmartIOTProtostub}} Starting SmartIotProtostub");
+		// System.out.println("{{SmartIOTProtostub}} Starting SmartIotProtostub");
 		this.url = config().getString("url");
 		this.collection = config().getString("collection");
 		this.database = config().getString("db_name");
@@ -48,9 +54,11 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
+		this.eb.<JsonObject>consumer(this.url + "/post", onNewPost());
+		
 
 		if (mongoHost != null) {
-			// logger.debug("{{SmartIOTProtostub}} Setting up Mongo to:" + this.url);
+			// System.out.println("{{SmartIOTProtostub}} Setting up Mongo to:" + this.url);
 			final String uri = "mongodb://" + mongoHost + ":27017";
 
 			final JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", this.database);
@@ -59,10 +67,10 @@ public class SmartIotProtostub extends AbstractVerticle {
 		}
 
 		this.currentToken = Authentication();
-		// logger.debug("{{SmartIOTProtostub}} token ->" + this.currentToken);
+		// System.out.println("{{SmartIOTProtostub}} token ->" + this.currentToken);
 
 		RegisterApp();
-		// logger.debug("{{SmartIOTProtostub}} app -> " + appID + ":" +
+		// System.out.println("{{SmartIOTProtostub}} app -> " + appID + ":" +
 		// appSecret);
 
 		/**
@@ -79,13 +87,15 @@ public class SmartIotProtostub extends AbstractVerticle {
 		 * //new subscription JsonObject subscription =
 		 * createSubscription("subcriptionName", "subscriptionDescription",
 		 * newDevice.getString("id"), streamName);
-		 * //logger.debug("subscription result" + subscription.toString());
+		 * //System.out.println("subscription result" + subscription.toString());
 		 */
 
 	}
 
 	private void RegisterApp() {
 
+		//{{SmartIOTProtostub}} appID:b58c47d8-9489-440a-8cb4-af6e26858b96
+		//{{SmartIOTProtostub}} appSecret:s7p03m5p1bd12om31hqg816vadbrf8ah1ukfe25eofg5fsfvr8h
 		JsonObject appData = registerNewDevice("private App", "Description of private APP");
 		if (appData != null) {
 			appID = appData.getString("id");
@@ -98,28 +108,19 @@ public class SmartIotProtostub extends AbstractVerticle {
 	private Handler<Message<JsonObject>> onMessage() {
 
 		return message -> {
+			System.out.println("{{SmartIOTProtostub}} new message ");
 
-			// logger.debug("{{SmartIOTProtostub}} New message -> " +
-			// message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
-
-				// logger.debug("{{SmartIOTProtostub}} -> [Worker]-" +
-				// Thread.currentThread().getName() + "\n[Data] "
-				// + message.body());
-
 				final JsonObject body = new JsonObject(message.body().toString()).getJsonObject("body");
 				final String type = message.body().getString("type");
 
 				switch (type) {
 				case "read":
-
-					// logger.debug("{{SmartIOTProtostub}} read message ");
+					System.out.println("{{SmartIOTProtostub}} read message ");
 
 					break;
 				case "create":
-					// logger.debug("{{SmartIOTProtostub}} create message ");
-					// message.reply(new JsonObject());
-
+					System.out.println("{{SmartIOTProtostub}} create message ");
 					if (body.getString("resource").equals("device")) {
 						handleDeviceCreationRequest(message);
 					} else if (body.getString("resource").equals("stream")) {
@@ -128,16 +129,162 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 					break;
 				case "delete":
+					System.out.println("{{SmartIOTProtostub}} delete message ");
 					if (body.getString("resource").equals("stream")) {
 						handleStreamDeleteRequest(message);
 					} else if (body.getString("resource").equals("device")) {
 						handleDeviceDeleteRequest(message);
 					}
+					break;
+				case "generate":
+					System.out.println("{{SmartIOTProtostub}} generate message ");
+					JsonObject msgBody = new JsonObject(message.body().getJsonObject("body").toString());
+					System.out.println("{{SmartIOTProtostub}} received message:"+ msgBody.toString());
+					
+					String device = msgBody.getString("device");
+					String stream = msgBody.getString("stream");
+					JsonObject data = msgBody.getJsonObject("data");	
+					publishDataIntoStream(deviceAuthentication(), device, stream, data);
+					
+					break;
 				default:
 					break;
 				}
 
 			}
+		};
+	}
+	
+	private Handler<Message<JsonObject>> onNewPost() {
+
+		return message -> {
+			System.out.println("{{SmartIOTProtostub}} new post ");
+
+
+				final JsonObject dataReceived = new JsonObject(message.body().toString());
+				JsonArray values = dataReceived.containsKey("values") ? dataReceived.getJsonArray("values") : null;
+
+				if (values != null) {
+					int x;
+					if (values.size() == 1) {
+							JsonObject currentObj = values.getJsonObject(0);
+							String value = currentObj.getString("data");
+
+							Future<JsonObject> objURLFuture = findStream(currentObj.getString("streamId"));
+							objURLFuture.setHandler(asyncResult -> {
+								JsonObject dataObject = asyncResult.result();
+								String objURL = dataObject.getString("objURL");
+	
+								JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value));
+								JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+								JsonArray valuesArray = new JsonArray().add(valueObject);
+								JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuesArray);
+								
+								
+								JsonArray toSend = new JsonArray().add(newObjToSend);
+							    System.out.println("publishing on " + objURL + "/changes");
+							    System.out.println("data: " + toSend.toString());
+
+								if (objURL != null) {
+									String changesObj = objURL + "/changes";
+									vertx.eventBus().publish(changesObj, toSend);
+								}
+							});
+
+					} else {
+						
+						
+						HashMap<String, JsonObject> streamIdObj = new HashMap<String, JsonObject>();
+						
+						
+						JsonArray toFind = new JsonArray();
+						for (x = 0; x < values.size(); x++) {
+							String streamID = values.getJsonObject(x).getString("streamId");
+							toFind.add(streamID);
+							streamIdObj.put(streamID, values.getJsonObject(x));
+						}
+						
+						JsonObject query = new JsonObject().put("url", new JsonObject().put("$in", toFind));
+						Future<JsonArray> transactionsFuture = getAllStreamDO(query);
+						transactionsFuture.setHandler(asyncResult -> {
+							if (asyncResult.succeeded()) {	
+								JsonArray publicDOs = asyncResult.result();
+								System.out.println("add public Dos" + publicDOs.toString());
+								
+								JsonArray valuestoSend = new JsonArray();
+								String toPublic = null;
+								for (int z=0; z<publicDOs.size(); z++) {
+									JsonObject currentDo = publicDOs.getJsonObject(z);
+									toPublic = currentDo.getString("objURL");
+									
+									String id = currentDo.getJsonObject("metadata").getString("guid").split("://")[1];
+									String url = currentDo.getString("url");
+									
+									String value = streamIdObj.get(url).getString("data");
+									
+									JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value)).put("id",id);
+									JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+									
+									valuestoSend.add(valueObject);
+									
+								}
+								
+								if (toPublic != null) {
+									String changesObj = toPublic + "/changes";
+									JsonObject allData = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuestoSend);
+									
+									vertx.eventBus().publish(changesObj, allData);
+								}
+								
+								
+							}
+						});
+						
+					}
+				}
+
+				
+				/*
+				 * 
+				 
+				 
+				 			JsonObject currentObj = values.getJsonObject(x);
+							String value = currentObj.getString("data");
+
+
+
+							Future<JsonObject> objURLFuture = findStream(currentObj.getString("streamId"));
+							objURLFuture.setHandler(asyncResult -> {
+								JsonObject dataObject = asyncResult.result();
+								String objURL = dataObject.getString("objURL");
+								String id = dataObject.getJsonObject("metadata").getString("guid").split("://")[1];
+								
+								
+								JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value)).put("id",id);
+								JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+								JsonArray valuesArray = new JsonArray().add(valueObject);
+								JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuesArray);
+								
+								
+								.add(newObjToSend);
+							    System.out.println("publishing on " + objURL + "/changes");
+							    System.out.println("data: " + toSend.toString());
+
+								if (objURL != null) {
+									String changesObj = objURL + "/changes";
+									vertx.eventBus().publish(changesObj, toSend);
+								}
+							});
+				 
+				 
+				 
+				 
+				 *
+				 *
+				 *
+				 * */
+
+
 		};
 	}
 
@@ -152,17 +299,17 @@ public class SmartIotProtostub extends AbstractVerticle {
 		JsonObject responseBodyOK = new JsonObject().put("code", 200);
 
 		if (guid != null) {
-			// logger.debug("{{SmartIOTProtostub}} search Device of guid->" + guid);
+			System.out.println("{{SmartIOTProtostub}} search Device of guid->" + guid);
 			final JsonObject body = messageToDelete.getJsonObject("body");
 
 			final String streamName = body.containsKey("value") ? body.getString("value") : null;
 			Future<JsonObject> deviceFuture = findDeviceObject(guid);
 			deviceFuture.setHandler(asyncResult -> {
 				JsonObject device = deviceFuture.result();
-				// logger.debug(" ->streamName:" + streamName);
+				System.out.println(" ->streamName:" + streamName);
 				if (device != null && streamName != null) {
 					final String deviceID = device.getString("id");
-					// logger.debug("{{SmartIOTProtostub}} DeviceID returned->" + deviceID);
+					System.out.println("{{SmartIOTProtostub}} DeviceID returned->" + deviceID);
 
 					JsonArray streamList = device.getJsonArray("stream_list");
 					boolean streamExist = false;
@@ -175,6 +322,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 						}
 					}
 					if (streamExist) {
+						final String deviceName = guid.split("//")[1];
 
 						boolean streamDeleted1st = deleteStream(deviceID, streamName);
 						boolean streamDeleted2nd = false;
@@ -187,20 +335,18 @@ public class SmartIotProtostub extends AbstractVerticle {
 							JsonObject update = new JsonObject().put("$pull", new JsonObject().put("device.stream_list",
 									new JsonObject().put("name", streamName)));
 
-							// logger.debug("{{SmartIOTProtostub}} delete" + update.toString());
+						System.out.println("{{SmartIOTProtostub}} delete" + update.toString());
 
 							mongoClient.updateCollection(this.collection, new JsonObject().put("guid", guid), update,
 									res -> {
-										// logger.debug("{{SmartIOTProtostub}} result>" + res.succeeded());
+										System.out.println("{{SmartIOTProtostub}} result>" + res.succeeded());
 									});
 
-							String dataObjectURL = "context://sharing-cities-dsm/" + platformID + "/" + streamName;
-
+							String dataObjectURL = "context://sharing-cities-dsm/" + streamName + "/" + deviceName;
+							System.out.println("{{SmartIOTProtostub}} deleting objurl: " + dataObjectURL);
 							mongoClient.findOneAndDelete("dataobjects", new JsonObject().put("objURL", dataObjectURL),
 									res -> {
-										logger.debug(
-												"{{SmartIOTProtostub}} result delete from dataobjects collection>"
-														+ res.succeeded());
+										System.out.println("{{SmartIOTProtostub}} result delete from dataobjects collection>"+ res.succeeded());
 									});
 
 							responseBodyOK.put("result", true);
@@ -212,12 +358,13 @@ public class SmartIotProtostub extends AbstractVerticle {
 						message.reply(responseOK);
 
 					}
-
+					message.reply(responseDenied);
 				}
+				message.reply(responseDenied);
 
 			});
 
-			message.reply(responseDenied);
+
 
 			return;
 		}
@@ -248,7 +395,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		JsonObject responseBodyOK = new JsonObject().put("code", 200);
 
 		if (guid != null) {
-			// logger.debug("{{SmartIOTProtostub}} search Device of guid->" + guid);
+			System.out.println("{{SmartIOTProtostub}} search Device of guid->" + guid);
 			final JsonObject body = messageToDelete.getJsonObject("body");
 
 			final String deviceID = body.containsKey("value") ? body.getString("value") : null;
@@ -263,25 +410,24 @@ public class SmartIotProtostub extends AbstractVerticle {
 					}
 
 					if (deviceDeleted1st || deviceDeleted2nd) {
-						// logger.debug("{{SmartIOTProtostub}} TO REMOVE on mongo (device) ->" +
-						// device.toString());
+						System.out.println("{{SmartIOTProtostub}} TO REMOVE on mongo (device) ->" + device.toString());
 						JsonArray streamList = device.getJsonArray("stream_list");
 
 						for (int i = 0; i < streamList.size(); i++) {
 							JsonObject currentStream = streamList.getJsonObject(i);
 							String dataObjectURL = "context://sharing-cities-dsm/" + currentStream.getString("platform")
-									+ "/" + currentStream.getString("name");
-							// logger.debug("{{SmartIOTProtostub}} to remove (obj)->" +
-							// dataObjectURL);
+									+ "/" + device.getString("name");
+							
+							System.out.println("{{SmartIOTProtostub}} to remove (obj)->" + dataObjectURL);
 
 							mongoClient.findOneAndDelete("dataobjects", new JsonObject().put("objURL", dataObjectURL),
 									res -> {
-										logger.debug("{{SmartIOTProtostub}} result delete on dataobject ("
+										System.out.println("{{SmartIOTProtostub}} result delete on dataobject ("
 												+ dataObjectURL + ")>" + res.succeeded());
 									});
 						}
 						mongoClient.findOneAndDelete(this.collection, new JsonObject().put("guid", guid), res -> {
-							logger.debug("{{SmartIOTProtostub}} result delete on siotdevices (" + guid + ")>"
+							System.out.println("{{SmartIOTProtostub}} result delete on siotdevices (" + guid + ")>"
 									+ res.succeeded());
 						});
 
@@ -331,13 +477,11 @@ public class SmartIotProtostub extends AbstractVerticle {
 			mongoClient.find(this.collection, new JsonObject().put("guid", guid), res -> {
 				if (res.result().size() == 0) {
 
-					// logger.debug("{{SmartIOTProtostub}} no device yet, creating");
+					System.out.println("{{SmartIOTProtostub}} no device yet, creating");
 
 					JsonObject newDevice = registerNewDevice(name, description);
 
-					// logger.debug(
-					// "{{SmartIOTProtostub}} no device yet, creating response1st->" +
-					// newDevice.toString());
+					System.out.println("{{SmartIOTProtostub}} no device yet, creating response1st->" + newDevice.toString());
 					if (newDevice.containsKey("unauthorised") && newDevice.getBoolean("unauthorised")) {
 
 						newDevice = registerNewDevice(name, description);
@@ -345,13 +489,11 @@ public class SmartIotProtostub extends AbstractVerticle {
 					final JsonObject deviceCreated = newDevice;
 
 					if (newDevice != null) {
-						// logger.debug("{{SmartIOTProtostub}} Device for " + name + " -> |||
-						// create with id->"
-						// + newDevice.getString("id"));
+						System.out.println("{{SmartIOTProtostub}} Device for " + name + " -> ||| create with id->" + newDevice.getString("id"));
 
 						JsonObject document = new JsonObject().put("guid", guid).put("device", newDevice);
 						mongoClient.save(this.collection, document, id -> {
-							// logger.debug("{{SmartIOTProtostub}} New device added to mongo" + id);
+							System.out.println("{{SmartIOTProtostub}} New device added to mongo" + id);
 							responseBodyOK.put("description", "new device created");
 							responseBodyOK.put("device", deviceCreated);
 							JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
@@ -359,14 +501,12 @@ public class SmartIotProtostub extends AbstractVerticle {
 							createDevice.complete();
 						});
 					} else {
-						// logger.debug("{{SmartIOTProtostub}} Creation request failed");
+						System.out.println("{{SmartIOTProtostub}} Creation request failed");
 						message.reply(responseDenied);
 						createDevice.complete();
 					}
 				} else {
-					// logger.debug("{{SmartIOTProtostub}} Device already created for this
-					// user"
-					// + res.result().get(0).toString());
+					System.out.println("{{SmartIOTProtostub}} Device already created for this user"+ res.result().get(0).toString());
 					responseBodyOK.put("device", res.result().get(0).getJsonObject("device"));
 					responseBodyOK.put("description", "device already exist");
 					JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
@@ -407,8 +547,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		
 		if (guid != null) {
 			final String onlyGuid = guid.split("://")[1];
-			// logger.debug("{{SmartIOTProtostub}}creationRequest search Device of
-			// guid->" + guid);
+			System.out.println("{{SmartIOTProtostub}}creationRequest search Device of guid->" + guid);
 			final JsonObject body = messageToCreate.getJsonObject("body");
 			final String thirdPtyPlatformId = body.containsKey("platformID") ? body.getString("platformID") : null;
 			final String ratingType = body.containsKey("ratingType") ? body.getString("ratingType") : null;
@@ -416,19 +555,16 @@ public class SmartIotProtostub extends AbstractVerticle {
 			deviceIDFuture.setHandler(asyncResult -> {
 				String deviceID = deviceIDFuture.result();
 
-				// logger.debug(
-				// "{{SmartIOTProtostub}} DeviceID returned->" + deviceID + " ->streamName:" +
-				// thirdPtyUserId);
+				System.out.println("{{SmartIOTProtostub}} DeviceID returned->" + deviceID + " ->streamName:" + thirdPtyPlatformId);
 
 				if (deviceID != null && thirdPtyPlatformId != null && ratingType != null) {
 					String objURL = "context://sharing-cities-dsm/" + thirdPtyPlatformId + "/" + onlyGuid;
 					Future<String> checkStreamIDFuture = findStream(objURL, guid);
 					checkStreamIDFuture.setHandler(res -> {
 						String checkStreamID = checkStreamIDFuture.result();
-						// logger.debug("{{SmartIOTProtostub}} stream ID exist?" + checkStreamID);
+						System.out.println("{{SmartIOTProtostub}} stream ID exist?" + checkStreamID);
 						if (checkStreamID != null) {
-							// logger.debug("{{SmartIOTProtostub}} stream already created->" +
-							// objURL);
+							System.out.println("{{SmartIOTProtostub}} stream already created->" +objURL);
 							inviteHyperty(onlyGuid, thirdPtyPlatformId, messageToCreate.getJsonObject("identity"),
 									checkStreamID, ratingType);
 
@@ -445,15 +581,13 @@ public class SmartIotProtostub extends AbstractVerticle {
 							if (streamCreated1st || streamCreated2nd) {
 
 								JsonArray streamList = new JsonObject(getStreamsList(deviceID)).getJsonArray("streams");
-								// logger.debug("{{SmartIOTProtostub}} - stream list" +
-								// streamList.toString());
+								System.out.println("{{SmartIOTProtostub}} - stream list" + streamList.toString());
 
 								int x;
 								for (x = 0; x < streamList.size(); x++) {
 									JsonObject currentStream = streamList.getJsonObject(x);
 									if (currentStream.getString("name").equals(thirdPtyPlatformId)) {
-										logger.debug(
-												"{{SmartIOTProtostub}} stream created was" + currentStream.toString());
+										System.out.println("{{SmartIOTProtostub}} stream created was" + currentStream.toString());
 										JsonObject ctx = new JsonObject().put("contextValue", "");
 										currentStream.put("context", ctx);
 										currentStream.put("platform", thirdPtyPlatformId);
@@ -461,16 +595,16 @@ public class SmartIotProtostub extends AbstractVerticle {
 										JsonObject update = new JsonObject().put("$push",
 												new JsonObject().put("device.stream_list", currentStream));
 
-										// logger.debug("{{SmartIOTProtostub}} push" + update.toString());
+										System.out.println("{{SmartIOTProtostub}} push" + update.toString());
 
 										mongoClient.updateCollection(this.collection,
 												new JsonObject().put("guid", guid), update, res2 -> {
-													logger.debug("{{SmartIOTProtostub}} result>" + res2.succeeded());
-													logger.debug("message:" + message.body().toString());
+													System.out.println("{{SmartIOTProtostub}} result>" + res2.succeeded());
+													System.out.println("message:" + message.body().toString());
 													responseBodyOK.put("description", "new stream created");
 													responseBodyOK.put("stream", currentStream);
 													JsonObject responseOK = new JsonObject().put("body", responseBodyOK);
-													logger.debug("response:" + responseOK.toString());
+													System.out.println("response:" + responseOK.toString());
 													message.reply(responseOK);
 												});
 										
@@ -479,9 +613,9 @@ public class SmartIotProtostub extends AbstractVerticle {
 												currentStream.getString("id"), ratingType);
 										
 
-										// logger.debug("{{SmartIOTProtostub}} subscription result " +
-										// createSubscription(
-										// "subscription from Vertx SmartIOTStub", null, deviceID, thirdPtyUserId));
+										//createSubscription(String subscriptionName, String subscriptionDescription, String deviceID,String streamName
+										JsonObject subscription = createSubscription("subscription from smartIOT Protostub", "subscriptionDescription", deviceID, thirdPtyPlatformId);
+										System.out.println("{{SmartIOTProtostub}} Subscription Result" + subscription.toString());
 									}
 								}
 
@@ -524,7 +658,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 				JsonObject rates = resultRates.result().get(0);
 
 				JsonArray energyArray = rates.getJsonArray("energy-saving");
-				// logger.debug("energy rates size->" + energyArray.size());
+				System.out.println("energy rates size->" + energyArray.size());
 				if (energyArray.size() == 0) {
 					JsonObject transaction = new JsonObject();
 					transaction.put("recipient", guid.split("//")[1]);
@@ -544,25 +678,25 @@ public class SmartIotProtostub extends AbstractVerticle {
 					mongoClient.find("wallets", query, res -> {
 						JsonObject result = res.result().get(0);
 						JsonArray wallets = result.getJsonArray("wallets");
-						// logger.debug("updatePublicWalletBalance(): gofind" + walletAddress);
+						System.out.println("updatePublicWalletBalance(): gofind" + walletAddress);
 						// create wallets
 						for (Object pWallet : wallets) {
 							// get wallet with that address
 							JsonObject wallet = (JsonObject) pWallet;
 
 							if (wallet.getString("address").equals(walletAddress)) {
-								// logger.debug("updatePublicWalletBalance(): wallet" + wallet);
+								System.out.println("updatePublicWalletBalance(): wallet" + wallet);
 								JsonArray transactions = wallet.getJsonArray("transactions");
 
 								transactions.add(transaction);
 
-								// logger.debug("transaction->" + transaction.toString());
+								System.out.println("transaction->" + transaction.toString());
 
 							}
 						}
 
 						mongoClient.findOneAndReplace("wallets", query, result, id -> {
-							// logger.debug("[siot] Transaction added to public wallet");
+							System.out.println("[siot] Transaction added to public wallet");
 
 						});
 					});
@@ -571,12 +705,12 @@ public class SmartIotProtostub extends AbstractVerticle {
 					energyrates.add(transaction);
 
 					mongoClient.findOneAndReplace("rates", new JsonObject().put("user", guid), rates, id -> {
-						// logger.debug("[siot] Transaction added to rates");
+						System.out.println("[siot] Transaction added to rates");
 
 					});
 
 				} else {
-					// logger.debug("[siot] Transaction already exist on rates");
+					System.out.println("[siot] Transaction already exist on rates");
 				}
 
 				fillRatesFuture.complete();
@@ -598,8 +732,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 		// case gira/mobi-e: hyperty://sharing-cities-dsm/user-activity
 		String toInviteHypertyUrl;
 		String fromUrl = "context://sharing-cities-dsm/" + thirdPtyPlatformId + "/" + thirdPtyUserId + "/subscription";
-
-		if (thirdPtyPlatformId.equals("edp")) {
+		System.out.println("[siot] do with url: "+ fromUrl.split("/subscription")[0]);
+		if (thirdPtyPlatformId.equals("edp") || thirdPtyPlatformId.equals("mobie")) {
 			toInviteHypertyUrl = "hyperty://sharing-cities-dsm/energy-saving-rating/" + ratingType;
 		} else {
 			toInviteHypertyUrl = "hyperty://sharing-cities-dsm/user-activity";
@@ -624,9 +758,9 @@ public class SmartIotProtostub extends AbstractVerticle {
 		mongoClient.find(this.collection, new JsonObject().put("guid", guid), res -> {
 			if (res.result().size() != 0) {
 				JsonObject deviceFound = res.result().get(0).getJsonObject("device");
-				// logger.debug("3,5" + deviceFound.getString("id"));
+				System.out.println("3,5" + deviceFound.getString("id"));
 				findDevice.complete(deviceFound.getString("id"));
-				// logger.debug("3,9" + device[0]);
+
 			} else {
 				findDevice.complete(null);
 			}
@@ -642,9 +776,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 		mongoClient.find(this.collection, new JsonObject().put("guid", guid), res -> {
 			if (res.result().size() != 0) {
 				JsonObject deviceFound = res.result().get(0).getJsonObject("device");
-				// logger.debug("3,5" + deviceFound.toString());
+				System.out.println("3,5" + deviceFound.toString());
 				findDevice.complete(deviceFound);
-				// logger.debug("3,9" + device[0]);
 			} else {
 				findDevice.complete(null);
 			}
@@ -654,7 +787,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 	}
 
 	private Future<String> findStream(String objURL, String guid) {
-		// logger.debug("{{SmartIOTProtostub}} find stream:" + objURL);
+		// System.out.println("{{SmartIOTProtostub}} find stream:" + objURL);
 		Future<String> findDevice = Future.future();
 
 		mongoClient.find("dataobjects", new JsonObject().put("objURL", objURL), res -> {
@@ -679,6 +812,22 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 		return findDevice;
 	}
+	
+	private Future<JsonArray> getAllStreamDO(JsonObject query) {
+
+		Future<JsonArray> findAll = Future.future();
+
+		mongoClient.find("dataobjects", query, res -> {
+			JsonArray result = new JsonArray(res.result().toString());
+
+			findAll.complete(result);
+		});
+
+		return findAll;
+		
+
+	}
+	
 
 	public boolean mandatoryFieldsValidator(Message<JsonObject> message) {
 		// header validation...
@@ -750,6 +899,43 @@ public class SmartIotProtostub extends AbstractVerticle {
 		return newToken;
 
 	}
+	
+	private String deviceAuthentication() {
+
+		String newToken = null;
+
+		try {
+
+			String toEncode = appID + ":" + appSecret;
+			byte[] encodedUserPassword = Base64.encodeBase64(toEncode.getBytes());
+
+			String encodedString = new String(encodedUserPassword);
+			StringBuilder received = new StringBuilder();
+			URL url = new URL(smartIotUrl + "/devices/token");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("POST");
+
+			conn.setRequestProperty("authorization", "Basic " + encodedString);
+
+			Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+
+			for (int c; (c = in.read()) >= 0;)
+				received.append(Character.toChars(c));
+
+			conn.disconnect();
+
+			System.out.println("{{SmartIOTProtostub}} [newToken device](" + conn.getResponseCode() + ")" + received.toString());
+			if (conn.getResponseCode() == 200) {
+				newToken = received.toString();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return newToken;
+
+	}
+	
 
 	private JsonObject registerNewDevice(String name, String description) {
 
@@ -802,8 +988,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		try {
 			StringBuilder received = new StringBuilder();
 			String urlToCreate = smartIotUrl + "/devices/" + deviceID + "/streams/" + streamName;
-			// logger.debug("{{SmartIOTProtostub}} create with url " + urlToCreate +
-			// "\nwithtoken->" + currentToken);
+			System.out.println("{{SmartIOTProtostub}} create with url " + urlToCreate + "\nwithtoken->" + currentToken);
 			URL url = new URL(urlToCreate);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("PUT");
@@ -830,8 +1015,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		try {
 			StringBuilder received = new StringBuilder();
 			String urlToDelete = smartIotUrl + "/devices/" + deviceID + "/streams/" + streamName;
-			// logger.debug("{{SmartIOTProtostub}} delete with url " + urlToDelete +
-			// "\nwithtoken->" + currentToken);
+			System.out.println("{{SmartIOTProtostub}} delete with url " + urlToDelete + "\nwithtoken->" + currentToken);
 			URL url = new URL(urlToDelete);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
@@ -839,9 +1023,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 			conn.disconnect();
 
-			// logger.debug(
-			// "{{SmartIOTProtostub}} [deleteStream](" + conn.getResponseCode() + ")" +
-			// received.toString());
+			System.out.println("{{SmartIOTProtostub}} [deleteStream](" + conn.getResponseCode() + ")" + received.toString());
 			if (conn.getResponseCode() == 204) {
 				return true;
 			} else {
@@ -862,8 +1044,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		try {
 			StringBuilder received = new StringBuilder();
 			String urlToDelete = smartIotUrl + "/devices/" + deviceID;
-			// logger.debug("{{SmartIOTProtostub}} delete with url " + urlToDelete +
-			// "\nwithtoken->" + currentToken);
+			System.out.println("{{SmartIOTProtostub}} delete with url " + urlToDelete + "\nwithtoken->" + currentToken);
 			URL url = new URL(urlToDelete);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("DELETE");
@@ -871,9 +1052,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 			conn.disconnect();
 
-			// logger.debug(
-			// "{{SmartIOTProtostub}} [deleteDevice](" + conn.getResponseCode() + ")" +
-			// received.toString());
+			System.out.println("{{SmartIOTProtostub}} [deleteDevice](" + conn.getResponseCode() + ")" + received.toString());
 			if (conn.getResponseCode() == 204) {
 				return true;
 			} else {
@@ -905,8 +1084,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 				received.append(Character.toChars(c));
 
 			conn.disconnect();
-			// logger.debug("[STREAMSLIST](" + conn.getResponseCode() + ")" +
-			// received.toString());
+			System.out.println("[STREAMSLIST](" + conn.getResponseCode() + ")" + received.toString());
 			return received.toString();
 
 		} catch (Exception e) {
@@ -948,15 +1126,65 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 			conn.disconnect();
 
-			// logger.debug(
-			// "{{SmartIOTProtostub}} [newSubscription](" + conn.getResponseCode() + ")" +
-			// received.toString());
+			System.out.println("{{SmartIOTProtostub}} [newSubscription](" + conn.getResponseCode() + ")" + received.toString());
 			return new JsonObject(received.toString());
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	private void publishDataIntoStream(String token, String device, String stream, JsonObject data) {
+
+		try {
+			StringBuilder received = new StringBuilder();
+
+			URL url = new URL(smartIotUrl + "/devices/" + device + "/streams/" + stream + "/value");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setDoOutput(true);
+			conn.setDoInput(true);
+			conn.setRequestProperty("Content-Type", "application/json");
+			conn.setRequestProperty("authorization", "Bearer " + token);
+			conn.setRequestMethod("POST");
+
+			// add payload Json
+			OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+			wr.write(data.toString());
+			wr.flush();
+
+			Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+
+			for (int c; (c = in.read()) >= 0;)
+				received.append(Character.toChars(c));
+
+			conn.disconnect();
+
+			 System.out.println("{{SmartIOTProtostub}} [postData](" + conn.getResponseCode() + ")");
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			
+		}
+
+	}
+	
+
+	private Future<JsonObject> findStream(String streamID) {
+		// System.out.println("find stream:" + streamID);
+		Future<JsonObject> stream = Future.future();
+
+		mongoClient.find("dataobjects", new JsonObject().put("url", streamID), res -> {
+			if (res.result().size() != 0) {
+				JsonObject  dataObject = res.result().get(0);
+				stream.complete(dataObject);
+				// System.out.println("3,9" + stream[0]);
+			} else {
+				stream.complete(null);
+			}
+		});
+
+		return stream;
 	}
 
 }

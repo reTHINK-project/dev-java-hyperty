@@ -50,9 +50,11 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private String mongoCluster = "NO";
 
 	private String SIOTurl = "https://iot.alticelabs.com/api";
-	private String pointOfContact = "https://url_contact";
+	private String pointOfContact = "https://ptsv2.com/t/testSIOT/post";
 	private MongoClient mongoClient = null;
 
+	
+	String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
 	public static void main(String[] args) {
 
 		Consumer<Vertx> runner = vertx -> {
@@ -109,7 +111,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String walletManagerHypertyURL = "hyperty://sharing-cities-dsm/wallet-manager";
 		String elearningHypertyURL = "hyperty://sharing-cities-dsm/elearning";
 		String energySavingRatingHypertyURL = "hyperty://sharing-cities-dsm/energy-saving-rating";
-		String smartIotProtostubUrl = "runtime://sharing-cities-dsm/protostub/smart-iot";
+
 		String registryHypertyURL = "runtime://sharing-cities-dsm";
 		String registryHypertyURLHandler = registryHypertyURL + "/registry";
 		String crmHypertyURL = "hyperty://sharing-cities-dsm/crm";
@@ -137,6 +139,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 		router.route("/requestpub*").handler(BodyHandler.create());
 		router.post("/requestpub").handler(this::handleRequestPub);
+		router.route("/generate*").handler(BodyHandler.create());
+		router.post("/generate").handler(this::handleGenerateData);
 
 		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
@@ -369,9 +373,9 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String school0ID = "user-guid://school-0";
 		String school1ID = "user-guid://school-1";
 		String school2ID = "user-guid://school-2";
-		JsonObject feed0 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet0userID");
-		JsonObject feed1 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet1userID");
-		JsonObject feed2 = new JsonObject().put("platformID", "edp").put("platformUID", "wallet2userID");
+		JsonObject feed0 = new JsonObject().put("platformID", "edp").put("platformUID", "school-0");
+		JsonObject feed1 = new JsonObject().put("platformID", "edp").put("platformUID", "school-1");
+		JsonObject feed2 = new JsonObject().put("platformID", "edp").put("platformUID", "school-2");
 
 		// publicWallets
 		JsonArray publicWallets = new JsonArray();
@@ -486,59 +490,36 @@ public class StartJavaHyperties extends AbstractVerticle {
 
 	private void handleRequestPub(RoutingContext routingContext) {
 
-		// System.out.println("ENDPOINT POST RECEIVED DATA -> " +
-		// routingContext.getBodyAsString().toString());
+		System.out.println("ENDPOINT POST RECEIVED DATA -> " +routingContext.getBodyAsString().toString());
 
 		JsonObject dataReceived = new JsonObject(routingContext.getBodyAsString().toString());
-		JsonArray values = dataReceived.containsKey("values") ? dataReceived.getJsonArray("values") : null;
 
-		if (values != null) {
-			int x;
-			for (x = 0; x < values.size(); x++) {
-				JsonObject currentObj = values.getJsonObject(x);
-				String value = currentObj.getString("data");
-
-				JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value));
-				JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
-
-				JsonArray valuesArray = new JsonArray().add(valueObject);
-
-				JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuesArray);
-
-				Future<String> objURLFuture = findStream(currentObj.getString("streamId"));
-				objURLFuture.setHandler(asyncResult -> {
-					String objURL = asyncResult.result();
-					// System.out.println("publishin on " + objURL + "/changes");
-
-					if (objURL != null) {
-						String changesObj = objURL + "/changes";
-						vertx.eventBus().publish(changesObj, new JsonArray().add(newObjToSend));
-					}
-				});
-
-			}
-		}
+		vertx.eventBus().publish(smartIotProtostubUrl + "/post", dataReceived);
 		HttpServerResponse httpServerResponse = routingContext.response();
 		httpServerResponse.setChunked(true);
 
 		httpServerResponse.putHeader("Content-Type", "application/text").end();
 	}
+	
+	private void handleGenerateData(RoutingContext routingContext) {
 
-	private Future<String> findStream(String streamID) {
-		// System.out.println("find stream:" + streamID);
-		Future<String> stream = Future.future();
+		System.out.println("generate endpoint -> " + routingContext.getBodyAsString().toString());
 
-		mongoClient.find("dataobjects", new JsonObject().put("url", streamID), res -> {
-			if (res.result().size() != 0) {
-				String objURL = res.result().get(0).getString("objURL");
-				stream.complete(objURL);
-				// System.out.println("3,9" + stream[0]);
-			} else {
-				stream.complete(null);
-			}
-		});
+		JsonObject dataReceived = new JsonObject(routingContext.getBodyAsString().toString());
+		
+		JsonObject message = new JsonObject();
+		message.put("type", "generate");
+		message.put("body", dataReceived);
+		message.put("from", "");
+		message.put("identity", new JsonObject());
+		vertx.eventBus().publish(smartIotProtostubUrl, message);
 
-		return stream;
+		HttpServerResponse httpServerResponse = routingContext.response();
+		httpServerResponse.setChunked(true);
+
+		httpServerResponse.putHeader("Content-Type", "application/text").end();
 	}
+	
+
 
 }
