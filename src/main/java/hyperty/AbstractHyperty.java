@@ -342,7 +342,8 @@ public class AbstractHyperty extends AbstractVerticle {
 		document.put("guid", guid);
 		document.put("type", type);
 
-		JsonObject toInsert = new JsonObject().put("url", streamID).put("objURL", objURL).put("metadata", document);
+		JsonObject toInsert = new JsonObject().put("url", streamID).put("objURL", objURL).put("metadata", document)
+				.put("ratingType", ratingType);
 		logger.debug("Creating DO entry -> " + toInsert.toString());
 
 		mongoClient.save(dataObjectsCollection, toInsert, res2 -> {

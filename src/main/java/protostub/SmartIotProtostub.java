@@ -175,19 +175,19 @@ public class SmartIotProtostub extends AbstractVerticle {
 								JsonObject dataObject = asyncResult.result();
 								String objURL = dataObject.getString("objURL");
 	
-								JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value));
-								JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
-								JsonArray valuesArray = new JsonArray().add(valueObject);
-								JsonObject newObjToSend = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuesArray);
-								
-								
-								JsonArray toSend = new JsonArray().add(newObjToSend);
+							    JsonArray valuestoSend = new JsonArray();
+							    JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value));
+							    JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+							    valuestoSend.add(valueObject);
+							    JsonObject allData = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuestoSend);
+
 							    System.out.println("publishing on " + objURL + "/changes");
-							    System.out.println("data: " + toSend.toString());
+							    System.out.println("data: " + allData.toString());
+
 
 								if (objURL != null) {
 									String changesObj = objURL + "/changes";
-									vertx.eventBus().publish(changesObj, toSend);
+									vertx.eventBus().publish(changesObj, allData);
 								}
 							});
 

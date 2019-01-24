@@ -40,6 +40,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		this.eb.<JsonObject>consumer(ratingPublic, onMessage(ratingPublic));
 		this.eb.<JsonObject>consumer(ratingPrivate, onMessage(ratingPrivate));
 
+		resumeDataObjects(ratingType);
+
 	}
 
 	public Handler<Message<JsonObject>> onMessage(String streamType) {
@@ -260,7 +262,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address, String ratingType) {
 
 		final String address_changes = address + "/changes";
-		logger.info(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
+		logger.info(logMessage + "onChanges-energy: waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
 			logger.info("[Energy]");
 			logger.debug(logMessage + "onChanges(): received message" + message.body());
@@ -342,6 +344,25 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			});
 
 		}
+	}
+	
+	@Override
+	public void resumeDataObjects(String ratingType) {
+		
+ 		JsonObject tofind = new JsonObject().put("ratingType", ratingType);
+		logger.debug("Resuming dataobjects ratingType-> " + ratingType);
+ 			mongoClient.find(dataObjectsCollection, tofind, allDataObjects -> {
+ 				logger.debug("GetAllDataObjects complete for energy - " + allDataObjects.result().size());
+				for (int i = 0; i < allDataObjects.result().size(); i++) {
+					String dataObjectUrl = allDataObjects.result().get(i).getString("objURL");
+					if(dataObjectUrl.contains("school")) {
+						onChanges(dataObjectUrl, ratingPublic);	
+					}else {
+						onChanges(dataObjectUrl, ratingPrivate);	
+					}
+									
+				}
+			});		
 	}
 
 }
