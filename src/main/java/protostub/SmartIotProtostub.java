@@ -733,7 +733,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		String toInviteHypertyUrl;
 		String fromUrl = "context://sharing-cities-dsm/" + thirdPtyPlatformId + "/" + thirdPtyUserId + "/subscription";
 		System.out.println("[siot] do with url: "+ fromUrl.split("/subscription")[0]);
-		if (thirdPtyPlatformId.equals("edp") || thirdPtyPlatformId.equals("mobie")) {
+		if (thirdPtyPlatformId.equals("edp")) {
 			toInviteHypertyUrl = "hyperty://sharing-cities-dsm/energy-saving-rating/" + ratingType;
 		} else {
 			toInviteHypertyUrl = "hyperty://sharing-cities-dsm/user-activity";
