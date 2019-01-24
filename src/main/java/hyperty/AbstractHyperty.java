@@ -58,7 +58,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		this.schemaURL = config().getString("schemaURL");
 		this.observers = config().getJsonArray("observers");
 		this.siotStubUrl = config().getString("siot_stub_url");
-		this.logger =  LoggerFactory.getInstance().getLogger(); 
+		this.logger = LoggerFactory.getInstance().getLogger();
 
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
@@ -117,8 +117,8 @@ public class AbstractHyperty extends AbstractVerticle {
 			logger.debug(logMessage + "New message -> " + message.body().toString());
 			if (mandatoryFieldsValidator(message)) {
 
-				logger.debug(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName()
-						+ "\n[Data] " + message.body());
+				logger.debug(logMessage + "[NewData] -> [Worker]-" + Thread.currentThread().getName() + "\n[Data] "
+						+ message.body());
 
 				final JsonObject body = new JsonObject(message.body().toString()).getJsonObject("body");
 				final String type = new JsonObject(message.body().toString()).getString("type");
@@ -138,8 +138,7 @@ public class AbstractHyperty extends AbstractVerticle {
 
 						JsonObject toSearch = new JsonObject().put("identity", identity);
 
-						logger.debug(
-								logMessage + "Search on " + this.collection + " with data" + toSearch.toString());
+						logger.debug(logMessage + "Search on " + this.collection + " with data" + toSearch.toString());
 
 						mongoClient.find(this.collection, toSearch, res -> {
 							if (res.result().size() != 0) {
@@ -202,6 +201,7 @@ public class AbstractHyperty extends AbstractVerticle {
 		Future<String> doStream = Future.future();
 
 		mongoClient.find(this.dataObjectsCollection, new JsonObject().put("objURL", objURL), res -> {
+			System.out.println("dataobject find result(" + objURL + ") :" + res.result().size());
 			for (int i = 0; i < res.result().size(); i++) {
 				String currentGuid = res.result().get(i).getJsonObject("metadata").getString("guid");
 				if (currentGuid.equals(guid)) {
@@ -234,7 +234,8 @@ public class AbstractHyperty extends AbstractVerticle {
 			Future<String> CheckURL = findDataObjectStream(objURL, guid);
 			CheckURL.setHandler(asyncResult -> {
 				if (asyncResult.succeeded()) {
-					if (CheckURL == null) {
+
+					if (asyncResult.result() == null) {
 						Future<Boolean> persisted = persistDataObjUserURL(streamID, guid, objURL, "reporter");
 						persisted.setHandler(res -> {
 							if (res.succeeded()) {
@@ -364,10 +365,9 @@ public class AbstractHyperty extends AbstractVerticle {
 		document.put("type", type);
 
 		JsonObject toFind = new JsonObject().put("url", address);
-		JsonObject toInsert = new JsonObject().put("url", address)
-				.put("metadata", document)
-				.put("ratingType", ratingType);
-		
+		JsonObject toInsert = new JsonObject().put("url", address).put("metadata", document).put("ratingType",
+				ratingType);
+
 		logger.debug("Creating DO entry -> " + toInsert.toString());
 		new Thread(() -> {
 
@@ -380,7 +380,8 @@ public class AbstractHyperty extends AbstractVerticle {
 						System.out.println("Setup complete - dataobjects + already exist, but ratingType undefined");
 						mongoClient.removeDocuments(dataObjectsCollection, toFind, deleteResult -> {
 							mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
-								System.out.println("Setup complete - dataobjects + Insert" + resInsert.result().toString());
+								System.out.println(
+										"Setup complete - dataobjects + Insert" + resInsert.result().toString());
 								dataPersisted.complete(resInsert.succeeded());
 							});
 						});
@@ -461,7 +462,6 @@ public class AbstractHyperty extends AbstractVerticle {
 		logger.debug("validating source ... from:" + from + "\nobservers:" + observers.getList().toString()
 				+ "\nourUserURL:" + this.identity.getJsonObject("userProfile").getString("userURL") + "\nCOLLECTION:"
 				+ collection);
-		
 
 		return true;
 
@@ -543,90 +543,79 @@ public class AbstractHyperty extends AbstractVerticle {
 		return true;
 
 	}
-	
-	
-	
+
 	public void resumeDataObjects(String ratingType) {
-		
-	 		JsonObject tofind = new JsonObject().put("ratingType", ratingType);
-			logger.debug("Resuming dataobjects ratingType-> " + ratingType);
-	 			mongoClient.find(dataObjectsCollection, tofind, allDataObjects -> {
-	 				logger.debug("GetAllDataObjects complete - " + allDataObjects.result().size());
-					for (int i = 0; i < allDataObjects.result().size(); i++) {
-						String dataObjectUrl = allDataObjects.result().get(i).getString("url");
-						onChanges(dataObjectUrl);					
-					}
-				});		
-		}
+
+		JsonObject tofind = new JsonObject().put("ratingType", ratingType);
+		logger.debug("Resuming dataobjects ratingType-> " + ratingType);
+		mongoClient.find(dataObjectsCollection, tofind, allDataObjects -> {
+			logger.debug("GetAllDataObjects complete - " + allDataObjects.result().size());
+			for (int i = 0; i < allDataObjects.result().size(); i++) {
+				String dataObjectUrl = allDataObjects.result().get(i).getString("url");
+				onChanges(dataObjectUrl);
+			}
+		});
+	}
 
 	public void cleanDuplicatedDataObjects() {
-		
+
 		mongoClient.find(dataObjectsCollection, new JsonObject(), resultHandler -> {
-			
-			
-			
-			//all documents
+
+			// all documents
 			List<JsonObject> dataObjectsArray = resultHandler.result();
 			logger.info("All dos size:" + dataObjectsArray.size());
-			
-			//to fill with single url of each dataobject
+
+			// to fill with single url of each dataobject
 			List<String> dataObjectsUrl = new ArrayList<String>();
-			
+
 			if (dataObjectsArray.size() > 0) {
 				int i;
 				for (i = 0; i < dataObjectsArray.size(); i++) {
-					
+
 					JsonObject currentDO = dataObjectsArray.get(i);
 					String url = currentDO.getString("url");
-					
-					if (!currentDO.containsKey("objURL") && !dataObjectsUrl.contains(url)) {
-						//add to list
-						dataObjectsUrl.add(url);
-						
-						JsonObject toRemove = new JsonObject().put("url", url);
-						
-						
-						//JsonObject document = currentDO.getJsonObject("metadata");
 
-						//JsonObject toAdd = new JsonObject().put("url", url)
-						//		.put("metadata", document);
+					if (!currentDO.containsKey("objURL") && !dataObjectsUrl.contains(url)) {
+						// add to list
+						dataObjectsUrl.add(url);
+
+						JsonObject toRemove = new JsonObject().put("url", url);
+
+						// JsonObject document = currentDO.getJsonObject("metadata");
+
+						// JsonObject toAdd = new JsonObject().put("url", url)
+						// .put("metadata", document);
 						currentDO.remove("_id");
-		
+
 						mongoClient.removeDocuments(dataObjectsCollection, toRemove, deleteResult -> {
 							mongoClient.save(dataObjectsCollection, currentDO, resInsert -> {
 								logger.info("Setup complete - dataobjects + Insert" + resInsert.result().toString());
 							});
 						});
-						
+
 					}
 				}
 				logger.info("single do size:" + dataObjectsUrl.size());
 			}
-		
-		
-		/*
-		mongoClient.find(dataObjectsCollection, new JsonObject(), res2 -> {
-			if (res2.result().size() > 0) {
-				if (res2.result().get(0).containsKey("ratingType")) {
-					System.out.println("Setup complete - dataobjects + already exist");
-					dataPersisted.complete(true);
-				} else {
-					System.out.println("Setup complete - dataobjects + already exist, but ratingType undefined");
-					mongoClient.removeDocuments(dataObjectsCollection, toFind, deleteResult -> {
-						mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
-							System.out.println("Setup complete - dataobjects + Insert" + resInsert.result().toString());
-							dataPersisted.complete(resInsert.succeeded());
-						});
-					});
-				}
-	
-			} else {
-				mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
-					System.out.println("Setup complete - dataobjects + Insert" + resInsert.result().toString());
-					dataPersisted.complete(resInsert.succeeded());
-				});
-			}
-		});*/
+
+			/*
+			 * mongoClient.find(dataObjectsCollection, new JsonObject(), res2 -> { if
+			 * (res2.result().size() > 0) { if
+			 * (res2.result().get(0).containsKey("ratingType")) {
+			 * System.out.println("Setup complete - dataobjects + already exist");
+			 * dataPersisted.complete(true); } else { System.out.
+			 * println("Setup complete - dataobjects + already exist, but ratingType undefined"
+			 * ); mongoClient.removeDocuments(dataObjectsCollection, toFind, deleteResult ->
+			 * { mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
+			 * System.out.println("Setup complete - dataobjects + Insert" +
+			 * resInsert.result().toString());
+			 * dataPersisted.complete(resInsert.succeeded()); }); }); }
+			 * 
+			 * } else { mongoClient.save(dataObjectsCollection, toInsert, resInsert -> {
+			 * System.out.println("Setup complete - dataobjects + Insert" +
+			 * resInsert.result().toString());
+			 * dataPersisted.complete(resInsert.succeeded()); }); } });
+			 */
 		});
 	}
 }
