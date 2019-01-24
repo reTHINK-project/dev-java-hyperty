@@ -54,7 +54,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * stored in the recipient wallet ?) (future in a blockchain?):
 	 */
 	void mine(int numTokens, JsonObject msgOriginal, String source) {
-		logger.debug(logMessage + "mine(): Mining " + numTokens + " tokens...\nmsg: " + msgOriginal);
+		logger.debug(logMessage + "mine(): Mining " + numTokens + " tokens...\nmsg: " + msgOriginal + "    ->source:  " + source);
 		String userId = msgOriginal.getString("guid");
 
 		// store transaction by sending it to wallet through wallet manager

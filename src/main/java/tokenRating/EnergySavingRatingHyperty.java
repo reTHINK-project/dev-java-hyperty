@@ -147,8 +147,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// get wallet from wallet manager
 		Future<JsonObject> readPublicWallet = Future.future();
-
-		String walletGuid = "user-guid://" + values.getJsonObject(biggestReductionIndex).getJsonObject("value").getString("id");
+		String walletid = values.getJsonObject(biggestReductionIndex).getJsonObject("value").getString("id");
+		String walletGuid = "user-guid://" + walletid;
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
 		msg.put("from", "myself");
@@ -182,6 +182,10 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				transaction.put("source", "energy-saving");
 				transaction.put("value", monthlyPoints);
 				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+				transaction.put("description", "valid");
+				transaction.put("nonce", 1);
+				transaction.put("wallet2bGranted", walletid.replace("-", "") + "-wallet");		
+				
 				msgEnergySaving.put("transaction", transaction);
 				vertx.eventBus().send("wallet-cause-transfer", msgEnergySaving);
 
