@@ -414,7 +414,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 							break;
 						}
 					}
-					Future<String> userURL = getUserURL(address);
+					Future<String> userURL = getUserURL(address, "url");
 					userURL.setHandler(asyncResult -> {
 						logger.debug("URL " + userURL.result());
 						changes.put("guid", userURL.result());
@@ -459,7 +459,7 @@ public class CheckInRatingHyperty extends AbstractTokenRatingHyperty {
 							break;
 						}
 					}
-					Future<String> userURLFuture = getUserURL(address);
+					Future<String> userURLFuture = getUserURL(address, "url");
 					userURLFuture.setHandler(asyncResult -> {
 						String userURL = userURLFuture.result();
 

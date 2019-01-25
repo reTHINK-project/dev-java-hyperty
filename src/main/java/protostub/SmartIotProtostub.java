@@ -168,28 +168,67 @@ public class SmartIotProtostub extends AbstractVerticle {
 					int x;
 					if (values.size() == 1) {
 							JsonObject currentObj = values.getJsonObject(0);
+							
+							String streamName = currentObj.getString("streamName");
 							String value = currentObj.getString("data");
+							String date = currentObj.getString("receivedAt");
+							
+							
+								
+								Future<JsonObject> objURLFuture = findStream(currentObj.getString("streamId"));
+								objURLFuture.setHandler(asyncResult -> {
+									JsonObject dataObject = asyncResult.result();
+									String objURL = dataObject.getString("objURL");
+		
+									if (streamName.equals("edp")) {
+										
+									    JsonArray valuestoSend = new JsonArray();
+									    JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value));
+									    JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+									    valuestoSend.add(valueObject);
+									    JsonObject allData = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuestoSend);
 
-							Future<JsonObject> objURLFuture = findStream(currentObj.getString("streamId"));
-							objURLFuture.setHandler(asyncResult -> {
-								JsonObject dataObject = asyncResult.result();
-								String objURL = dataObject.getString("objURL");
-	
-							    JsonArray valuestoSend = new JsonArray();
-							    JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value));
-							    JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
-							    valuestoSend.add(valueObject);
-							    JsonObject allData = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuestoSend);
-
-							    System.out.println("publishing on " + objURL + "/changes");
-							    System.out.println("data: " + allData.toString());
+									    System.out.println("publishing on " + objURL + "/changes");
+									    System.out.println("data: " + allData.toString());
 
 
-								if (objURL != null) {
-									String changesObj = objURL + "/changes";
-									vertx.eventBus().publish(changesObj, allData);
-								}
-							});
+										if (objURL != null) {
+											String changesObj = objURL + "/changes";
+											vertx.eventBus().publish(changesObj, allData);
+										}
+										
+									} else if (streamName.equals("mobie")) {
+										 JsonArray valuestoSend = new JsonArray();
+										 JsonObject data = new JsonObject();
+										
+										 data.put("type", "user_eVehicles_context");
+										 data.put("name", "eVehicles distance in meters");
+										 data.put("unit", "meter");
+										 data.put("startTime", date);
+										 data.put("endTime", date);
+										 
+										 Double value_kw = Double.parseDouble(value);
+										 Double value_meter = value_kw * 100 / 12 * 1000;
+										 // 12kWh/100km
+										 data.put("value", value_meter);
+
+										 valuestoSend.add(data);
+										 
+										 
+										if (objURL != null) {
+											String changesObj = objURL + "/changes";
+											logger.debug("publish on (" + changesObj + ") -> data:" + valuestoSend.toString());
+											vertx.eventBus().publish(changesObj, valuestoSend);
+										}
+										
+									}
+
+									
+
+								});
+							
+							
+
 
 					} else {
 						

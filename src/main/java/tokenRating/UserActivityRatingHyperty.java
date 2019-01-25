@@ -280,36 +280,55 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 				if (data.size() == 1) {
 					JsonObject changes = new JsonObject();
 
-					for (int i = 0; i < data.size(); i++) {
-						final JsonObject obj = data.getJsonObject(i);
-						final String type = obj.getString("type");
-						switch (type) {
-						case "user_walking_context":
-						case "user_biking_context":
-						case "user_bikeSharing_context":
-						case "user_eVehicles_context":
-							changes.put("activity", type);
-							changes.put("distance", obj.getDouble("value"));
-							break;
-						default:
-							break;
-						}
+
+					final JsonObject obj = data.getJsonObject(0);
+					final String type = obj.getString("type");
+					switch (type) {
+					case "user_walking_context":
+					case "user_biking_context":
+					case "user_bikeSharing_context":
+					case "user_eVehicles_context":
+						changes.put("activity", type);
+						changes.put("distance", obj.getDouble("value"));
+						break;
+					default:
+						break;
 					}
 
-					Future<String> userURL = getUserURL(address);
-					userURL.setHandler(asyncResult -> {
-						changes.put("guid", userURL.result());
-						logger.debug(logMessage + "changes: " + changes.toString());
 
-						Future<Integer> numTokens = rate(changes);
-						numTokens.setHandler(res -> {
-							if (numTokens.succeeded()) {
-								mine(numTokens.result(), changes, "user-activity");
-							} else {
-								// oh ! we have a problem...
-							}
+					if (type.equals("user_eVehicles_context")) {
+						Future<String> userURL = getUserURL(address, "objURL");
+						userURL.setHandler(asyncResult -> {
+							changes.put("guid", userURL.result());
+							logger.debug(logMessage + "changes: " + changes.toString());
+
+							Future<Integer> numTokens = rate(changes);
+							numTokens.setHandler(res -> {
+								if (numTokens.succeeded()) {
+									mine(numTokens.result(), changes, "user-activity");
+								} else {
+									// oh ! we have a problem...
+								}
+							});
 						});
-					});
+					} else {
+						Future<String> userURL = getUserURL(address, "url");
+						userURL.setHandler(asyncResult -> {
+							changes.put("guid", userURL.result());
+							logger.debug(logMessage + "changes: " + changes.toString());
+
+							Future<Integer> numTokens = rate(changes);
+							numTokens.setHandler(res -> {
+								if (numTokens.succeeded()) {
+									mine(numTokens.result(), changes, "user-activity");
+								} else {
+									// oh ! we have a problem...
+								}
+							});
+						});
+					}
+					
+
 
 				}
 

@@ -248,10 +248,10 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		});
 	}
 
-	public Future<String> getUserURL(String address) {
+	public Future<String> getUserURL(String address, String key) {
 
 		Future<String> userID = Future.future();
-		mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {
+		mongoClient.find(dataObjectsCollection, new JsonObject().put(key, address), userURLforAddress -> {
 			logger.debug("2 - find Dataobjects size->" + userURLforAddress.result().size());
 			if (userURLforAddress.result().size() == 0) {
 				userID.complete("");

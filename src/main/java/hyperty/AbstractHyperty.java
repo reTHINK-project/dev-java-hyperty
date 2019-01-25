@@ -552,7 +552,12 @@ public class AbstractHyperty extends AbstractVerticle {
 			logger.debug("GetAllDataObjects complete - " + allDataObjects.result().size());
 			for (int i = 0; i < allDataObjects.result().size(); i++) {
 				String dataObjectUrl = allDataObjects.result().get(i).getString("url");
-				onChanges(dataObjectUrl);
+				if(allDataObjects.result().get(i).containsKey("objURL")) {
+					onChanges(allDataObjects.result().get(i).getString("objURL"));
+				} else {
+					onChanges(dataObjectUrl);
+				}
+				
 			}
 		});
 	}
