@@ -9,7 +9,7 @@ Additional configuration data:
   tokens_per_walking_km: <integer>,
   tokens_per_biking_km: <integer>,
   tokens_per_bikesharing_km: <integer>,
-  tokens_per_evehicle_km: <integer>,
+  tokens_per_e-driving_km: <integer>,
 }
 ```
 
