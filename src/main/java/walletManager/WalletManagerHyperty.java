@@ -614,9 +614,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// insert transaction to transactionsCollection
 			persistTransaction(transaction);
 			Account account = null;
+			
 			logger.debug(logMessage + "transferToPrivateWallet - 1");
 			if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
+				
 				logger.debug(logMessage + "transferToPrivateWallet - 1.1");
+				walletInfo = checkEDriving(walletInfo); 
+				
 				account = getAccount(transaction.getString("source"), walletInfo);
 				logger.debug(logMessage + "transferToPrivateWallet - 2");
 				account = updateAccount(account, transaction);
@@ -1043,8 +1047,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 						// update counters
 						JsonObject countersObj = wallet.getJsonObject(counters);
+						System.out.println("counter obj" + countersObj.toString());
+						System.out.println("source" + source);
 						if (!source.equals("created") && !source.equals("bonus")) {
-							countersObj.put(source, countersObj.getInteger(source) + transactionValue);
+							if (source.equals("e-driving")) {
+								countersObj.put("user-activity", countersObj.getInteger("user-activity") + transactionValue);
+							} else {
+								countersObj.put(source, countersObj.getInteger(source) + transactionValue);
+							}
+							
 						}
 
 						updatedWallet = wallet;

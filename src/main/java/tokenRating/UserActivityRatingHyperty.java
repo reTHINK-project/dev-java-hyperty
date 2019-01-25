@@ -305,7 +305,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 							Future<Integer> numTokens = rate(changes);
 							numTokens.setHandler(res -> {
 								if (numTokens.succeeded()) {
-									mine(numTokens.result(), changes, "user-activity");
+									mine(numTokens.result(), changes, "e-driving");
 								} else {
 									// oh ! we have a problem...
 								}
