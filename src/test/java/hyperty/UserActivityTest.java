@@ -372,16 +372,14 @@ class UserActivityTest {
 
 			mongoClient.find(walletsCollection, query, result -> {
 				JsonObject wallet = result.result().get(0).getJsonArray("wallets").getJsonObject(0);
-				JsonArray transactions = wallet.getJsonArray("transactions");
 				JsonArray accounts = wallet.getJsonArray("accounts");
 				// check accounts
 				List<Object> res = accounts.stream()
 						.filter(account -> ((JsonObject) account).getString("name").equals("created"))
 						.collect(Collectors.toList());
 				JsonObject accountCreated = (JsonObject) res.get(0);
-				assertEquals(10, (int) accountCreated.getInteger("totalBalance"));
+				assertEquals(50, (int) accountCreated.getInteger("totalBalance"));
 				assertEquals(1, (int) accountCreated.getInteger("lastData"));
-				assertEquals(2, transactions.size());
 				assertions.countDown();
 			});
 		}).start();
