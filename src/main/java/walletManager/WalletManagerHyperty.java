@@ -849,7 +849,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			}
 			transactions = trAux;
 		}
-		if (source.equals("walking") || source.equals("biking")) {
+		if (source.equals("walking") || source.equals("biking") || source.equals("e-driving")) {
 			String newSource = "user_" + source + "_context";
 			return transactions.stream()
 					.filter(transaction -> isUserActivityTransaction((JsonObject) transaction, newSource))
@@ -1023,10 +1023,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 						if (transactionValue > 0) {
 							logger.debug(logMessage + "transferToPublicWallet - 1");
 							// update accounts
-							/*
-							 * JsonObject withCreated = checkCreated(wallet); logger.debug(logMessage +
-							 * "transferToPublicWallet - 2");
-							 */
+							
+							wallet = checkEDriving(wallet); 
+							logger.debug(logMessage +"transferToPublicWallet - 2");
+							
 							Account account = getAccount(transaction.getString("source"), wallet);
 							logger.debug(logMessage + "transferToPublicWallet - 3" + account.toJsonObject().toString());
 							account = updateAccount(account, transaction);
@@ -1103,25 +1103,26 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		return transferFuture;
 
 	}
-	/*
-	 * private JsonObject checkCreated(JsonObject wallet) { boolean createdExists =
-	 * false; JsonArray accounts = wallet.getJsonArray("accounts"); for (Object
-	 * object : accounts) { JsonObject account = (JsonObject) object; if
-	 * (account.getString("name").equals("created")) createdExists = true; }
-	 * 
-	 * if (!createdExists) { System.out.println("UPDATING WITH CREATED"); // build
-	 * "created" account Account created = new Account("created", "points"); //
-	 * transactions for this source List<Object> transactionsForSource =
-	 * getTransactionsForSource(wallet.getJsonArray("transactions"), "created",
-	 * false); created.totalBalance = sumTransactionsField(transactionsForSource,
-	 * "value"); created.totalData = transactionsForSource.size(); JsonArray
-	 * lastTransactions = lastWeekTransactions(transactionsForSource);
-	 * created.lastBalance = sumTransactionsField(lastTransactions.getList(),
-	 * "value"); created.lastData = lastTransactions.size();
-	 * accounts.add(created.toJsonObject()); } return wallet;
-	 * 
-	 * }
-	 */
+	
+	private JsonObject checkEDriving(JsonObject wallet) {
+		boolean evehicleExists = false;
+		JsonArray accounts = wallet.getJsonArray("accounts");
+		for (Object object : accounts) {
+			JsonObject account = (JsonObject) object;
+			if (account.getString("name").equals("e-driving"))
+				evehicleExists = true;
+		}
+
+		if (!evehicleExists) {
+			System.out.println("UPDATING WITH EVEHICLES");
+			// build "e-driving" account
+			Account eDriving = new Account("e-driving", "kw/h");
+			accounts.add(eDriving.toJsonObject());
+		}
+		return wallet;
+
+	}
+	
 
 	private JsonObject sumAccounts(JsonObject wallet, boolean isPrivate) {
 
