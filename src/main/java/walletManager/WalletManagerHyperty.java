@@ -1104,7 +1104,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		});
 
-		return transferFuture;
+		return transferFuture; 
 
 	}
 	/*
