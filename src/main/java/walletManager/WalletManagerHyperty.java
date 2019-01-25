@@ -1003,7 +1003,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			Lock lock = r.result();
 
 			logger.debug(logMessage + "transferToPublicWallet(): " + walletAddress + "\n" + transaction);
-			String source = getSource(transaction);;
+			String source = getSource(transaction);
+			String sourceOriginal = transaction.getString("source");
 			int transactionValue = transaction.getInteger("value");
 
 			JsonObject query = new JsonObject().put("identity",
@@ -1046,8 +1047,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 						// update counters
 						JsonObject countersObj = wallet.getJsonObject(counters);
-						if (!source.equals("created") && !source.equals("bonus")) {
-							countersObj.put(source, countersObj.getInteger(source) + transactionValue);
+						if (!sourceOriginal.equals("created") && !sourceOriginal.equals("bonus")) {
+							countersObj.put(sourceOriginal, countersObj.getInteger(sourceOriginal) + transactionValue);
 						}
 
 						updatedWallet = wallet;
