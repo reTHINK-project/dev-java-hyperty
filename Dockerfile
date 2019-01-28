@@ -2,6 +2,9 @@ FROM java:8
 
 #Install maven
 RUN apt-get update
+ 
+RUN ["sleep","10"]
+
 RUN apt-get install -y maven
 
 
@@ -42,10 +45,14 @@ RUN set -ex; \
 	for key in $GPG_KEYS; do \
 		gpg --keyserver pool.sks-keyservers.net --recv-keys "$key"; \
 	done
-
+RUN ["sleep","10000"]
 
 ENV NPM_CONFIG_LOGLEVEL info
 ENV NODE_VERSION 11.8.0
+
+
+RUN ["sleep","20"]
+
 
 RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.xz" \
     && curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
