@@ -45,7 +45,6 @@ RUN set -ex; \
 	for key in $GPG_KEYS; do \
 		gpg --keyserver pool.sks-keyservers.net --recv-keys "$key"; \
 	done
-RUN ["sleep","10000"]
 
 ENV NPM_CONFIG_LOGLEVEL info
 ENV NODE_VERSION 11.8.0
