@@ -293,8 +293,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configUserActivity.put("mongoHost", mongoHosts);
 		configUserActivity.put("mongoCluster", mongoCluster);
 		configUserActivity.put("mongoPorts", mongoPorts);
-		configUserActivity.put("tokens_per_walking_km", 10);
-		configUserActivity.put("tokens_per_biking_km", 10);
+		configUserActivity.put("tokens_per_walking_km", 20);
+		configUserActivity.put("tokens_per_biking_km", 20);
 		configUserActivity.put("tokens_per_bikesharing_km", 10);
 		configUserActivity.put("tokens_per_evehicle_km", 5);
 		configUserActivity.put("mtWalkPerDay", 20000);
