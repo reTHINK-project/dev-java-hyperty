@@ -735,6 +735,8 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 				source = "biking";
 			} else if (activity.equals("user_walking_context")) {
 				source = "walking";
+			} else if (activity.equals("user_e-driving_context")) {
+				source ="e-driving";
 			}
 		}
 		return source;

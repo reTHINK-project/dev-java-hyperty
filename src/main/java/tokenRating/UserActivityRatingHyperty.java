@@ -122,7 +122,13 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		logger.debug(logMessage + " message: " + activityMessage.toString());
 		String user = activityMessage.getString("guid");
 		String activity = activityMessage.getString("activity");
-		int currentSessionDistance = activityMessage.getInteger("distance");
+		int val = 0;
+		if (activity.equals("user_e-driving_context")) {
+			val = activityMessage.getInteger("distance") * 100 / 12 * 1000;
+		} else {
+			val = activityMessage.getInteger("distance");
+		}
+		int currentSessionDistance = val;
 
 		Future<Integer> result = Future.future();
 		Future<JsonArray> unprocessed = getUnprocessedSessions(user, activity);
@@ -232,7 +238,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 			return distance >= 500;
 		case "user_bikeSharing_context":
 			return distance >= 1000;
-		case "user_eVehicles_context":
+		case "user_e-driving_context":
 			return distance >= 2000;
 		default:
 			return false;
@@ -257,7 +263,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 			break;
 		case "user_bikeSharing_context":
 			tokens = distance / 1000 * tokensBikesharingKm;
-		case "user_eVehicles_context":
+		case "user_e-driving_context":
 			tokens = distance / 2000 * (tokensEvehicleKm * 2);
 			break;
 		default:
@@ -286,8 +292,11 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 					switch (type) {
 					case "user_walking_context":
 					case "user_biking_context":
+						changes.put("activity", type);
+						changes.put("distance", obj.getDouble("value"));
+						break;
 					case "user_bikeSharing_context":
-					case "user_eVehicles_context":
+					case "user_e-driving_context":
 						changes.put("activity", type);
 						changes.put("distance", obj.getDouble("value"));
 						break;
@@ -296,7 +305,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 					}
 
 
-					if (type.equals("user_eVehicles_context")) {
+					if (type.equals("user_e-driving_context")) {
 						Future<String> userURL = getUserURL(address, "objURL");
 						userURL.setHandler(asyncResult -> {
 							changes.put("guid", userURL.result());
@@ -305,7 +314,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 							Future<Integer> numTokens = rate(changes);
 							numTokens.setHandler(res -> {
 								if (numTokens.succeeded()) {
-									mine(numTokens.result(), changes, "e-driving");
+									mine(numTokens.result(), changes, "user-activity");
 								} else {
 									// oh ! we have a problem...
 								}

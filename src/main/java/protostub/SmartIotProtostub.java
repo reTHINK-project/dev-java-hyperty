@@ -201,16 +201,16 @@ public class SmartIotProtostub extends AbstractVerticle {
 							JsonArray valuestoSend = new JsonArray();
 							JsonObject data = new JsonObject();
 
-							data.put("type", "user_eVehicles_context");
+							data.put("type", "user_e-driving_context");
 							data.put("name", "eVehicles distance in meters");
 							data.put("unit", "meter");
 							data.put("startTime", date);
 							data.put("endTime", date);
 
 							Double value_kw = Double.parseDouble(value);
-							Double value_meter = value_kw * 100 / 12 * 1000;
+							
 							// 12kWh/100km
-							data.put("value", value_meter);
+							data.put("value", value_kw);
 
 							valuestoSend.add(data);
 

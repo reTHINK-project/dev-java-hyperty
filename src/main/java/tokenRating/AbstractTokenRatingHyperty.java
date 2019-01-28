@@ -109,8 +109,15 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 				if (source.equals("user-activity")) {
 					// add data
 					JsonObject data = new JsonObject();
-					data.put("distance", msgOriginal.getInteger("distance"));
-					data.put("activity", msgOriginal.getString("activity"));
+					if(msgOriginal.getString("activity").equals("user_eVehicles_context")) {
+						data.put("distance", msgOriginal.getInteger("distance"));
+						data.put("activity", "e-driving");
+					} else {
+						data.put("distance", msgOriginal.getInteger("distance"));
+						data.put("activity", msgOriginal.getString("activity"));
+					}
+					
+					
 					transaction.put("data", data);
 				}
 				if (source.equals("elearning")) {
