@@ -58,7 +58,7 @@ RUN ["sleep","10"]
 #	done
 
 ENV NPM_CONFIG_LOGLEVEL info
-ENV NODE_VERSION 11.8.0
+ENV NODE_VERSION 11.7.0
 
 
 RUN ["sleep","20"]
