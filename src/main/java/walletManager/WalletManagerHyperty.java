@@ -239,27 +239,39 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private void resetPublicWalletCounters() {
 		logger.debug(logMessage + "resetPublicWalletCounters()");
 
-		JsonObject query = new JsonObject().put("identity",
-				new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
-		// get wallets document
-		mongoClient.find(walletsCollection, query, res -> {
-			JsonObject result = res.result().get(0);
-			JsonArray wallets = result.getJsonArray("wallets");
+		sd.getLockWithTimeout("mongoLock", 10000, r -> {
 
-			// create wallets
-			for (Object pWallet : wallets) {
-				JsonObject wallet = (JsonObject) pWallet;
-
-				// update counters
-				JsonObject countersObj = wallet.getJsonObject(counters);
-				String[] sources = new String[] { "user-activity", "elearning", "checkin", "energy-saving" };
-				for (String source : sources) {
-					countersObj.put(source, 0);
-				}
+			if (!r.succeeded()) {
+				logger.error("Error when accessing lock");
+				return;
 			}
+			// Got the lock!
+			Lock lock = r.result();
 
-			mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
-				logger.debug("[WalletManager] counters reset");
+			
+			JsonObject query = new JsonObject().put("identity",
+			new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
+			// get wallets document
+			mongoClient.find(walletsCollection, query, res -> {
+				JsonObject result = res.result().get(0);
+				JsonArray wallets = result.getJsonArray("wallets");
+				
+				// create wallets
+				for (Object pWallet : wallets) {
+					JsonObject wallet = (JsonObject) pWallet;
+					
+					// update counters
+					JsonObject countersObj = wallet.getJsonObject(counters);
+					String[] sources = new String[] { "user-activity", "elearning", "checkin", "energy-saving" };
+					for (String source : sources) {
+						countersObj.put(source, 0);
+					}
+				}
+
+				mongoClient.findOneAndReplace(walletsCollection, query, result, id -> {
+					logger.debug("[WalletManager] counters reset");
+					lock.release();
+				});
 			});
 		});
 
@@ -1001,8 +1013,8 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 
 	JsonObject updatedWallet;
 
+	SharedData sd = vertx.sharedData();
 	private Future<Void> transferToPublicWallet(String walletAddress, JsonObject transaction) {
-		SharedData sd = vertx.sharedData();
 		Future<Void> transferFuture = Future.future();
 
 		sd.getLockWithTimeout("mongoLock", 10000, r -> {
