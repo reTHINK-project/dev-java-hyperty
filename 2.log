@@ -1,0 +1,13 @@
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten] MongoDB starting : pid=23704 port=47017 dbpath=rs2 64-bit host=cangalho
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten] db version v3.6.3
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten] git version: 9586e557d54ef70f9ca4b43c26892cd55257e1a5
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten] OpenSSL version: OpenSSL 1.1.0g  2 Nov 2017
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten] allocator: tcmalloc
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten] modules: none
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten] build environment:
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten]     distarch: x86_64
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten]     target_arch: x86_64
+2019-01-29T10:07:29.802+0000 I CONTROL  [initandlisten] options: { net: { port: 47017 }, replication: { replSet: "testeMongo" }, storage: { dbPath: "rs2" }, systemLog: { destination: "file", path: "2.log" } }
+2019-01-29T10:07:29.803+0000 I STORAGE  [initandlisten] exception in initAndListen: NonExistentPath: Data directory rs2 not found., terminating
+2019-01-29T10:07:29.803+0000 I CONTROL  [initandlisten] now exiting
+2019-01-29T10:07:29.803+0000 I CONTROL  [initandlisten] shutting down with code:100
