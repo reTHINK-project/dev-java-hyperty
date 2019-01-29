@@ -237,6 +237,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	}
 
 	private void resetPublicWalletCounters() {
+		SharedData sd = vertx.sharedData();
 		logger.debug(logMessage + "resetPublicWalletCounters()");
 
 		sd.getLockWithTimeout("mongoLock", 10000, r -> {
@@ -1013,8 +1014,8 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 
 	JsonObject updatedWallet;
 
-	SharedData sd = vertx.sharedData();
 	private Future<Void> transferToPublicWallet(String walletAddress, JsonObject transaction) {
+		SharedData sd = vertx.sharedData();
 		Future<Void> transferFuture = Future.future();
 
 		sd.getLockWithTimeout("mongoLock", 10000, r -> {
