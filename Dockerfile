@@ -11,7 +11,6 @@ WORKDIR /build
 ADD pom.xml /build/pom.xml
 RUN ["mvn", "dependency:resolve"]
 RUN ["mvn", "verify"]
-RUN ["npm", "install"]
 
 # Compile and package jar
 ADD src /build/src
