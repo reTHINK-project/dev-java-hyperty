@@ -1078,14 +1078,17 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 
 						System.out.println("counter obj" + countersObj.toString());
 						System.out.println("source" + source);
-						if (!sourceOriginal.equals("created") && !sourceOriginal.equals("bonus")) {
-							if (sourceOriginal.equals("user-activity")) {
-								countersObj.put("user-activity", countersObj.getInteger("user-activity") + transactionValue);
-							} else {
-								countersObj.put(source, countersObj.getInteger(source) + transactionValue);
-							}
+						if(transaction.containsKey("bonus") && !transaction.getBoolean("bonus")) {
+							if (!sourceOriginal.equals("created") && !sourceOriginal.equals("bonus")) {
+								if (sourceOriginal.equals("user-activity")) {
+									countersObj.put("user-activity", countersObj.getInteger("user-activity") + transactionValue);
+								} else {
+									countersObj.put(source, countersObj.getInteger(source) + transactionValue);
+								}
 
-						}						
+							}		
+						}
+				
 						
 
 						updatedWallet = wallet;
