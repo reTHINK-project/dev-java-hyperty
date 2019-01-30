@@ -230,6 +230,9 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			transaction.put("value", causeReductionPercentage * 5);
 			transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 			transaction.put("bonus", true);
+			JsonObject data = new JsonObject();
+			data.put("value", causeReductionPercentage);
+			transaction.put("data", data);
 			msgToPublicWallet.put("transaction", transaction);
 			vertx.eventBus().send("wallet-cause-transfer", msgToPublicWallet);
 		});

@@ -139,12 +139,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 					data.put("bonusID", msgOriginal.getString("bonusID"));
 					transaction.put("data", data);
 				}
-				if (source.equals("energy-saving")) {
-					// TODOadd data
-					JsonObject data = new JsonObject();
-					data.put("something", "something");
-					transaction.put("data", data);
-				}
 
 				transaction.put("nonce", 1);
 				JsonObject body = new JsonObject().put("resource", userId).put("value",

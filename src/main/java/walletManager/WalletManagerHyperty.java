@@ -778,14 +778,17 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 		account.lastBalance += value;
 		account.lastTransactions.add(transaction.getString("_id"));
 
-		// TODO: update to support energy savings and electric cars charging
-
-		if (!transaction.getString("source").equals("user-activity")) {
-			account.totalData += 1;
-			++account.lastData;
-		} else {
+		// TODO: update to support electric cars charging
+		if (transaction.getString("source").equals("energy-saving")) {
+			++account.totalData;
+			account.lastData += transaction.getJsonObject("data").getInteger("value");
+		} else if (transaction.getString("source").equals("user-activity")) {
 			account.totalData += transaction.getJsonObject("data").getInteger("distance");
 			account.lastData += transaction.getJsonObject("data").getInteger("distance");
+		}
+		else{
+			++account.totalData;
+			++account.lastData;
 		}
 
 		logger.debug("UpdateACCOUNT:" + account.toString());
