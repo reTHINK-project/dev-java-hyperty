@@ -115,6 +115,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		return tokenAmount;
 	}
 
+	int biggestReductionPercentage;
+
 	/**
 	 * Rate energy message according to the public algorithm.
 	 *
@@ -126,7 +128,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		logger.debug(logMessage + "applyPublicRating(): " + values);
 
-		int biggestReductionPercentage = -1;
+		biggestReductionPercentage = -1;
 		int biggestReductionIndex = 0;
 
 		// get values for every cause
@@ -186,7 +188,10 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
 				transaction.put("description", "valid");
 				transaction.put("nonce", 1);
-				transaction.put("wallet2bGranted", walletid.replace("-", "") + "-wallet");		
+				transaction.put("wallet2bGranted", walletid.replace("-", "") + "-wallet");
+				JsonObject data = new JsonObject();
+				data.put("value", biggestReductionPercentage);
+				transaction.put("data", data);	
 				
 				msgEnergySaving.put("transaction", transaction);
 				vertx.eventBus().send("wallet-cause-transfer", msgEnergySaving);

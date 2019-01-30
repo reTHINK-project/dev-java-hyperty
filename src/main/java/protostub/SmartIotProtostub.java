@@ -173,7 +173,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 					String streamName = currentObj.getString("streamName");
 					String value = currentObj.getString("data");
-					value.replace(",", ".");
+					value = value.replace(",", ".");
 							
 					String date = currentObj.getString("receivedAt");
 
@@ -258,7 +258,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 								String url = currentDo.getString("url");
 
 								String value = streamIdObj.get(url).getString("data");
-								value.replace(",", ".");
+								value = value.replace(",", ".");
 								Float fValue = Float.parseFloat(value);
 								int iValue = Math.round(fValue);
 
