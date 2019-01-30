@@ -258,8 +258,11 @@ public class SmartIotProtostub extends AbstractVerticle {
 								String url = currentDo.getString("url");
 
 								String value = streamIdObj.get(url).getString("data");
+								value.replace(",", ".");
+								Float fValue = Float.parseFloat(value);
+								int iValue = Math.round(fValue);
 
-								JsonObject valueData = new JsonObject().put("value", Integer.parseInt(value)).put("id",
+								JsonObject valueData = new JsonObject().put("value", iValue).put("id",
 										id);
 								JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
 
