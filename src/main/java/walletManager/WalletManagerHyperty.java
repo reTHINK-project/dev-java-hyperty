@@ -800,7 +800,7 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 	private JsonObject updateLastTransactions(JsonObject wallet, JsonObject transaction) {
 		JsonArray lastTransactions = wallet.getJsonArray("transactions");
 
-		Boolean maxTransactions = lastTransactions.size() > MaxNumLastTransactions ? true : false;
+		Boolean maxTransactions = lastTransactions.size() >= MaxNumLastTransactions ? true : false;
 
 		// TODO: update to support energy savings and electric cars charging
 		if (maxTransactions) {
@@ -808,13 +808,14 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 			for (int i = 1; i < lastTransactions.size(); ++i) {
 				trAux.add(lastTransactions.getJsonObject(i));
 			}
-			lastTransactions = trAux;
+			trAux.add(transaction);
+			wallet.remove("tranasctions");
+			wallet.put("transactions", trAux);
+		} else {
+			lastTransactions.add(transaction);
+
+			wallet.put("transactions", lastTransactions);
 		}
-
-		lastTransactions.add(transaction);
-
-		wallet.put("transactions", lastTransactions);
-
 		return wallet;
 	}
 
