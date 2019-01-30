@@ -1061,13 +1061,15 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 
 							wallet = checkEDriving(wallet);
 							logger.debug(logMessage +"transferToPublicWallet - 2");
-
+							
 							Account account = getAccount(source, wallet);
 							logger.debug(logMessage + "transferToPublicWallet - 3" + account.toJsonObject().toString());
 							account = updateAccount(account, transaction);
 							logger.debug(logMessage + "transferToPublicWallet - 5" + account.toJsonObject().toString());
+							
 							// update wallet
-							// wallet = updateLastTransactions(wallet, transaction);
+							wallet = updateLastTransactions(wallet, transaction);
+							
 							wallet = updateWalletAccounts(wallet, account);
 							logger.debug(logMessage + "transferToPublicWallet - 6" + wallet.toString());
 							wallet = sumAccounts(wallet, false);
