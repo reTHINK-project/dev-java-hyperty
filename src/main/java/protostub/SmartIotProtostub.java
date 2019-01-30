@@ -173,7 +173,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 
 					String streamName = currentObj.getString("streamName");
 					String value = currentObj.getString("data");
-					value = value.replace(",", ".");
+					String valReplaced = value.replace(",", ".");
 							
 					String date = currentObj.getString("receivedAt");
 
@@ -185,7 +185,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 						if (streamName.equals("edp")) {
 
 							
-							Float fValue = Float.parseFloat(value);
+							Float fValue = Float.parseFloat(valReplaced);
 							int iValue = Math.round(fValue);
 							
 							JsonArray valuestoSend = new JsonArray();
@@ -213,7 +213,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 							data.put("startTime", date);
 							data.put("endTime", date);
 
-							Double value_kw = Double.parseDouble(value);
+							Double value_kw = Double.parseDouble(valReplaced);
 							
 							// 12kWh/100km
 							data.put("value", value_kw);
@@ -258,8 +258,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 								String url = currentDo.getString("url");
 
 								String value = streamIdObj.get(url).getString("data");
-								value = value.replace(",", ".");
-								Float fValue = Float.parseFloat(value);
+								String valReplaced = value.replace(",", ".");
+								Float fValue = Float.parseFloat(valReplaced);
 								int iValue = Math.round(fValue);
 
 								JsonObject valueData = new JsonObject().put("value", iValue).put("id",
