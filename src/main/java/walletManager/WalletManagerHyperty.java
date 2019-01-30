@@ -781,7 +781,7 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 		// TODO: update to support electric cars charging
 		if (transaction.getString("source").equals("energy-saving")) {
 			++account.totalData;
-			account.lastData += transaction.getJsonObject("data").getInteger("value");
+			account.lastData = transaction.getJsonObject("data").getInteger("value");
 		} else if (transaction.getString("source").equals("user-activity")) {
 			account.totalData += transaction.getJsonObject("data").getInteger("distance");
 			account.lastData += transaction.getJsonObject("data").getInteger("distance");
