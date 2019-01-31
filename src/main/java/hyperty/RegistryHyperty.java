@@ -151,23 +151,31 @@ public class RegistryHyperty extends AbstractHyperty {
 		// check if no user allocated to this code
 		JsonObject query = new JsonObject().put("guid", guid);
 		mongoClient.find(collection, query, res -> {
-			JsonObject entry = new JsonArray(res.result()).getJsonObject(0);
-			// set identity
-			entry.put("status", status);
-			entry.put("lastModified", lastMofidified);
-			JsonObject document = new JsonObject(entry.toString());
-			mongoClient.findOneAndReplace(collection, new JsonObject().put("guid", entry.getString("guid")), document,
-					id -> {
-						logger.debug(logMessage + "updateStatus(): registry updated" +
-						 document);
-					});
-			// publish message to crmStatus and offlineSMstatus
-			publish(CRMHypertyStatus, msg);
-			publish(offlineSMStatus, msg);
+			if(res.result().size()>0) {
+				JsonObject entry = new JsonArray(res.result()).getJsonObject(0);
+				// set identity
+				entry.put("status", status);
+				entry.put("lastModified", lastMofidified);
+				JsonObject document = new JsonObject(entry.toString());
+				mongoClient.findOneAndReplace(collection, new JsonObject().put("guid", entry.getString("guid")), document,
+						id -> {
+							logger.debug(logMessage + "updateStatus(): registry updated" +
+							 document);
+						});
+				// publish message to crmStatus and offlineSMstatus
+				publish(CRMHypertyStatus, msg);
+				publish(offlineSMStatus, msg);
 
-			JsonObject response = new JsonObject().put("code", 200);
-			message.reply(response);
-			statusUpdate.complete();
+				JsonObject response = new JsonObject().put("code", 200);
+				message.reply(response);
+				statusUpdate.complete();
+			} else {
+				JsonObject response = new JsonObject().put("code", 404);
+				message.reply(response);
+				statusUpdate.complete();
+			}
+			
+			
 		});
 
 		return statusUpdate;

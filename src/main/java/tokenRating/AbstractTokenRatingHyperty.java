@@ -54,7 +54,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 	 * stored in the recipient wallet ?) (future in a blockchain?):
 	 */
 	void mine(int numTokens, JsonObject msgOriginal, String source) {
-		logger.debug(logMessage + "mine(): Mining " + numTokens + " tokens...\nmsg: " + msgOriginal);
+		logger.debug(logMessage + "mine(): Mining " + numTokens + " tokens...\nmsg: " + msgOriginal + "    ->source:  " + source);
 		String userId = msgOriginal.getString("guid");
 
 		// store transaction by sending it to wallet through wallet manager
@@ -109,8 +109,15 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 				if (source.equals("user-activity")) {
 					// add data
 					JsonObject data = new JsonObject();
-					data.put("distance", msgOriginal.getInteger("distance"));
-					data.put("activity", msgOriginal.getString("activity"));
+					if(msgOriginal.getString("activity").equals("user_eVehicles_context")) {
+						data.put("distance", msgOriginal.getInteger("distance"));
+						data.put("activity", "e-driving");
+					} else {
+						data.put("distance", msgOriginal.getInteger("distance"));
+						data.put("activity", msgOriginal.getString("activity"));
+					}
+					
+					
 					transaction.put("data", data);
 				}
 				if (source.equals("elearning")) {
@@ -130,12 +137,6 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 					JsonObject data = new JsonObject();
 					data.put("shopID", msgOriginal.getString("shopID"));
 					data.put("bonusID", msgOriginal.getString("bonusID"));
-					transaction.put("data", data);
-				}
-				if (source.equals("energy-saving")) {
-					// TODOadd data
-					JsonObject data = new JsonObject();
-					data.put("something", "something");
 					transaction.put("data", data);
 				}
 
@@ -248,10 +249,10 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 		});
 	}
 
-	public Future<String> getUserURL(String address) {
+	public Future<String> getUserURL(String address, String key) {
 
 		Future<String> userID = Future.future();
-		mongoClient.find(dataObjectsCollection, new JsonObject().put("url", address), userURLforAddress -> {
+		mongoClient.find(dataObjectsCollection, new JsonObject().put(key, address), userURLforAddress -> {
 			logger.debug("2 - find Dataobjects size->" + userURLforAddress.result().size());
 			if (userURLforAddress.result().size() == 0) {
 				userID.complete("");
