@@ -805,7 +805,7 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 		// TODO: update to support energy savings and electric cars charging
 		if (maxTransactions) {
 			JsonArray trAux = new JsonArray();
-			for (int i = 1; i < lastTransactions.size(); ++i) {
+			for (int i = 1; i < MaxNumLastTransactions; i++) {
 				trAux.add(lastTransactions.getJsonObject(i));
 			}
 			trAux.add(transaction);
