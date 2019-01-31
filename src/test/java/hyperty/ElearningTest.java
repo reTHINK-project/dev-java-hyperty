@@ -38,7 +38,7 @@ import io.vertx.core.shareddata.Lock;
  * Example of an asynchronous JUnit test for a Verticle.
  */
 @ExtendWith(VertxExtension.class)
- @Disabled
+@Disabled
 class ElearningTest {
 
 	public static final String publicWalletsOnChangesAddress = "wallet://public-wallets/changes";

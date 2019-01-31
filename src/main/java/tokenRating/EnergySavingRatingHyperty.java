@@ -40,6 +40,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		this.eb.<JsonObject>consumer(ratingPublic, onMessage(ratingPublic));
 		this.eb.<JsonObject>consumer(ratingPrivate, onMessage(ratingPrivate));
 
+		resumeDataObjects(ratingType);
+
 	}
 
 	public Handler<Message<JsonObject>> onMessage(String streamType) {
@@ -113,6 +115,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		return tokenAmount;
 	}
 
+	int biggestReductionPercentage;
+
 	/**
 	 * Rate energy message according to the public algorithm.
 	 *
@@ -124,15 +128,17 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		logger.debug(logMessage + "applyPublicRating(): " + values);
 
-		int biggestReductionPercentage = -1;
+		biggestReductionPercentage = -1;
 		int biggestReductionIndex = 0;
 
 		// get values for every cause
 		for (int i = 0; i < values.size(); i++) {
 			final JsonObject valObject = values.getJsonObject(i).getJsonObject("value");
+			System.out.println(logMessage + "val id(" + i + ")" + valObject.toString());
 			int causeReductionPercentage = valObject.getInteger("value");
 			String id = valObject.getString("id");
-			transferToPublicWallet(causeReductionPercentage, id);
+			String walletGuid = "user-guid://" + id;
+			transferToPublicWallet(causeReductionPercentage, walletGuid);
 
 			if (causeReductionPercentage > biggestReductionPercentage) {
 				biggestReductionPercentage = causeReductionPercentage;
@@ -145,12 +151,12 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		// get wallet from wallet manager
 		Future<JsonObject> readPublicWallet = Future.future();
-
+		String walletid = values.getJsonObject(biggestReductionIndex).getJsonObject("value").getString("id");
+		String walletGuid = "user-guid://" + walletid;
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
 		msg.put("from", "myself");
-		JsonObject body = new JsonObject().put("resource", "wallet").put("value",
-				Integer.toString(biggestReductionIndex));
+		JsonObject body = new JsonObject().put("resource", "wallet").put("value",walletGuid);
 		JsonObject identity = new JsonObject();
 		msg.put("body", body);
 		msg.put("identity", identity);
@@ -180,7 +186,14 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				transaction.put("source", "energy-saving");
 				transaction.put("value", monthlyPoints);
 				transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-				msg.put("transaction", transaction);
+				transaction.put("description", "valid");
+				transaction.put("nonce", 1);
+				transaction.put("wallet2bGranted", walletid.replace("-", "") + "-wallet");
+				JsonObject data = new JsonObject();
+				data.put("value", biggestReductionPercentage);
+				transaction.put("data", data);	
+				
+				msgEnergySaving.put("transaction", transaction);
 				vertx.eventBus().send("wallet-cause-transfer", msgEnergySaving);
 
 				// reset counters
@@ -221,6 +234,10 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			transaction.put("source", "energy-saving");
 			transaction.put("value", causeReductionPercentage * 5);
 			transaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+			transaction.put("bonus", true);
+			JsonObject data = new JsonObject();
+			data.put("value", causeReductionPercentage);
+			transaction.put("data", data);
 			msgToPublicWallet.put("transaction", transaction);
 			vertx.eventBus().send("wallet-cause-transfer", msgToPublicWallet);
 		});
@@ -254,17 +271,16 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 	public void onChanges(String address, String ratingType) {
 
 		final String address_changes = address + "/changes";
-		logger.info(logMessage + "onChanges(): waiting for changes on ->" + address_changes);
+		logger.info(logMessage + "onChanges-energy: waiting for changes on ->" + address_changes);
 		eb.consumer(address_changes, message -> {
 			logger.info("[Energy]");
 			logger.debug(logMessage + "onChanges(): received message" + message.body());
 			try {
-				JsonArray data = new JsonArray(message.body().toString());
-				if (data.size() == 1) {
+				JsonObject data = new JsonObject(message.body().toString());
 					JsonObject changes = new JsonObject();
 
 					changes.put("ratingType", ratingType);
-					changes.put("message", data.getJsonObject(0));
+					changes.put("message", data);
 					Future<String> userGuid = getUserGuid(address);
 
 					userGuid.setHandler(asyncResult -> {
@@ -282,7 +298,6 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 						});
 					});
 
-				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -338,6 +353,25 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			});
 
 		}
+	}
+	
+	@Override
+	public void resumeDataObjects(String ratingType) {
+		
+ 		JsonObject tofind = new JsonObject().put("ratingType", ratingType);
+		logger.debug("Resuming dataobjects ratingType-> " + ratingType);
+ 			mongoClient.find(dataObjectsCollection, tofind, allDataObjects -> {
+ 				logger.debug("GetAllDataObjects complete for energy - " + allDataObjects.result().size());
+				for (int i = 0; i < allDataObjects.result().size(); i++) {
+					String dataObjectUrl = allDataObjects.result().get(i).getString("objURL");
+					if(dataObjectUrl.contains("school")) {
+						onChanges(dataObjectUrl, ratingPublic);	
+					}else {
+						onChanges(dataObjectUrl, ratingPrivate);	
+					}
+									
+				}
+			});		
 	}
 
 }

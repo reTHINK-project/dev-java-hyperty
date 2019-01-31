@@ -9,7 +9,8 @@ Additional configuration data:
   tokens_per_walking_km: <integer>,
   tokens_per_biking_km: <integer>,
   tokens_per_bikesharing_km: <integer>,
-  tokens_per_evehicle_km: <integer>,
+  tokens_per_e-driving_km: <integer>,
+  tokens_per_feedback: <integer>
 }
 ```
 
@@ -19,11 +20,12 @@ The User Activity Rating Hyperty observes user's activity and reward with tokens
 - each biking distance km is rewarded with configured `tokens_per_biking_km`
 - each bike sharing distance km is rewarded with configured `tokens_per_bikesharing_km`
 - each electric vehicle distance km is rewarded with configured `tokens_per_evehicle_km`
+- each feedback provided when submitting google forms (or others) is rewarded with configured `tokens_per_feedback`
 
 ![User Activity Rating Arch](user-activity-rating.png)
 
 ### Observed Streams
 
-* Citizen User Activity which is a [Context Data Object](https://rethink-project.github.io/specs/datamodel/data-objects/context/readme/?scroll=2564) with types `user_walking_context` or `user_biking_context`
+* Citizen User Activity which is a [Context Data Object](https://rethink-project.github.io/specs/datamodel/data-objects/context/readme/?scroll=2564) with types `user_walking_context`, `user_biking_context`, `user_e-driving_context` or `user_giving_feedback_context`
 
 

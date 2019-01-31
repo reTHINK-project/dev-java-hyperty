@@ -178,7 +178,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 				if (data.size() == 1) {
 					logger.debug("CHANGES" + data.toString());
 					JsonObject messageToRate = data.getJsonObject(0);
-					Future<String> userURL = getUserURL(address);
+					Future<String> userURL = getUserURL(address, "url");
 					userURL.setHandler(asyncResult -> {
 						logger.debug("URL " + userURL.result());
 						messageToRate.put("guid", userURL.result());
