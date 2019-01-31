@@ -809,7 +809,7 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 				trAux.add(lastTransactions.getJsonObject(i));
 			}
 			trAux.add(transaction);
-			wallet.remove("tranasctions");
+			wallet.remove("transactions");
 			wallet.put("transactions", trAux);
 		} else {
 			lastTransactions.add(transaction);
