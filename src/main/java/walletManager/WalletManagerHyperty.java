@@ -936,10 +936,13 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 						int value = current.getInteger("value");
 						lastBalance += value;
 
-						if (!current.getString("source").equals("user-activity")) {
-							lastData++;
-						} else {
+						if (current.getString("source").equals("user-activity")) {
 							lastData += current.getJsonObject("data").getInteger("distance");
+						} 
+						else if (current.getString("source").equals("energy-saving")) {
+							lastData = current.getJsonObject("data").getInteger("value");
+						}else {
+							lastData++;
 						}
 					}
 
