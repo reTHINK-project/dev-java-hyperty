@@ -35,7 +35,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private final JsonArray accountsDefault = new JsonArray().add(new Account("elearning", "quizzes").toJsonObject())
 			.add(new Account("walking", "km").toJsonObject()).add(new Account("biking", "km").toJsonObject())
 			.add(new Account("checkin", "checkin").toJsonObject())
-			.add(new Account("energy-saving", "%").toJsonObject());
+			.add(new Account("energy-saving", "%").toJsonObject())
+			.add(new Account("e-driving", "kw/h").toJsonObject());
 
 	private static final String logMessage = "[WalletManager] ";
 	private static final String smartMeterEnabled = "smartMeterEnabled";
