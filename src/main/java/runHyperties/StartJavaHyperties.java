@@ -50,7 +50,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private String mongoCluster = "NO";
 
 	private String SIOTurl = "https://iot.alticelabs.com/api";
-	private String pointOfContact = "https://ptsv2.com/t/testSIOT/post";
+	private String pointOfContact = "https://vertx-runtime.hysmart.rethink.ptinovacao.pt/siotintegration";
 	private MongoClient mongoClient = null;
 
 	
@@ -141,6 +141,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		router.post("/requestpub").handler(this::handleRequestPub);
 		router.route("/generate*").handler(BodyHandler.create());
 		router.post("/generate").handler(this::handleGenerateData);
+		router.route("/siotintegration*").handler(BodyHandler.create());
+		router.post("/siotintegration").handler(this::handleSiotIntegration);
 
 		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
@@ -513,6 +515,16 @@ public class StartJavaHyperties extends AbstractVerticle {
 		message.put("from", "");
 		message.put("identity", new JsonObject());
 		vertx.eventBus().publish(smartIotProtostubUrl, message);
+
+		HttpServerResponse httpServerResponse = routingContext.response();
+		httpServerResponse.setChunked(true);
+
+		httpServerResponse.putHeader("Content-Type", "application/text").end();
+	}
+	
+	private void handleSiotIntegration(RoutingContext routingContext) {
+
+		System.out.println("SIOT Integration test -> " +routingContext.getBodyAsString().toString());
 
 		HttpServerResponse httpServerResponse = routingContext.response();
 		httpServerResponse.setChunked(true);
