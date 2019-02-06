@@ -141,8 +141,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		router.post("/requestpub").handler(this::handleRequestPub);
 		router.route("/generate*").handler(BodyHandler.create());
 		router.post("/generate").handler(this::handleGenerateData);
-		router.route("/siotintegration*").handler(BodyHandler.create());
-		router.post("/siotintegration").handler(this::handleSiotIntegration);
+		router.route("/energysaving*").handler(BodyHandler.create());
+		router.post("/energysaving").handler(this::handleEnergy);
 
 		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
@@ -522,10 +522,12 @@ public class StartJavaHyperties extends AbstractVerticle {
 		httpServerResponse.putHeader("Content-Type", "application/text").end();
 	}
 	
-	private void handleSiotIntegration(RoutingContext routingContext) {
+	private void handleEnergy(RoutingContext routingContext) {
 
-		System.out.println("SIOT Integration test -> " +routingContext.getBodyAsString().toString());
+		System.out.println("handleEnergy endpoint -> " + routingContext.getBodyAsString().toString());
 
+		JsonObject dataReceived = new JsonObject(routingContext.getBodyAsString().toString());
+		vertx.eventBus().publish(smartIotProtostubUrl + "/readpubdata", dataReceived);
 		HttpServerResponse httpServerResponse = routingContext.response();
 		httpServerResponse.setChunked(true);
 
