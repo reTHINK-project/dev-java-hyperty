@@ -50,7 +50,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private String mongoCluster = "NO";
 
 	private String SIOTurl = "https://iot.alticelabs.com/api";
-	private String pointOfContact = "https://vertx-runtime.hysmart.rethink.ptinovacao.pt/siotintegration";
+	private String pointOfContact = "https://vertx-runtime.hysmart.rethink.ptinovacao.pt/requestpub";
 	private MongoClient mongoClient = null;
 
 	
