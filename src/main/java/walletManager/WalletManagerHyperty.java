@@ -34,8 +34,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private Integer onReadMaxTransactions;
 	private final JsonArray accountsDefault = new JsonArray().add(new Account("elearning", "quizzes").toJsonObject())
 			.add(new Account("walking", "km").toJsonObject()).add(new Account("biking", "km").toJsonObject())
-			.add(new Account("checkin", "checkin").toJsonObject())
-			.add(new Account("energy-saving", "%").toJsonObject())
+			.add(new Account("checkin", "checkin").toJsonObject()).add(new Account("energy-saving", "%").toJsonObject())
 			.add(new Account("e-driving", "kw/h").toJsonObject());
 
 	private static final String logMessage = "[WalletManager] ";
@@ -250,18 +249,17 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// Got the lock!
 			Lock lock = r.result();
 
-			
 			JsonObject query = new JsonObject().put("identity",
-			new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
+					new JsonObject().put("userProfile", new JsonObject().put("guid", publicWalletGuid)));
 			// get wallets document
 			mongoClient.find(walletsCollection, query, res -> {
 				JsonObject result = res.result().get(0);
 				JsonArray wallets = result.getJsonArray("wallets");
-				
+
 				// create wallets
 				for (Object pWallet : wallets) {
 					JsonObject wallet = (JsonObject) pWallet;
-					
+
 					// update counters
 					JsonObject countersObj = wallet.getJsonObject(counters);
 					String[] sources = new String[] { "user-activity", "elearning", "checkin", "energy-saving" };
@@ -631,7 +629,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			logger.debug(logMessage + "transferToPrivateWallet - 1");
 
-
 			String source = getSource(transaction);
 			if (!source.equals("bonus") && transactionValue > 0) {
 
@@ -639,14 +636,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				walletInfo = checkEDriving(walletInfo);
 				account = getAccount(source, walletInfo);
 
-/*
-if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
-
-	logger.debug(logMessage + "transferToPrivateWallet - 1.1");
-	walletInfo = checkEDriving(walletInfo);
-
-	account = getAccount(transaction.getString("source"), walletInfo);
-*/
+				/*
+				 * if (!transaction.getString("source").equals("bonus") && transactionValue > 0)
+				 * {
+				 * 
+				 * logger.debug(logMessage + "transferToPrivateWallet - 1.1"); walletInfo =
+				 * checkEDriving(walletInfo);
+				 * 
+				 * account = getAccount(transaction.getString("source"), walletInfo);
+				 */
 
 				logger.debug(logMessage + "transferToPrivateWallet - 2");
 				account = updateAccount(account, transaction);
@@ -750,7 +748,7 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 			} else if (activity.equals("user_walking_context")) {
 				source = "walking";
 			} else if (activity.equals("user_e-driving_context")) {
-				source ="e-driving";
+				source = "e-driving";
 			}
 		}
 		return source;
@@ -786,8 +784,7 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 		} else if (transaction.getString("source").equals("user-activity")) {
 			account.totalData += transaction.getJsonObject("data").getInteger("distance");
 			account.lastData += transaction.getJsonObject("data").getInteger("distance");
-		}
-		else{
+		} else {
 			++account.totalData;
 			++account.lastData;
 		}
@@ -939,10 +936,9 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 
 						if (current.getString("source").equals("user-activity")) {
 							lastData += current.getJsonObject("data").getInteger("distance");
-						} 
-						else if (current.getString("source").equals("energy-saving")) {
+						} else if (current.getString("source").equals("energy-saving")) {
 							lastData = current.getJsonObject("data").getInteger("value");
-						}else {
+						} else {
 							lastData++;
 						}
 					}
@@ -1065,16 +1061,16 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 							// update accounts
 
 							wallet = checkEDriving(wallet);
-							logger.debug(logMessage +"transferToPublicWallet - 2");
-							
+							logger.debug(logMessage + "transferToPublicWallet - 2");
+
 							Account account = getAccount(source, wallet);
 							logger.debug(logMessage + "transferToPublicWallet - 3" + account.toJsonObject().toString());
 							account = updateAccount(account, transaction);
 							logger.debug(logMessage + "transferToPublicWallet - 5" + account.toJsonObject().toString());
-							
+
 							// update wallet
 							wallet = updateLastTransactions(wallet, transaction);
-							
+
 							wallet = updateWalletAccounts(wallet, account);
 							logger.debug(logMessage + "transferToPublicWallet - 6" + wallet.toString());
 							wallet = sumAccounts(wallet, false);
@@ -1088,18 +1084,17 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 
 						System.out.println("counter obj" + countersObj.toString());
 						System.out.println("source" + source);
-						if(transaction.containsKey("bonus") && !transaction.getBoolean("bonus")) {
+						if (transaction.containsKey("bonus") && !transaction.getBoolean("bonus")) {
 							if (!sourceOriginal.equals("created") && !sourceOriginal.equals("bonus")) {
 								if (sourceOriginal.equals("user-activity")) {
-									countersObj.put("user-activity", countersObj.getInteger("user-activity") + transactionValue);
+									countersObj.put("user-activity",
+											countersObj.getInteger("user-activity") + transactionValue);
 								} else {
 									countersObj.put(source, countersObj.getInteger(source) + transactionValue);
 								}
 
-							}		
+							}
 						}
-				
-						
 
 						updatedWallet = wallet;
 					}
@@ -1176,7 +1171,6 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 		return wallet;
 
 	}
-
 
 	private JsonObject sumAccounts(JsonObject wallet, boolean isPrivate) {
 
@@ -1380,119 +1374,125 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 						logger.debug("no wallet yet, creating");
 
 						String address = generateWalletAddressv2(msg.getJsonObject("identity"));
-						int bal = initialBalance;
-						JsonArray transactions = new JsonArray();
-						JsonObject newTransaction = new JsonObject();
-						JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile")
-								.getJsonObject("info");
-						if (info.containsKey("balance")) {
-							// bal = info.getInteger("balance");
-							// TODO: add _id to transaction on recipient
-							newTransaction.put("recipient", address);
-							newTransaction.put("source", "created");
-							newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-							newTransaction.put("value", initialBalance);
-							newTransaction.put("description", "valid");
-							newTransaction.put("nonce", 1);
-							JsonObject data = new JsonObject();
-							data.put("created", "true");
-							newTransaction.put("data", data);
-							// transactions.add(newTransaction);
-						}
-						// build wallet document
-						JsonObject newWallet = new JsonObject();
+						Future<Integer> balFuture = getInitialBalance(initialBalance);
+						balFuture.setHandler(balanceRes -> {
+							int bal = balanceRes.result();
 
-						newWallet.put("address", address);
-						newWallet.put("identity", identity);
-						newWallet.put("created", new Date().getTime());
-						newWallet.put("balance", initialBalance);
-						newWallet.put("bonus-credit", initialBalance);
-						// TODO - remove
-						// newWallet.put("transactions", transactions);
-						newWallet.put("status", "active");
-						newWallet.put("ranking", 0);
-						newWallet.put("accounts", accountsDefault.copy());
-
-						// check if profile info
-						JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
-								.getJsonObject("info");
-						logger.debug("[WalletManager] Profile info: " + profileInfo);
-						if (profileInfo != null) {
-							causeID = profileInfo.getString("cause");
-							newWallet.put("profile", profileInfo);
-							String wallet2bGranted = getPublicWalletAddress(causeID);
-							newWallet.put(causeWalletAddress, wallet2bGranted);
-							newTransaction.put(causeWalletAddress, wallet2bGranted);
-						} else {
-							JsonObject response = new JsonObject().put("code", 400).put("reason",
-									"you must provide user info (i.e. cause)");
-							reply2.result().reply(response);
-							return;
-						}
-
-						JsonObject document = new JsonObject(newWallet.toString());
-						mongoClient.save(walletsCollection, document, id -> {
-							logger.debug("[WalletManager] new wallet with ID:" + id);
-							if (id.succeeded()) {
-								newTransaction.put("recipient", id.result());
-								transactions.add(newTransaction);
-								newWallet.put("transactions", transactions);
-
-								mongoClient.findOneAndReplace(walletsCollection,
-										new JsonObject().put("_id", id.result()), new JsonObject(newWallet.toString()),
-										resultHandler -> {
-											if (resultHandler.succeeded()) {
-
-												persistTransaction(newTransaction);
-											}
-										});
-
+							JsonArray transactions = new JsonArray();
+							JsonObject newTransaction = new JsonObject();
+							JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile")
+									.getJsonObject("info");
+							if (info.containsKey("balance")) {
+								// bal = info.getInteger("balance");
+								// TODO: add _id to transaction on recipient
+								newTransaction.put("recipient", address);
+								newTransaction.put("source", "created");
+								newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+								newTransaction.put("value", initialBalance);
+								newTransaction.put("description", "valid");
+								newTransaction.put("nonce", 1);
+								JsonObject data = new JsonObject();
+								data.put("created", "true");
+								newTransaction.put("data", data);
+								// transactions.add(newTransaction);
 							}
-							inviteObservers(msg.getJsonObject("identity"), address, requestsHandler(), readHandler());
-						});
-						JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
-						logger.debug("wallet created, reply" + response.toString());
+							// build wallet document
+							JsonObject newWallet = new JsonObject();
 
-						Future<Void> transferPublic;
-						if (bal > 0) {
-							transferPublic = transferToPublicWallet(newWallet.getString(causeWalletAddress),
-									newTransaction);
-						} else {
-							transferPublic = Future.future();
-							transferPublic.complete();
-						}
+							newWallet.put("address", address);
+							newWallet.put("identity", identity);
+							newWallet.put("created", new Date().getTime());
+							newWallet.put("balance", initialBalance);
+							newWallet.put("bonus-credit", initialBalance);
+							// TODO - remove
+							// newWallet.put("transactions", transactions);
+							newWallet.put("status", "active");
+							newWallet.put("ranking", 0);
+							newWallet.put("accounts", accountsDefault.copy());
 
-						transferPublic.setHandler(asyncResult -> {
-							String roleCode = profileInfo.getString("code");
-							if (roleCode != null) {
-								logger.debug(logMessage + "resolving role for code " + roleCode);
-								Future<Void> validateCause = Future.future();
-
-								JsonObject validationMessage = new JsonObject();
-								validationMessage.put("from", url);
-								validationMessage.put("identity", identity);
-								validationMessage.put("type", "forward");
-								validationMessage.put("code", roleCode);
-								send("resolve-role", validationMessage, reply -> {
-									logger.debug(
-											logMessage + "role validation result: " + reply.result().body().toString());
-									String role = new JsonObject(reply.result().body().toString()).getString("role");
-									response.put("role", role);
-									validateCause.complete();
-								});
-
-								validateCause.setHandler(asyncResult2 -> {
-									if (asyncResult2.succeeded()) {
-										reply2.result().reply(response);
-									} else {
-										// oh ! we have a problem...
-									}
-								});
-
+							// check if profile info
+							JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
+									.getJsonObject("info");
+							logger.debug("[WalletManager] Profile info: " + profileInfo);
+							if (profileInfo != null) {
+								causeID = profileInfo.getString("cause");
+								newWallet.put("profile", profileInfo);
+								String wallet2bGranted = getPublicWalletAddress(causeID);
+								newWallet.put(causeWalletAddress, wallet2bGranted);
+								newTransaction.put(causeWalletAddress, wallet2bGranted);
+							} else {
+								JsonObject response = new JsonObject().put("code", 400).put("reason",
+										"you must provide user info (i.e. cause)");
+								reply2.result().reply(response);
+								return;
 							}
 
-							reply2.result().reply(response);
-							result.complete();
+							JsonObject document = new JsonObject(newWallet.toString());
+							mongoClient.save(walletsCollection, document, id -> {
+								logger.debug("[WalletManager] new wallet with ID:" + id);
+								if (id.succeeded()) {
+									newTransaction.put("recipient", id.result());
+									transactions.add(newTransaction);
+									newWallet.put("transactions", transactions);
+
+									mongoClient.findOneAndReplace(walletsCollection,
+											new JsonObject().put("_id", id.result()),
+											new JsonObject(newWallet.toString()), resultHandler -> {
+												if (resultHandler.succeeded()) {
+
+													persistTransaction(newTransaction);
+												}
+											});
+
+								}
+								inviteObservers(msg.getJsonObject("identity"), address, requestsHandler(),
+										readHandler());
+							});
+							JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
+							logger.debug("wallet created, reply" + response.toString());
+
+							Future<Void> transferPublic;
+							if (bal > 0) {
+								transferPublic = transferToPublicWallet(newWallet.getString(causeWalletAddress),
+										newTransaction);
+							} else {
+								transferPublic = Future.future();
+								transferPublic.complete();
+							}
+
+							transferPublic.setHandler(asyncResult -> {
+								String roleCode = profileInfo.getString("code");
+								if (roleCode != null) {
+									logger.debug(logMessage + "resolving role for code " + roleCode);
+									Future<Void> validateCause = Future.future();
+
+									JsonObject validationMessage = new JsonObject();
+									validationMessage.put("from", url);
+									validationMessage.put("identity", identity);
+									validationMessage.put("type", "forward");
+									validationMessage.put("code", roleCode);
+									send("resolve-role", validationMessage, reply -> {
+										logger.debug(logMessage + "role validation result: "
+												+ reply.result().body().toString());
+										String role = new JsonObject(reply.result().body().toString())
+												.getString("role");
+										response.put("role", role);
+										validateCause.complete();
+									});
+
+									validateCause.setHandler(asyncResult2 -> {
+										if (asyncResult2.succeeded()) {
+											reply2.result().reply(response);
+										} else {
+											// oh ! we have a problem...
+										}
+									});
+
+								}
+
+								reply2.result().reply(response);
+								result.complete();
+							});
 						});
 
 					} else {
@@ -1539,6 +1539,33 @@ if (!transaction.getString("source").equals("bonus") && transactionValue > 0) {
 
 		return result;
 
+	}
+
+	/**
+	 * Check initial balance, if 1000th user (i.e. there are already 999 private + 1
+	 * public wallet) then initial wallet balance is 1000 points.
+	 * 
+	 * @param initialbalance
+	 * @return
+	 */
+	private Future<Integer> getInitialBalance(int initialbalance) {
+
+		// check num wallets
+		Future<Integer> balance = Future.future();
+		mongoClient.find(walletsCollection, new JsonObject(), res -> {
+
+			int numWallets = res.result().size();
+
+			logger.debug(logMessage+ "getInitialBalance(): user number " + numWallets);
+
+			if (numWallets == 1000) {
+				balance.complete(1000);
+			} else {
+				balance.complete(initialbalance);
+			}
+
+		});
+		return balance;
 	}
 
 	private void updatePublicWalletAccountsNewUser(JsonObject privateWallet, JsonArray newAccounts) {
