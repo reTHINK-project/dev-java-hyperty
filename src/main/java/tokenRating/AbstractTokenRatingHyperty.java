@@ -120,6 +120,14 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 					
 					transaction.put("data", data);
 				}
+				if(source.equals("energy-saving")) {
+					JsonObject data = new JsonObject();
+					JsonArray valuesArray = msgOriginal.getJsonObject("message").getJsonArray("values");
+					int value = valuesArray.getJsonObject(0).getJsonObject("value").getInteger("value");
+					data.put("value", value);
+
+					transaction.put("data", data);
+				}
 				if (source.equals("elearning")) {
 					// add data
 					JsonObject data = new JsonObject();
