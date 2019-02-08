@@ -72,6 +72,8 @@ class UserActivityTest {
 		configUserActivity.put("tokens_per_biking_km", 10);
 		configUserActivity.put("tokens_per_bikesharing_km", 10);
 		configUserActivity.put("tokens_per_evehicle_km", 5);
+		configUserActivity.put("tokens_per_feedback", 10);
+
 		// daily distance limits
 		configUserActivity.put("mtWalkPerDay", 20000);
 		configUserActivity.put("mtBikePerDay", 50000);
@@ -321,6 +323,7 @@ class UserActivityTest {
 	}
 
 	@Test
+	@Disabled
 	void sessionMax(VertxTestContext testContext, Vertx vertx) {
 		System.out.println("TEST - Session with too big distance");
 
@@ -394,6 +397,82 @@ class UserActivityTest {
 
 	}
 
+
+	@Test
+	// @Disabled
+	void userFeedback(VertxTestContext testContext, Vertx vertx) {
+		System.out.println("TEST - user feedback");
+
+		JsonObject msg = new JsonObject();
+		// create identity
+		msg.put("type", "create");
+		msg.put("identity",
+				new JsonObject().put("userProfile", new JsonObject().put("guid", userID).put("info", profileInfo)));
+		msg.put("from", "myself");
+		vertx.eventBus().send(walletManagerHypertyURL, msg, res -> {
+			System.out.println("Received reply from wallet!: " + res.result().body().toString());
+			JsonObject newMsg = new JsonObject();
+			JsonObject body = new JsonObject().put("code", 200);
+			newMsg.put("body", body);
+			res.result().reply(newMsg);
+		});
+
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		JsonObject activityMessage = new JsonObject();
+
+		activityMessage.put("identity", new JsonObject());
+		activityMessage.put("userID", userID);
+		activityMessage.put("type", "user_giving_feedback_context");
+		activityMessage.put("source", source);
+		JsonArray toSend = new JsonArray();
+		toSend.add(activityMessage);
+		vertx.eventBus().send(changesAddress, toSend, reply -> {
+			System.out.println("REP: " + reply.toString());
+		});
+
+		// wait for op
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		CountDownLatch assertions = new CountDownLatch(1);
+
+		new Thread(() -> {
+
+			JsonObject query = new JsonObject().put("address", "public-wallets");
+
+			mongoClient.find(walletsCollection, query, result -> {
+				JsonObject wallet = result.result().get(0).getJsonArray("wallets").getJsonObject(0);
+				JsonArray accounts = wallet.getJsonArray("accounts");
+				// check accounts
+				List<Object> res = accounts.stream()
+						.filter(account -> ((JsonObject) account).getString("name").equals("feedback"))
+						.collect(Collectors.toList());
+				JsonObject accountCreated = (JsonObject) res.get(0);
+				assertEquals(10, (int) accountCreated.getInteger("totalBalance"));
+				assertEquals(10, (int) accountCreated.getInteger("lastBalance"));
+				assertEquals(1, (int) accountCreated.getInteger("lastData"));
+				assertEquals(1, (int) accountCreated.getInteger("totalData"));
+				assertions.countDown();
+			});
+		}).start();
+
+		try {
+			assertions.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		testContext.completeNow();
+
+	}
 	void tearDownStream(VertxTestContext testContext, Vertx vertx) {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "delete");

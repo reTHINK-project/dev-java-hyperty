@@ -35,7 +35,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private final JsonArray accountsDefault = new JsonArray().add(new Account("elearning", "quizzes").toJsonObject())
 			.add(new Account("walking", "km").toJsonObject()).add(new Account("biking", "km").toJsonObject())
 			.add(new Account("checkin", "checkin").toJsonObject()).add(new Account("energy-saving", "%").toJsonObject())
-			.add(new Account("e-driving", "kw/h").toJsonObject());
+			.add(new Account("e-driving", "kw/h").toJsonObject())
+			.add(new Account("created", "wallet").toJsonObject())
+			.add(new Account("feedback", "questionnaire").toJsonObject());
 
 	private static final String logMessage = "[WalletManager] ";
 	private static final String smartMeterEnabled = "smartMeterEnabled";
@@ -634,6 +636,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				logger.debug(logMessage + "transferToPrivateWallet - 1.1");
 				walletInfo = checkEDriving(walletInfo);
+				walletInfo = checkFeedback(walletInfo);
 				account = getAccount(source, walletInfo);
 
 				/*
@@ -749,6 +752,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				source = "walking";
 			} else if (activity.equals("user_e-driving_context")) {
 				source = "e-driving";
+			} else if (activity.equals("user_giving_feedback_context")) {
+				source = "feedback";
 			}
 		}
 		return source;
@@ -782,8 +787,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			++account.totalData;
 			account.lastData = transaction.getJsonObject("data").getInteger("value");
 		} else if (transaction.getString("source").equals("user-activity")) {
-			account.totalData += transaction.getJsonObject("data").getInteger("distance");
-			account.lastData += transaction.getJsonObject("data").getInteger("distance");
+			if(transaction.getJsonObject("data").getString("activity").equals("user_giving_feedback_context"))
+			{
+				++account.totalData;
+				++account.lastData;
+			}
+			else{
+				account.totalData += transaction.getJsonObject("data").getInteger("distance");
+				account.lastData += transaction.getJsonObject("data").getInteger("distance");
+			}
 		} else {
 			++account.totalData;
 			++account.lastData;
@@ -1167,6 +1179,25 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// build "e-driving" account
 			Account eDriving = new Account("e-driving", "kw/h");
 			accounts.add(eDriving.toJsonObject());
+		}
+		return wallet;
+
+	}
+
+	private JsonObject checkFeedback(JsonObject wallet) {
+		boolean feedbackExists = false;
+		JsonArray accounts = wallet.getJsonArray("accounts");
+		for (Object object : accounts) {
+			JsonObject account = (JsonObject) object;
+			if (account.getString("name").equals("feedback"))
+				feedbackExists = true;
+		}
+
+		if (!feedbackExists) {
+			System.out.println("UPDATING WITH FEEDBACK");
+			// build "feedback" account
+			Account feedback = new Account("feedback", "questionnaire");
+			accounts.add(feedback.toJsonObject());
 		}
 		return wallet;
 
