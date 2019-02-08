@@ -1073,6 +1073,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							// update accounts
 
 							wallet = checkEDriving(wallet);
+							wallet = checkFeedback(wallet);
 							logger.debug(logMessage + "transferToPublicWallet - 2");
 
 							Account account = getAccount(source, wallet);
