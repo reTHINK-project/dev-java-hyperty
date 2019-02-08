@@ -299,6 +299,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configUserActivity.put("tokens_per_biking_km", 20);
 		configUserActivity.put("tokens_per_bikesharing_km", 10);
 		configUserActivity.put("tokens_per_evehicle_km", 5);
+		configUserActivity.put("tokens_per_feedback", 10);
 		configUserActivity.put("mtWalkPerDay", 20000);
 		configUserActivity.put("mtBikePerDay", 50000);
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
