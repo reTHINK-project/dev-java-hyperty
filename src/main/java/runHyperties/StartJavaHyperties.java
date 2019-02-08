@@ -50,7 +50,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private String mongoCluster = "NO";
 
 	private String SIOTurl = "https://iot.alticelabs.com/api";
-	private String pointOfContact = "https://vertx-runtime.hybroker.rethink.ptinovacao.pt/requestpub";
+
 	private MongoClient mongoClient = null;
 
 	
@@ -105,6 +105,18 @@ public class StartJavaHyperties extends AbstractVerticle {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+		String pointOfContact = "https://vertx-runtime.hysmart.rethink.ptinovacao.pt/requestpub";
+		try {
+			String envPOC = System.getenv("SIOT_POC");
+			if (envPOC != null) {
+				pointOfContact = envPOC;
+				
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		System.out.println("SIOT_POC:" + pointOfContact);
 
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
