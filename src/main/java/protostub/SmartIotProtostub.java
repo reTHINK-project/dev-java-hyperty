@@ -1213,6 +1213,12 @@ public class SmartIotProtostub extends AbstractVerticle {
 			for (int c; (c = in.read()) >= 0;)
 				received.append(Character.toChars(c));
 
+			if (conn.getResponseCode() == 401) {
+				this.currentToken = Authentication();
+				conn.disconnect();
+				return getStreamData(deviceID, streamName, start, end);
+
+			}
 			conn.disconnect();
 			System.out.println("[StreamValue](" + conn.getResponseCode() + ")" + received.toString());
 			return new JsonObject(received.toString());
