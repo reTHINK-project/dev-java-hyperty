@@ -172,6 +172,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 			System.out.println("{{SmartIOTProtostub}} type:" + type);
 			
 			if(type!=null && type.equals("user_giving_feedback_context")) {
+										  
 				String userGuid = dataReceived.getString("guid");
 				JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid", userGuid));
 				JsonObject activityMessage = new JsonObject();
@@ -182,7 +183,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 				JsonArray toSend = new JsonArray();
 				toSend.add(activityMessage);
 				
-				Future<String> objURLFuture = findDataObjectUrl(userGuid);
+				Future<String> objURLFuture = findDataObjectUrl(userGuid, "user-activity");
 				objURLFuture.setHandler(asyncResult -> {
 					String objURL = asyncResult.result();
 					System.out.println("objURL:" + objURL);
@@ -1345,12 +1346,12 @@ public class SmartIotProtostub extends AbstractVerticle {
 		return stream;
 	}
 
-	private Future<String> findDataObjectUrl(String guid) {
+	private Future<String> findDataObjectUrl(String guid, String ratingType) {
 		// System.out.println("find stream:" + streamID);
 		Future<String> stream = Future.future();
 
 		JsonObject metadata = new JsonObject().put("guid", guid).put("type", "observer");
-		JsonObject query = new JsonObject().put("metadata", metadata);
+		JsonObject query = new JsonObject().put("metadata", metadata).put("ratingType", ratingType);
 		mongoClient.find("dataobjects", query, res -> {
 			if (res.result().size() != 0) {
 				String url = res.result().get(0).getString("url");
