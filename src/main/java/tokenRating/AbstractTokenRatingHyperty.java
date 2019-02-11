@@ -130,7 +130,7 @@ public class AbstractTokenRatingHyperty extends AbstractHyperty {
 				}
 				if (source.equals("elearning")) {
 					JsonObject data = new JsonObject();
-					if(msgOriginal.getString("activity").equals("user_giving_feedback_context")) {
+					if(msgOriginal.containsKey("activity") && msgOriginal.getString("activity").equals("user_giving_feedback_context")) {
 						data.put("activity", "user_giving_feedback_context");
 					} else {
 						data.put("quiz", msgOriginal.getString("id"));
