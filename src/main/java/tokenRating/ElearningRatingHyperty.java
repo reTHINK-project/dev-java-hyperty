@@ -23,6 +23,11 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 	 */
 	private int tokensPerCorrectAnswer;
 
+	/**
+	 * Number of tokens awarded after filling out a questionary.
+	 */
+	private int tokensFeedback;
+	
 	private String dataSource = "elearning";
 
 	@Override
@@ -34,6 +39,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 		// read config
 		tokensPerCompletedQuiz = config().getInteger("tokens_per_completed_quiz");
 		tokensPerCorrectAnswer = config().getInteger("tokens_per_correct_answer");
+		tokensFeedback = config().getInteger("tokens_per_feedback");
 
 		createStreams();
 		
@@ -105,7 +111,13 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		JsonObject message = (JsonObject) data;
 		logger.debug("ELEARNING MESSAGE " + message.toString());
-
+		
+		if (message.containsKey("activity") && message.getString("activity").equals("user_giving_feedback_context")) {
+			Future<Integer> resultFeedback = Future.future();
+			resultFeedback.complete(tokensFeedback);
+			return resultFeedback;
+		} else {
+			
 		String user = message.getString("guid");
 
 		// persist in MongoDB
@@ -114,6 +126,7 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 
 		Future<Integer> tokensForAnswer = getTokensForAnswer(message);
 		return tokensForAnswer;
+		}
 	}
 
 	private String elearningsCollection = "elearnings";
@@ -176,8 +189,17 @@ public class ElearningRatingHyperty extends AbstractTokenRatingHyperty {
 			try {
 				JsonArray data = new JsonArray(message.body().toString());
 				if (data.size() == 1) {
+
+					final JsonObject messageToRate = data.getJsonObject(0);
+					if (messageToRate.containsKey("type") && messageToRate.getString("type").equals("user_giving_feedback_context")) {
+						final String type = messageToRate.getString("type");
+						messageToRate.put("activity", type);
+					}
+					
+					
+					
 					logger.debug("CHANGES" + data.toString());
-					JsonObject messageToRate = data.getJsonObject(0);
+
 					Future<String> userURL = getUserURL(address, "url");
 					userURL.setHandler(asyncResult -> {
 						logger.debug("URL " + userURL.result());

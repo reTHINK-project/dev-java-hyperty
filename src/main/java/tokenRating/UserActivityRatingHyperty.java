@@ -58,7 +58,6 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		tokensBikingKm = config().getInteger("tokens_per_biking_km");
 		tokensBikesharingKm = config().getInteger("tokens_per_bikesharing_km");
 		tokensEvehicleKm = config().getInteger("tokens_per_evehicle_km");
-		tokensFeedback = config().getInteger("tokens_per_feedback");
 		mtWalkPerDay = config().getInteger("mtWalkPerDay");
 		mtBikePerDay = config().getInteger("mtBikePerDay");
 
@@ -130,11 +129,15 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		int val = 0;
 		if (activity.equals("user_e-driving_context")) {
 			val = activityMessage.getInteger("distance") * 100 / 12 * 1000;
-		} else if (activity.equals("user_giving_feedback_context")) {
+		} 
+		
+		/*else if (activity.equals("user_giving_feedback_context")) {
 			Future<Integer> resultFeedback = Future.future();
 			resultFeedback.complete(tokensFeedback);
 			return resultFeedback;
-		} else {
+		} */
+		
+		else {
 			val = activityMessage.getInteger("distance");
 		}
 		int currentSessionDistance = val;

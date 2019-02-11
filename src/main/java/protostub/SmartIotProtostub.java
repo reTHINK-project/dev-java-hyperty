@@ -179,11 +179,11 @@ public class SmartIotProtostub extends AbstractVerticle {
 				activityMessage.put("identity", identity);
 				activityMessage.put("userID", userGuid);
 				activityMessage.put("type", dataReceived.getString("type"));
-				activityMessage.put("source", "user-activity");
+				activityMessage.put("source", "elearning");
 				JsonArray toSend = new JsonArray();
 				toSend.add(activityMessage);
 				
-				Future<String> objURLFuture = findDataObjectUrl(userGuid, "user-activity");
+				Future<String> objURLFuture = findDataObjectUrl(userGuid, "elearning");
 				objURLFuture.setHandler(asyncResult -> {
 					String objURL = asyncResult.result();
 					System.out.println("objURL:" + objURL);

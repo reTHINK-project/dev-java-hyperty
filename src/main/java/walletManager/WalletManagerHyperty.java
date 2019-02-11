@@ -752,8 +752,13 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				source = "walking";
 			} else if (activity.equals("user_e-driving_context")) {
 				source = "e-driving";
-			} else if (activity.equals("user_giving_feedback_context")) {
+			}
+		}else if(source.equals("elearning")) {
+			if (lastTransaction.getJsonObject("data").containsKey("activity") && 
+					lastTransaction.getJsonObject("data").getString("activity").equals("user_giving_feedback_context")) {
 				source = "feedback";
+			} else {
+				return source;
 			}
 		}
 		return source;
@@ -1097,17 +1102,20 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 						System.out.println("counter obj" + countersObj.toString());
 						System.out.println("source" + source);
-						if (transaction.containsKey("bonus") && !transaction.getBoolean("bonus")) {
-							if (!sourceOriginal.equals("created") && !sourceOriginal.equals("bonus")) {
-								if (sourceOriginal.equals("user-activity")) {
-									countersObj.put("user-activity",
-											countersObj.getInteger("user-activity") + transactionValue);
-								} else {
-									countersObj.put(source, countersObj.getInteger(source) + transactionValue);
-								}
+						if (!source.equals("feedback")) {
+							if (transaction.containsKey("bonus") && !transaction.getBoolean("bonus")) {
+								if (!sourceOriginal.equals("created") && !sourceOriginal.equals("bonus")) {
+									if (sourceOriginal.equals("user-activity")) {
+										countersObj.put("user-activity",
+												countersObj.getInteger("user-activity") + transactionValue);
+									} else {
+										countersObj.put(source, countersObj.getInteger(source) + transactionValue);
+									}
 
+								}
 							}
 						}
+						
 
 						updatedWallet = wallet;
 					}
