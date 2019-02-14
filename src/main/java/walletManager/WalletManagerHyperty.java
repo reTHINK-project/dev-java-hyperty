@@ -1517,21 +1517,25 @@ public class WalletManagerHyperty extends AbstractHyperty {
 										String role = new JsonObject(reply.result().body().toString())
 												.getString("role");
 										response.put("role", role);
+										
 										validateCause.complete();
 									});
 
 									validateCause.setHandler(asyncResult2 -> {
 										if (asyncResult2.succeeded()) {
 											reply2.result().reply(response);
+											result.complete();
 										} else {
 											// oh ! we have a problem...
 										}
 									});
 
+								} else {
+									reply2.result().reply(response);
+									result.complete();
 								}
 
-								reply2.result().reply(response);
-								result.complete();
+								
 							});
 						});
 
