@@ -1428,7 +1428,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								newTransaction.put("recipient", address);
 								newTransaction.put("source", "created");
 								newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
-								newTransaction.put("value", initialBalance);
+								newTransaction.put("value", bal);
 								newTransaction.put("description", "valid");
 								newTransaction.put("nonce", 1);
 								JsonObject data = new JsonObject();
@@ -1442,8 +1442,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							newWallet.put("address", address);
 							newWallet.put("identity", identity);
 							newWallet.put("created", new Date().getTime());
-							newWallet.put("balance", initialBalance);
-							newWallet.put("bonus-credit", initialBalance);
+							newWallet.put("balance", bal);
+							newWallet.put("bonus-credit", bal);
 							// TODO - remove
 							// newWallet.put("transactions", transactions);
 							newWallet.put("status", "active");
