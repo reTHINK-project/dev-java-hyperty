@@ -40,6 +40,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 	private String appSecret;
 	private String pointOfContact;
 	protected Logger logger;
+	protected HashMap<String, JsonObject> schoolsData = new HashMap<String, JsonObject>();
 
 	@Override
 	public void start() {
@@ -55,6 +56,7 @@ public class SmartIotProtostub extends AbstractVerticle {
 		this.eb = vertx.eventBus();
 		this.eb.<JsonObject>consumer(this.url, onMessage());
 		this.eb.<JsonObject>consumer(this.url + "/post", onNewPost());
+		this.eb.<JsonObject>consumer(this.url + "/readpubdata", getPubData());
 
 		if (mongoHost != null) {
 			// System.out.println("{{SmartIOTProtostub}} Setting up Mongo to:" + this.url);
@@ -164,164 +166,207 @@ public class SmartIotProtostub extends AbstractVerticle {
 			System.out.println("{{SmartIOTProtostub}} new post ");
 
 			final JsonObject dataReceived = new JsonObject(message.body().toString());
-			JsonArray values = dataReceived.containsKey("values") ? dataReceived.getJsonArray("values") : null;
-
-			if (values != null) {
-				int x;
-				if (values.size() == 1) {
-					JsonObject currentObj = values.getJsonObject(0);
-
-					String streamName = currentObj.getString("streamName");
-					String value = currentObj.getString("data");
-					String valReplaced = value.replace(",", ".");
-							
-					String date = currentObj.getString("receivedAt");
-
-					Future<JsonObject> objURLFuture = findStream(currentObj.getString("streamId"));
-					objURLFuture.setHandler(asyncResult -> {
-						JsonObject dataObject = asyncResult.result();
-						String objURL = dataObject.getString("objURL");
-
-						if (streamName.equals("edp")) {
-
-							
-							Float fValue = Float.parseFloat(valReplaced);
-							int iValue = Math.round(fValue);
-							
-							JsonArray valuestoSend = new JsonArray();
-							JsonObject valueData = new JsonObject().put("value", iValue);
-							JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
-							valuestoSend.add(valueObject);
-							JsonObject allData = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values",
-									valuestoSend);
-
-							System.out.println("publishing on " + objURL + "/changes");
-							System.out.println("data: " + allData.toString());
-
-							if (objURL != null) {
-								String changesObj = objURL + "/changes";
-								vertx.eventBus().publish(changesObj, allData);
-							}
-
-						} else if (streamName.equals("mobie")) {
-							JsonArray valuestoSend = new JsonArray();
-							JsonObject data = new JsonObject();
-
-							data.put("type", "user_e-driving_context");
-							data.put("name", "eVehicles distance in meters");
-							data.put("unit", "meter");
-							data.put("startTime", date);
-							data.put("endTime", date);
-
-							Double value_kw = Double.parseDouble(valReplaced);
-							
-							// 12kWh/100km
-							data.put("value", value_kw);
-
-							valuestoSend.add(data);
-
-							if (objURL != null) {
-								String changesObj = objURL + "/changes";
-								logger.debug("publish on (" + changesObj + ") -> data:" + valuestoSend.toString());
-								vertx.eventBus().publish(changesObj, valuestoSend);
-							}
-
-						}
-
-					});
-
-				} else {
-
-					HashMap<String, JsonObject> streamIdObj = new HashMap<String, JsonObject>();
-
-					JsonArray toFind = new JsonArray();
-					for (x = 0; x < values.size(); x++) {
-						String streamID = values.getJsonObject(x).getString("streamId");
-						toFind.add(streamID);
-						streamIdObj.put(streamID, values.getJsonObject(x));
+			System.out.println("{{SmartIOTProtostub}} data " + dataReceived);
+			
+			String type = dataReceived.containsKey("type") ? dataReceived.getString("type") : null;
+			System.out.println("{{SmartIOTProtostub}} type:" + type);
+			
+			if(type!=null && type.equals("user_giving_feedback_context")) {
+										  
+				String userGuid = dataReceived.getString("guid");
+				JsonObject identity = new JsonObject().put("userProfile", new JsonObject().put("guid", userGuid));
+				JsonObject activityMessage = new JsonObject();
+				activityMessage.put("identity", identity);
+				activityMessage.put("userID", userGuid);
+				activityMessage.put("type", dataReceived.getString("type"));
+				activityMessage.put("source", "elearning");
+				JsonArray toSend = new JsonArray();
+				toSend.add(activityMessage);
+				
+				Future<String> objURLFuture = findDataObjectUrl(userGuid, "elearning");
+				objURLFuture.setHandler(asyncResult -> {
+					String objURL = asyncResult.result();
+					System.out.println("objURL:" + objURL);
+					if (objURL != null) {
+						String changesObj = objURL + "/changes";
+						vertx.eventBus().publish(changesObj, toSend);
 					}
+				});
+				
+				
+			} else {
+				
+				JsonArray values = dataReceived.containsKey("values") ? dataReceived.getJsonArray("values") : null;	
+				if (values != null) {
+					int x;
+					if (values.size() == 1) {
+						JsonObject currentObj = values.getJsonObject(0);
+						String streamName = currentObj.getString("streamName");
+						String deviceID = currentObj.getString("deviceId");
+						String value = currentObj.getString("data");
+						String valReplaced = value.replace(",", ".");
 
-					JsonObject query = new JsonObject().put("url", new JsonObject().put("$in", toFind));
-					Future<JsonArray> transactionsFuture = getAllStreamDO(query);
-					transactionsFuture.setHandler(asyncResult -> {
-						if (asyncResult.succeeded()) {
-							JsonArray publicDOs = asyncResult.result();
-							System.out.println("add public Dos" + publicDOs.toString());
+						String date = currentObj.getString("receivedAt");
 
-							JsonArray valuestoSend = new JsonArray();
-							String toPublic = null;
-							for (int z = 0; z < publicDOs.size(); z++) {
-								JsonObject currentDo = publicDOs.getJsonObject(z);
-								toPublic = currentDo.getString("objURL");
+						Future<JsonObject> objURLFuture = findStream(currentObj.getString("streamId"));
+						objURLFuture.setHandler(asyncResult -> {
+							JsonObject dataObject = asyncResult.result();
+							String objURL = dataObject.getString("objURL");
 
-								String id = currentDo.getJsonObject("metadata").getString("guid").split("://")[1];
-								String url = currentDo.getString("url");
+							if (streamName.equals("edp")) {
+									Float fValue = Float.parseFloat(valReplaced);
+									int iValue = Math.round(fValue);
 
-								String value = streamIdObj.get(url).getString("data");
-								String valReplaced = value.replace(",", ".");
-								Float fValue = Float.parseFloat(valReplaced);
-								int iValue = Math.round(fValue);
+									JsonArray valuestoSend = new JsonArray();
+									JsonObject valueData = new JsonObject().put("value", iValue);
+									JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+									valuestoSend.add(valueObject);
+									JsonObject allData = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values",
+											valuestoSend);
 
-								JsonObject valueData = new JsonObject().put("value", iValue).put("id",
-										id);
-								JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+									System.out.println("publishing on " + objURL + "/changes");
+									System.out.println("data: " + allData.toString());
 
-								valuestoSend.add(valueObject);
+									if (objURL != null) {
+										String changesObj = objURL + "/changes";
+										vertx.eventBus().publish(changesObj, allData);
+									}
+							} else if (streamName.equals("mobie")) {
+								JsonArray valuestoSend = new JsonArray();
+								JsonObject data = new JsonObject();
 
+								data.put("type", "user_e-driving_context");
+								data.put("name", "eVehicles distance in meters");
+								data.put("unit", "meter");
+								data.put("startTime", date);
+								data.put("endTime", date);
+
+								Double value_kw = Double.parseDouble(valReplaced);
+
+								// 12kWh/100km
+								data.put("value", value_kw);
+
+								valuestoSend.add(data);
+
+								if (objURL != null) {
+									String changesObj = objURL + "/changes";
+									logger.debug("publish on (" + changesObj + ") -> data:" + valuestoSend.toString());
+									vertx.eventBus().publish(changesObj, valuestoSend);
+								}
 							}
+						});
+					}
+				}		
+			}
+		};
 
-							if (toPublic != null) {
-								String changesObj = toPublic + "/changes";
-								JsonObject allData = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values",
-										valuestoSend);
+	}
+	
+	private Handler<Message<JsonObject>> getPubData() {
 
-								vertx.eventBus().publish(changesObj, allData);
-							}
+		return message -> {
+			System.out.println("{{SmartIOTProtostub}} get pub Data ");
 
+			String [] schools = {"school-0", "school-1", "school-2"};
+			final JsonObject dataReceived = new JsonObject(message.body().toString());
+			final String start = dataReceived.containsKey("start") ? dataReceived.getString("start") : null;
+			final String end = dataReceived.containsKey("end") ? dataReceived.getString("end") : null;
+
+			if (start != null && end != null) {
+				for(int x = 0; x< schools.length; x++) {
+					
+					JsonObject currentData = getStreamData(schools[x], "edp", start, end);
+					JsonObject device = new JsonObject(getDevice(schools[x]));
+					JsonArray streamsList = device.getJsonArray("stream_list");
+					String streamID = null;
+					for(int z = 0; z < streamsList.size(); z++) {
+						if (streamsList.getJsonObject(z).getString("name").equals("edp")) {
+							streamID = streamsList.getJsonObject(z).getString("id");
 						}
-					});
+					}
+					
+					System.out.println("Data:" + currentData.toString() + " \nstreamID:" + streamID+"\n"+x);
+					
+					JsonArray values = currentData.getJsonArray("values");
+					if (values.getJsonObject(0) != null) {
+							JsonObject toadd = new JsonObject().put("streamId", streamID)
+									.put("streamName", "edp")
+									.put("data",values.getJsonObject(0).getString("value"));
+							schoolsData.put(schools[x], toadd);
+
+						if (schoolsData.keySet().size() == 3) {
+
+							JsonArray allValues = new JsonArray();
+							for (String key : schoolsData.keySet()) {
+								allValues.add(schoolsData.get(key));
+							}
+							schoolsData.clear();
+							handleSchoolDataEdp(allValues);
+							
+
+						} else {
+							System.out.println("schools not ready:" + schoolsData.keySet().size());
+						}
+					}
+					
+					
+					
+				}				
+			}
+		};
+
+	}
+	
+	
+
+	private void handleSchoolDataEdp(JsonArray values) {
+
+		HashMap<String, JsonObject> streamIdObj = new HashMap<String, JsonObject>();
+
+		JsonArray toFind = new JsonArray();
+		for (int x = 0; x < values.size(); x++) {
+			String streamID = values.getJsonObject(x).getString("streamId");
+			toFind.add(streamID);
+			streamIdObj.put(streamID, values.getJsonObject(x));
+		}
+
+		JsonObject query = new JsonObject().put("url", new JsonObject().put("$in", toFind));
+		Future<JsonArray> transactionsFuture = getAllStreamDO(query);
+		transactionsFuture.setHandler(asyncResult -> {
+			if (asyncResult.succeeded()) {
+				JsonArray publicDOs = asyncResult.result();
+				System.out.println("add public Dos" + publicDOs.toString());
+
+				JsonArray valuestoSend = new JsonArray();
+				String toPublic = null;
+				for (int z = 0; z < publicDOs.size(); z++) {
+					JsonObject currentDo = publicDOs.getJsonObject(z);
+					toPublic = currentDo.getString("objURL");
+
+					String id = currentDo.getJsonObject("metadata").getString("guid").split("://")[1];
+					String url = currentDo.getString("url");
+
+					String value = streamIdObj.get(url).getString("data");
+					String valReplaced = value.replace(",", ".");
+					Float fValue = Float.parseFloat(valReplaced);
+					int iValue = Math.round(fValue);
+
+					JsonObject valueData = new JsonObject().put("value", iValue).put("id", id);
+					JsonObject valueObject = new JsonObject().put("type", "POWER").put("value", valueData);
+
+					valuestoSend.add(valueObject);
 
 				}
+
+				if (toPublic != null) {
+					String changesObj = toPublic + "/changes";
+					JsonObject allData = new JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuestoSend);
+
+					vertx.eventBus().publish(changesObj, allData);
+				}
+
 			}
-
-			/*
-			 * 
-			 * 
-			 * 
-			 * JsonObject currentObj = values.getJsonObject(x); String value =
-			 * currentObj.getString("data");
-			 * 
-			 * 
-			 * 
-			 * Future<JsonObject> objURLFuture =
-			 * findStream(currentObj.getString("streamId"));
-			 * objURLFuture.setHandler(asyncResult -> { JsonObject dataObject =
-			 * asyncResult.result(); String objURL = dataObject.getString("objURL"); String
-			 * id = dataObject.getJsonObject("metadata").getString("guid").split("://")[1];
-			 * 
-			 * 
-			 * JsonObject valueData = new JsonObject().put("value",
-			 * Integer.parseInt(value)).put("id",id); JsonObject valueObject = new
-			 * JsonObject().put("type", "POWER").put("value", valueData); JsonArray
-			 * valuesArray = new JsonArray().add(valueObject); JsonObject newObjToSend = new
-			 * JsonObject().put("unit", "WATT_PERCENTAGE").put("values", valuesArray);
-			 * 
-			 * 
-			 * .add(newObjToSend); System.out.println("publishing on " + objURL +
-			 * "/changes"); System.out.println("data: " + toSend.toString());
-			 * 
-			 * if (objURL != null) { String changesObj = objURL + "/changes";
-			 * vertx.eventBus().publish(changesObj, toSend); } });
-			 *
-			 *
-			 *
-			 * 
-			 * 
-			 * 
-			 * 
-			 */
-
-		};
+		});
 	}
 
 	private void handleStreamDeleteRequest(Message<JsonObject> message) {
@@ -1148,6 +1193,39 @@ public class SmartIotProtostub extends AbstractVerticle {
 		}
 		return null;
 	}
+	
+	private JsonObject getStreamData(String deviceID, String streamName, String start, String end) {
+
+		try {
+			StringBuilder received = new StringBuilder();
+			//{{iot_url}}/devices/school-2/streams/edp/values?start=2019-02-01T19:14:00.325Z&end=2019-02-01T19:16:00.325Z&limit=1
+			String urlString = smartIotUrl + "/devices/" + deviceID + "/streams/" + streamName + "/values?start=" + start + "&end="+end+"&limit=1"; 
+			URL url = new URL(urlString);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("GET");
+
+			conn.setRequestProperty("authorization", "Bearer " + currentToken);
+
+			Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+
+			for (int c; (c = in.read()) >= 0;)
+				received.append(Character.toChars(c));
+
+			if (conn.getResponseCode() == 401) {
+				this.currentToken = Authentication();
+				conn.disconnect();
+				return getStreamData(deviceID, streamName, start, end);
+
+			}
+			conn.disconnect();
+			System.out.println("[StreamValue](" + conn.getResponseCode() + ")" + received.toString());
+			return new JsonObject(received.toString());
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 
 	private String getDevice(String deviceID) {
 
@@ -1268,4 +1346,22 @@ public class SmartIotProtostub extends AbstractVerticle {
 		return stream;
 	}
 
+	private Future<String> findDataObjectUrl(String guid, String ratingType) {
+		// System.out.println("find stream:" + streamID);
+		Future<String> stream = Future.future();
+
+		JsonObject metadata = new JsonObject().put("guid", guid).put("type", "observer");
+		JsonObject query = new JsonObject().put("metadata", metadata).put("ratingType", ratingType);
+		mongoClient.find("dataobjects", query, res -> {
+			if (res.result().size() != 0) {
+				String url = res.result().get(0).getString("url");
+				stream.complete(url);
+				// System.out.println("3,9" + stream[0]);
+			} else {
+				stream.complete(null);
+			}
+		});
+
+		return stream;
+	}
 }

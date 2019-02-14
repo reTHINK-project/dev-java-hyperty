@@ -248,7 +248,7 @@ public class AbstractHyperty extends AbstractVerticle {
 						});
 
 					} else {
-						onChanges(objURL);
+					//	onChanges(objURL);
 					}
 				} else {
 					// oh ! we have a problem...

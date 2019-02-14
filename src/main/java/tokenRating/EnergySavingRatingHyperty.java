@@ -36,7 +36,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		super.start();
 
 		ratingType = "energy-saving";
-		
+
 		this.eb.<JsonObject>consumer(ratingPublic, onMessage(ratingPublic));
 		this.eb.<JsonObject>consumer(ratingPrivate, onMessage(ratingPrivate));
 
@@ -156,7 +156,7 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 		JsonObject msg = new JsonObject();
 		msg.put("type", "read");
 		msg.put("from", "myself");
-		JsonObject body = new JsonObject().put("resource", "wallet").put("value",walletGuid);
+		JsonObject body = new JsonObject().put("resource", "wallet").put("value", walletGuid);
 		JsonObject identity = new JsonObject();
 		msg.put("body", body);
 		msg.put("identity", identity);
@@ -191,8 +191,8 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 				transaction.put("wallet2bGranted", walletid.replace("-", "") + "-wallet");
 				JsonObject data = new JsonObject();
 				data.put("value", biggestReductionPercentage);
-				transaction.put("data", data);	
-				
+				transaction.put("data", data);
+
 				msgEnergySaving.put("transaction", transaction);
 				vertx.eventBus().send("wallet-cause-transfer", msgEnergySaving);
 
@@ -277,26 +277,26 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 			logger.debug(logMessage + "onChanges(): received message" + message.body());
 			try {
 				JsonObject data = new JsonObject(message.body().toString());
-					JsonObject changes = new JsonObject();
+				JsonObject changes = new JsonObject();
 
-					changes.put("ratingType", ratingType);
-					changes.put("message", data);
-					Future<String> userGuid = getUserGuid(address);
+				changes.put("ratingType", ratingType);
+				changes.put("message", data);
+				Future<String> userGuid = getUserGuid(address);
 
-					userGuid.setHandler(asyncResult -> {
-						changes.put("guid", userGuid.result());
+				userGuid.setHandler(asyncResult -> {
+					changes.put("guid", userGuid.result());
 
-						logger.debug(logMessage + "onChanges(): change: " + changes.toString());
+					logger.debug(logMessage + "onChanges(): change: " + changes.toString());
 
-						Future<Integer> numTokens = rate(changes);
-						numTokens.setHandler(res -> {
-							if (numTokens.result() > 0) {
-								logger.debug(logMessage + "rate(): numTokens=" + numTokens);
-								mine(numTokens.result(), changes, dataSource);
-							}
+					Future<Integer> numTokens = rate(changes);
+					numTokens.setHandler(res -> {
+						if (numTokens.result() > 0) {
+							logger.debug(logMessage + "rate(): numTokens=" + numTokens);
+							mine(numTokens.result(), changes, dataSource);
+						}
 
-						});
 					});
+				});
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -354,24 +354,24 @@ public class EnergySavingRatingHyperty extends AbstractTokenRatingHyperty {
 
 		}
 	}
-	
+
 	@Override
 	public void resumeDataObjects(String ratingType) {
-		
- 		JsonObject tofind = new JsonObject().put("ratingType", ratingType);
+
+		JsonObject tofind = new JsonObject().put("ratingType", ratingType);
 		logger.debug("Resuming dataobjects ratingType-> " + ratingType);
- 			mongoClient.find(dataObjectsCollection, tofind, allDataObjects -> {
- 				logger.debug("GetAllDataObjects complete for energy - " + allDataObjects.result().size());
-				for (int i = 0; i < allDataObjects.result().size(); i++) {
-					String dataObjectUrl = allDataObjects.result().get(i).getString("objURL");
-					if(dataObjectUrl.contains("school")) {
-						onChanges(dataObjectUrl, ratingPublic);	
-					}else {
-						onChanges(dataObjectUrl, ratingPrivate);	
-					}
-									
+		mongoClient.find(dataObjectsCollection, tofind, allDataObjects -> {
+			logger.debug("GetAllDataObjects complete for energy - " + allDataObjects.result().size());
+			for (int i = 0; i < allDataObjects.result().size(); i++) {
+				String dataObjectUrl = allDataObjects.result().get(i).getString("objURL");
+				if (dataObjectUrl.contains("school")) {
+					onChanges(dataObjectUrl, ratingPublic);
+				} else {
+					onChanges(dataObjectUrl, ratingPrivate);
 				}
-			});		
+
+			}
+		});
 	}
 
 }

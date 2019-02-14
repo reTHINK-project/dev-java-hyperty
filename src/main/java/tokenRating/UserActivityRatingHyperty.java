@@ -31,6 +31,10 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 	 * Number of tokens awarded after biking 1 km.
 	 */
 	private int tokensEvehicleKm;
+	/**
+	 * Number of tokens awarded after filling out a questionary.
+	 */
+	private int tokensFeedback;
 
 	/**
 	 * Daily walking limit (meters).
@@ -56,10 +60,10 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		tokensEvehicleKm = config().getInteger("tokens_per_evehicle_km");
 		mtWalkPerDay = config().getInteger("mtWalkPerDay");
 		mtBikePerDay = config().getInteger("mtBikePerDay");
-		
+
 		ratingType = "user-activity";
 		resumeDataObjects(ratingType);
-		
+
 	}
 
 	/**
@@ -125,7 +129,15 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 		int val = 0;
 		if (activity.equals("user_e-driving_context")) {
 			val = activityMessage.getInteger("distance") * 100 / 12 * 1000;
-		} else {
+		} 
+		
+		/*else if (activity.equals("user_giving_feedback_context")) {
+			Future<Integer> resultFeedback = Future.future();
+			resultFeedback.complete(tokensFeedback);
+			return resultFeedback;
+		} */
+		
+		else {
 			val = activityMessage.getInteger("distance");
 		}
 		int currentSessionDistance = val;
@@ -300,6 +312,9 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 						changes.put("activity", type);
 						changes.put("distance", obj.getDouble("value"));
 						break;
+					case "user_giving_feedback_context":
+						changes.put("activity", type);
+						break;
 					default:
 						break;
 					}
@@ -336,7 +351,7 @@ public class UserActivityRatingHyperty extends AbstractTokenRatingHyperty {
 							});
 						});
 					}
-					
+
 
 
 				}

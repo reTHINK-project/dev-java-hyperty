@@ -50,7 +50,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 	private String mongoCluster = "NO";
 
 	private String SIOTurl = "https://iot.alticelabs.com/api";
-	private String pointOfContact = "https://ptsv2.com/t/testSIOT/post";
+
 	private MongoClient mongoClient = null;
 
 	
@@ -105,6 +105,18 @@ public class StartJavaHyperties extends AbstractVerticle {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+		String pointOfContact = "https://vertx-runtime.hysmart.rethink.ptinovacao.pt/requestpub";
+		try {
+			String envPOC = System.getenv("SIOT_POC");
+			if (envPOC != null) {
+				pointOfContact = envPOC;
+				
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		System.out.println("SIOT_POC:" + pointOfContact);
 
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
@@ -141,6 +153,8 @@ public class StartJavaHyperties extends AbstractVerticle {
 		router.post("/requestpub").handler(this::handleRequestPub);
 		router.route("/generate*").handler(BodyHandler.create());
 		router.post("/generate").handler(this::handleGenerateData);
+		router.route("/energysaving*").handler(BodyHandler.create());
+		router.post("/energysaving").handler(this::handleEnergy);
 
 		// web sockets
 		router.route("/eventbus/*").handler(eventBusHandler(vertx));
@@ -293,10 +307,11 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configUserActivity.put("mongoHost", mongoHosts);
 		configUserActivity.put("mongoCluster", mongoCluster);
 		configUserActivity.put("mongoPorts", mongoPorts);
-		configUserActivity.put("tokens_per_walking_km", 20);
-		configUserActivity.put("tokens_per_biking_km", 20);
+		configUserActivity.put("tokens_per_walking_km", 10);
+		configUserActivity.put("tokens_per_biking_km", 10);
 		configUserActivity.put("tokens_per_bikesharing_km", 10);
 		configUserActivity.put("tokens_per_evehicle_km", 5);
+		configUserActivity.put("tokens_per_feedback", 10);
 		configUserActivity.put("mtWalkPerDay", 20000);
 		configUserActivity.put("mtBikePerDay", 50000);
 		configUserActivity.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
@@ -321,6 +336,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configElearning.put("mongoCluster", mongoCluster);
 		configElearning.put("tokens_per_completed_quiz", 50);
 		configElearning.put("tokens_per_correct_answer", 5);
+		configElearning.put("tokens_per_feedback", 10);
 		configElearning.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configElearning.put("streams", new JsonObject().put("elearning", "data://sharing-cities-dsm/elearning"));
 		configElearning.put("hyperty", "123");
@@ -514,6 +530,18 @@ public class StartJavaHyperties extends AbstractVerticle {
 		message.put("identity", new JsonObject());
 		vertx.eventBus().publish(smartIotProtostubUrl, message);
 
+		HttpServerResponse httpServerResponse = routingContext.response();
+		httpServerResponse.setChunked(true);
+
+		httpServerResponse.putHeader("Content-Type", "application/text").end();
+	}
+	
+	private void handleEnergy(RoutingContext routingContext) {
+
+		System.out.println("handleEnergy endpoint -> " + routingContext.getBodyAsString().toString());
+
+		JsonObject dataReceived = new JsonObject(routingContext.getBodyAsString().toString());
+		vertx.eventBus().publish(smartIotProtostubUrl + "/readpubdata", dataReceived);
 		HttpServerResponse httpServerResponse = routingContext.response();
 		httpServerResponse.setChunked(true);
 
