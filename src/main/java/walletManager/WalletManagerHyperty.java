@@ -37,7 +37,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			.add(new Account("checkin", "checkin").toJsonObject()).add(new Account("energy-saving", "%").toJsonObject())
 			.add(new Account("e-driving", "kw/h").toJsonObject())
 			.add(new Account("created", "wallet").toJsonObject())
-			.add(new Account("feedback", "questionnaire").toJsonObject());
+			.add(new Account("feedback", "questionnaire").toJsonObject())
+			.add(new Account("engagedUsers", "users").toJsonObject());
 
 	private static final String logMessage = "[WalletManager] ";
 	private static final String smartMeterEnabled = "smartMeterEnabled";
@@ -61,6 +62,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private static final int initialBalance = 50;
 
+	private static final int engageRating;
+
 	@Override
 	public void start() {
 
@@ -72,6 +75,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		JsonArray publicWallets = config().getJsonArray("publicWallets");
 		int rankingTimer = config().getInteger("rankingTimer");
 		onReadMaxTransactions = config().getInteger("onReadMaxTransactions");
+		engageRating = config().getInteger("engageRating");
 
 		if (publicWallets != null) {
 			createPublicWallets(publicWallets);
@@ -636,6 +640,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				logger.debug(logMessage + "transferToPrivateWallet - 1.1");
 				walletInfo = checkEDriving(walletInfo);
+				walletInfo = checkEngageRating(walletInfo);
 				walletInfo = checkFeedback(walletInfo);
 				account = getAccount(source, walletInfo);
 
@@ -1212,6 +1217,25 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	}
 
+	private JsonObject checkEngageRating(JsonObject wallet) {
+		boolean engageExists = false;
+		JsonArray accounts = wallet.getJsonArray("accounts");
+		for (Object object : accounts) {
+			JsonObject account = (JsonObject) object;
+			if (account.getString("name").equals("engagedUsers"))
+				engageExists = true;
+		}
+
+		if (!engageExists) {
+			System.out.println("UPDATING WITH ENGAGEDUSERS");
+			// build "engagedUsers" account
+			Account engagedUsers = new Account("engagedUsers", "users");
+			accounts.add(engagedUsers.toJsonObject());
+		}
+		return wallet;
+
+	}
+
 	private JsonObject sumAccounts(JsonObject wallet, boolean isPrivate) {
 
 		JsonArray accounts = wallet.getJsonArray("accounts");
@@ -1329,6 +1353,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				// reply with address
 				logger.debug("Returned wallet: " + walletInfo.toString());
 				message.reply(walletInfo);
+			}
+			else{
+				message.reply(new JsonObject().put("error", "no wallet for this guid"))
 			}
 		});
 
@@ -1503,7 +1530,37 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							transferPublic.setHandler(asyncResult -> {
 								String roleCode = profileInfo.getString("code");
 								if (roleCode != null) {
+
 									logger.debug(logMessage + "resolving role for code " + roleCode);
+									if(roleCode.startsWith("user-guid://")){
+										// check if wallet with this guid
+										Future isValidGuidFuture = getWalletInfo(roleCode);
+
+										isValidGuidFuture.setHandler(guidRes -> {
+										if (guidRes.succeeded()) {
+											JsonObject walletInfo = guidRes.result()
+											if(walletInfo.getJsonObject("error") == null){
+												// there is a wallet for this guid
+												String walletAddress = walletInfo.getString("address");
+												JsonObject newTransaction = new JsonObject();
+												newTransaction.put("recipient", walletAddress);
+												newTransaction.put("source", "engagedUsers");
+												newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
+												newTransaction.put("value", engageRating);
+												newTransaction.put("description", "valid");
+												newTransaction.put("nonce", 1);
+												transferToPrivateWallet(walletAddress, transaction);
+												result.complete();
+
+
+											}
+										}
+									});
+
+										return;
+									}
+
+									
 									Future<Void> validateCause = Future.future();
 
 									JsonObject validationMessage = new JsonObject();
@@ -1957,11 +2014,18 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		send(this.url, msg, reply -> {
 
-			JsonObject walletresult = new JsonObject().put("address", reply.result().body().getString("address"))
-					.put("_id", (String) reply.result().body().getValue("_id"))
-					.put("wallet2bGranted", reply.result().body().getString("wallet2bGranted"));
-			logger.debug("sending reply from getwalletInfo" + walletresult.toString());
-			walletInfo.complete(walletresult);
+			if(reply.getJsonObject("error")){
+				// no wallet for this guid
+				walletInfo.complete(reply);
+			}
+			else{
+
+				JsonObject walletresult = new JsonObject().put("address", reply.result().body().getString("address"))
+				.put("_id", (String) reply.result().body().getValue("_id"))
+				.put("wallet2bGranted", reply.result().body().getString("wallet2bGranted"));
+				logger.debug("sending reply from getwalletInfo" + walletresult.toString());
+				walletInfo.complete(walletresult);
+			}
 		});
 
 		return walletInfo;
