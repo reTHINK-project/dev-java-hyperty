@@ -588,6 +588,8 @@ public class CRMHyperty extends AbstractHyperty {
 			if (results.size() > 0) {
 				JsonObject agent = results.getJsonObject(0);
 				getCodeForAgent.complete(agent.getString("code"));
+			} else {
+				getCodeForAgent.complete("");
 			}
 		});
 
