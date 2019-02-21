@@ -1535,8 +1535,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 										validateCause.setHandler(asyncResult2 -> {
 											if (asyncResult2.succeeded()) {
-												reply2.result().reply(response);
-												result.complete();
+											//	reply2.result().reply(response);
+											//	result.complete();
 											} else {
 												// oh ! we have a problem...
 											}
