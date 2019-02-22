@@ -655,11 +655,12 @@ public class CRMHyperty extends AbstractHyperty {
 
 			for (Object entry : results) {
 				JsonObject agent = (JsonObject) entry;
+				JsonObject messagecopy = new JsonObject(message.toString());
 				String address = agent.getString("address");
 				String guid = agent.getString("user");
 				String code = agent.getString("code");
-				message.put("to", address);
-				send(guid, message, reply -> {
+				messagecopy.put("to", address);
+				send(guid, messagecopy, reply -> {
 				});
 
 //						, reply -> {
