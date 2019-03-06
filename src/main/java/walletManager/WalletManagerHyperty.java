@@ -103,6 +103,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		eb.consumer("wallet-cause-transfer", message -> {
 			JsonObject received = (JsonObject) message.body();
 			JsonObject transaction = received.getJsonObject("transaction");
+			
 			logger.debug(logMessage + "wallet-cause-transfer():" + received);
 			Future<Void> persistFuture = persistTransaction(transaction);
 			persistFuture.setHandler(asyncResult -> {
