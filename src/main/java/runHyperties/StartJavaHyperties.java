@@ -381,7 +381,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("siot_stub_url", smartIotProtostubUrl);
 		configWalletManager.put("rankingTimer", 30000);
 		configWalletManager.put("onReadMaxTransactions", 100);
-		configWalletManager.put("engageRating", 100);
+		configWalletManager.put("engageRating", 50);
 
 
 		// public wallets
