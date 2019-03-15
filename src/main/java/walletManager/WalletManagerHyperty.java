@@ -35,9 +35,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private final JsonArray accountsDefault = new JsonArray().add(new Account("elearning", "quizzes").toJsonObject())
 			.add(new Account("walking", "km").toJsonObject()).add(new Account("biking", "km").toJsonObject())
 			.add(new Account("checkin", "checkin").toJsonObject()).add(new Account("energy-saving", "%").toJsonObject())
-			.add(new Account("e-driving", "kw/h").toJsonObject())
-			.add(new Account("created", "wallet").toJsonObject())
-			.add(new Account("feedback", "questionnaire").toJsonObject());
+			.add(new Account("e-driving", "kw/h").toJsonObject()).add(new Account("created", "wallet").toJsonObject())
+			.add(new Account("feedback", "questionnaire").toJsonObject())
+			.add(new Account("engagedUsers", "users").toJsonObject());
 
 	private static final String logMessage = "[WalletManager] ";
 	private static final String smartMeterEnabled = "smartMeterEnabled";
@@ -61,6 +61,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 	private static final int initialBalance = 50;
 
+	private static int engageRating;
+
 	@Override
 	public void start() {
 
@@ -72,6 +74,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		JsonArray publicWallets = config().getJsonArray("publicWallets");
 		int rankingTimer = config().getInteger("rankingTimer");
 		onReadMaxTransactions = config().getInteger("onReadMaxTransactions");
+		engageRating = config().getInteger("engageRating");
 
 		if (publicWallets != null) {
 			createPublicWallets(publicWallets);
@@ -100,6 +103,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		eb.consumer("wallet-cause-transfer", message -> {
 			JsonObject received = (JsonObject) message.body();
 			JsonObject transaction = received.getJsonObject("transaction");
+			
 			logger.debug(logMessage + "wallet-cause-transfer():" + received);
 			Future<Void> persistFuture = persistTransaction(transaction);
 			persistFuture.setHandler(asyncResult -> {
@@ -636,6 +640,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 				logger.debug(logMessage + "transferToPrivateWallet - 1.1");
 				walletInfo = checkEDriving(walletInfo);
+				walletInfo = checkEngageRating(walletInfo);
 				walletInfo = checkFeedback(walletInfo);
 				account = getAccount(source, walletInfo);
 
@@ -753,9 +758,9 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			} else if (activity.equals("user_e-driving_context")) {
 				source = "e-driving";
 			}
-		}else if(source.equals("elearning")) {
-			if (lastTransaction.getJsonObject("data").containsKey("activity") && 
-					lastTransaction.getJsonObject("data").getString("activity").equals("user_giving_feedback_context")) {
+		} else if (source.equals("elearning")) {
+			if (lastTransaction.getJsonObject("data").containsKey("activity") && lastTransaction.getJsonObject("data")
+					.getString("activity").equals("user_giving_feedback_context")) {
 				source = "feedback";
 			} else {
 				return source;
@@ -792,12 +797,10 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			++account.totalData;
 			account.lastData = transaction.getJsonObject("data").getInteger("value");
 		} else if (transaction.getString("source").equals("user-activity")) {
-			if(transaction.getJsonObject("data").getString("activity").equals("user_giving_feedback_context"))
-			{
+			if (transaction.getJsonObject("data").getString("activity").equals("user_giving_feedback_context")) {
 				++account.totalData;
 				++account.lastData;
-			}
-			else{
+			} else {
 				account.totalData += transaction.getJsonObject("data").getInteger("distance");
 				account.lastData += transaction.getJsonObject("data").getInteger("distance");
 			}
@@ -1079,6 +1082,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 							wallet = checkEDriving(wallet);
 							wallet = checkFeedback(wallet);
+							wallet = checkEngageRating(wallet);
 							logger.debug(logMessage + "transferToPublicWallet - 2");
 
 							Account account = getAccount(source, wallet);
@@ -1115,7 +1119,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								}
 							}
 						}
-						
+
 
 						updatedWallet = wallet;
 					}
@@ -1207,6 +1211,25 @@ public class WalletManagerHyperty extends AbstractHyperty {
 			// build "feedback" account
 			Account feedback = new Account("feedback", "questionnaire");
 			accounts.add(feedback.toJsonObject());
+		}
+		return wallet;
+
+	}
+
+	private JsonObject checkEngageRating(JsonObject wallet) {
+		boolean engageExists = false;
+		JsonArray accounts = wallet.getJsonArray("accounts");
+		for (Object object : accounts) {
+			JsonObject account = (JsonObject) object;
+			if (account.getString("name").equals("engagedUsers"))
+				engageExists = true;
+		}
+
+		if (!engageExists) {
+			System.out.println("UPDATING WITH ENGAGEDUSERS");
+			// build "engagedUsers" account
+			Account engagedUsers = new Account("engagedUsers", "users");
+			accounts.add(engagedUsers.toJsonObject());
 		}
 		return wallet;
 
@@ -1329,6 +1352,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				// reply with address
 				logger.debug("Returned wallet: " + walletInfo.toString());
 				message.reply(walletInfo);
+			} else {
+				message.reply(new JsonObject().put("error", "no wallet for this guid"));
 			}
 		});
 
@@ -1423,8 +1448,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							JsonObject info = msg.getJsonObject("identity").getJsonObject("userProfile")
 									.getJsonObject("info");
 							if (info.containsKey("balance")) {
-								// bal = info.getInteger("balance");
-								// TODO: add _id to transaction on recipient
 								newTransaction.put("recipient", address);
 								newTransaction.put("source", "created");
 								newTransaction.put("date", DateUtilsHelper.getCurrentDateAsISO8601());
@@ -1444,8 +1467,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							newWallet.put("created", new Date().getTime());
 							newWallet.put("balance", bal);
 							newWallet.put("bonus-credit", bal);
-							// TODO - remove
-							// newWallet.put("transactions", transactions);
 							newWallet.put("status", "active");
 							newWallet.put("ranking", 0);
 							newWallet.put("accounts", accountsDefault.copy());
@@ -1454,15 +1475,79 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							JsonObject profileInfo = msg.getJsonObject("identity").getJsonObject("userProfile")
 									.getJsonObject("info");
 							logger.debug("[WalletManager] Profile info: " + profileInfo);
+							JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
 							if (profileInfo != null) {
 								causeID = profileInfo.getString("cause");
 								newWallet.put("profile", profileInfo);
 								String wallet2bGranted = getPublicWalletAddress(causeID);
 								newWallet.put(causeWalletAddress, wallet2bGranted);
 								newTransaction.put(causeWalletAddress, wallet2bGranted);
+
+								String roleCode = profileInfo.getString("code");
+								if (roleCode != null) {
+
+									logger.debug(logMessage + "resolving role for code " + roleCode);
+									if (roleCode.startsWith("user-guid://")) {
+										logger.debug(logMessage + "checking guid...");
+										// check if wallet with this guid
+										Future<JsonObject> isValidGuidFuture = getWalletInfo(roleCode);
+
+										isValidGuidFuture.setHandler(guidRes -> {
+											logger.debug(logMessage + "getWalletInfo returned!");
+											if (guidRes.succeeded()) {
+												JsonObject walletInfo = guidRes.result();
+												if (walletInfo.getJsonObject("error") == null) {
+													String walletAddress = walletInfo.getString("address");
+													JsonObject engagedUserTransaction = new JsonObject();
+													engagedUserTransaction.put("recipient", 
+															walletInfo.getString("_id"));
+													engagedUserTransaction.put("source", "engagedUsers");
+													engagedUserTransaction.put("date",
+													DateUtilsHelper.getCurrentDateAsISO8601());
+													engagedUserTransaction.put("value", engageRating);
+													engagedUserTransaction.put("description", "valid");
+													engagedUserTransaction.put("nonce", 1);
+													engagedUserTransaction.put(causeWalletAddress, wallet2bGranted);
+													// transfer to other wallet
+													transferToPrivateWallet(walletAddress, engagedUserTransaction);
+													transferToPublicWallet(
+															newWallet.getString(causeWalletAddress), 
+															engagedUserTransaction);
+												}
+											}
+										});
+									} else {
+
+										Future<Void> validateCause = Future.future();
+
+										JsonObject validationMessage = new JsonObject();
+										validationMessage.put("from", url);
+										validationMessage.put("identity", identity);
+										validationMessage.put("type", "forward");
+										validationMessage.put("code", roleCode);
+										send("resolve-role", validationMessage, reply -> {
+											logger.debug(logMessage + "role validation result: "
+													+ reply.result().body().toString());
+											String role = new JsonObject(reply.result().body().toString())
+													.getString("role");
+											response.put("role", role);
+
+											validateCause.complete();
+										});
+
+										validateCause.setHandler(asyncResult2 -> {
+											if (asyncResult2.succeeded()) {
+											//	reply2.result().reply(response);
+											//	result.complete();
+											} else {
+												// oh ! we have a problem...
+											}
+										});
+									}
+
+								}
 							} else {
-								JsonObject response = new JsonObject().put("code", 400).put("reason",
-										"you must provide user info (i.e. cause)");
+								response.put("code", 400).put("reason", "you must provide user info (i.e. cause)");
 								reply2.result().reply(response);
 								return;
 							}
@@ -1474,13 +1559,35 @@ public class WalletManagerHyperty extends AbstractHyperty {
 									newTransaction.put("recipient", id.result());
 									transactions.add(newTransaction);
 									newWallet.put("transactions", transactions);
-
+									
 									mongoClient.findOneAndReplace(walletsCollection,
-											new JsonObject().put("_id", id.result()),
-											new JsonObject(newWallet.toString()), resultHandler -> {
-												if (resultHandler.succeeded()) {
+									new JsonObject().put("_id", id.result()),
+									new JsonObject(newWallet.toString()), resultHandler -> {
+										if (resultHandler.succeeded()) {
+											
+													// transfer to public after persisting
+													Future<Void> persistFuture = persistTransaction(newTransaction);
+													persistFuture.setHandler(r -> {
+														response.put("code", 200).put("wallet", newWallet);
+														logger.debug("wallet created, reply" + response.toString());
 
-													persistTransaction(newTransaction);
+														Future<Void> transferPublic;
+														if (bal > 0) {
+															transferPublic = transferToPublicWallet(
+																	newWallet.getString(causeWalletAddress),
+																	newTransaction);
+														} else {
+															transferPublic = Future.future();
+															transferPublic.complete();
+														}
+
+														transferPublic.setHandler(asyncResult -> {
+															reply2.result().reply(response);
+															result.complete();
+
+														});
+													});
+													
 												}
 											});
 
@@ -1488,51 +1595,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								inviteObservers(msg.getJsonObject("identity"), address, requestsHandler(),
 										readHandler());
 							});
-							JsonObject response = new JsonObject().put("code", 200).put("wallet", newWallet);
-							logger.debug("wallet created, reply" + response.toString());
-
-							Future<Void> transferPublic;
-							if (bal > 0) {
-								transferPublic = transferToPublicWallet(newWallet.getString(causeWalletAddress),
-										newTransaction);
-							} else {
-								transferPublic = Future.future();
-								transferPublic.complete();
-							}
-
-							transferPublic.setHandler(asyncResult -> {
-								String roleCode = profileInfo.getString("code");
-								if (roleCode != null) {
-									logger.debug(logMessage + "resolving role for code " + roleCode);
-									Future<Void> validateCause = Future.future();
-
-									JsonObject validationMessage = new JsonObject();
-									validationMessage.put("from", url);
-									validationMessage.put("identity", identity);
-									validationMessage.put("type", "forward");
-									validationMessage.put("code", roleCode);
-									send("resolve-role", validationMessage, reply -> {
-										logger.debug(logMessage + "role validation result: "
-												+ reply.result().body().toString());
-										String role = new JsonObject(reply.result().body().toString())
-												.getString("role");
-										response.put("role", role);
-										validateCause.complete();
-									});
-
-									validateCause.setHandler(asyncResult2 -> {
-										if (asyncResult2.succeeded()) {
-											reply2.result().reply(response);
-										} else {
-											// oh ! we have a problem...
-										}
-									});
-
-								}
-
-								reply2.result().reply(response);
-								result.complete();
-							});
+							
 						});
 
 					} else {
@@ -1596,7 +1659,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 			int numWallets = res.result().size();
 
-			logger.debug(logMessage+ "getInitialBalance(): user number " + numWallets);
+			logger.debug(logMessage + "getInitialBalance(): user number " + numWallets);
 
 			if (numWallets == 1000) {
 				balance.complete(1000);
@@ -1953,11 +2016,19 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 		send(this.url, msg, reply -> {
 
-			JsonObject walletresult = new JsonObject().put("address", reply.result().body().getString("address"))
-					.put("_id", (String) reply.result().body().getValue("_id"))
-					.put("wallet2bGranted", reply.result().body().getString("wallet2bGranted"));
-			logger.debug("sending reply from getwalletInfo" + walletresult.toString());
-			walletInfo.complete(walletresult);
+			JsonObject rep = reply.result().body();
+
+			if (rep.getJsonObject("error") != null) {
+				// no wallet for this guid
+				walletInfo.complete(rep);
+			} else {
+
+				JsonObject walletresult = new JsonObject().put("address", reply.result().body().getString("address"))
+						.put("_id", (String) reply.result().body().getValue("_id"))
+						.put("wallet2bGranted", reply.result().body().getString("wallet2bGranted"));
+				logger.debug("sending reply from getwalletInfo" + walletresult.toString());
+				walletInfo.complete(walletresult);
+			}
 		});
 
 		return walletInfo;

@@ -204,16 +204,18 @@ public class SmartIotProtostub extends AbstractVerticle {
 						String streamName = currentObj.getString("streamName");
 						String deviceID = currentObj.getString("deviceId");
 						String value = currentObj.getString("data");
-						String valReplaced = value.replace(",", ".");
+						
 
 						String date = currentObj.getString("receivedAt");
 
 						Future<JsonObject> objURLFuture = findStream(currentObj.getString("streamId"));
 						objURLFuture.setHandler(asyncResult -> {
 							JsonObject dataObject = asyncResult.result();
-							String objURL = dataObject.getString("objURL");
-
-							if (streamName.equals("edp")) {
+							
+							if (dataObject != null && dataObject.containsKey("objURL")) {
+								String objURL = dataObject.getString("objURL");
+								if (streamName.equals("edp")) {
+									String valReplaced = value.replace(",", ".");
 									Float fValue = Float.parseFloat(valReplaced);
 									int iValue = Math.round(fValue);
 
@@ -232,6 +234,13 @@ public class SmartIotProtostub extends AbstractVerticle {
 										vertx.eventBus().publish(changesObj, allData);
 									}
 							} else if (streamName.equals("mobie")) {
+
+								JsonObject objAdaptReceived = new JsonObject(value);
+								System.out.println("objAdaptReceived:" + objAdaptReceived.toString());
+								int valReplaced = objAdaptReceived.getJsonObject("mobie").getInteger("value");
+								
+								//JsonObject objAdaptReceived = new JsonObject(valReplaced);
+								//System.out.println("data:" + objAdaptReceived.toString());
 								JsonArray valuestoSend = new JsonArray();
 								JsonObject data = new JsonObject();
 
@@ -241,10 +250,11 @@ public class SmartIotProtostub extends AbstractVerticle {
 								data.put("startTime", date);
 								data.put("endTime", date);
 
-								Double value_kw = Double.parseDouble(valReplaced);
+								//Double value_kw = Double.parseDouble(valReplaced);
 
+								
 								// 12kWh/100km
-								data.put("value", value_kw);
+								data.put("value", (double) valReplaced);
 
 								valuestoSend.add(data);
 
@@ -253,6 +263,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 									logger.debug("publish on (" + changesObj + ") -> data:" + valuestoSend.toString());
 									vertx.eventBus().publish(changesObj, valuestoSend);
 								}
+							}
+							
 							}
 						});
 					}
