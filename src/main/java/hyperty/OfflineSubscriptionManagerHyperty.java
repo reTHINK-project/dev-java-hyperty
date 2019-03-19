@@ -176,7 +176,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 			logger.debug(logMessage + "handleSubscription() reply " + dataObject.toString());
 			JsonObject response = new JsonObject().put("code", 200);
 			response.put("body", new JsonObject().put("value",
-					dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("value")));
+					dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("value")));
 			message.reply(response);
 			// 2- Queries the registry about cguid status.
 			Future<Boolean> online = queryRegistry(msg);
