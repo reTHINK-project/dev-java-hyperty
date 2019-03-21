@@ -174,18 +174,26 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		mongoClient.find(dataObjectsRegistry, query, res -> {
 			JsonObject dataObject = res.result().get(0);
 			logger.debug(logMessage + "handleSubscription() reply  " + dataObject.toString());
-			JsonObject response = new JsonObject().put("code", 200);
+			JsonObject response = new JsonObject();
 			response.put("body", new JsonObject().put("value",
-					dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("value")));
+					dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("value")).put("code", 200));
 			message.reply(response);
 			// 2- Queries the registry about cguid status.
-			Future<Boolean> online = queryRegistry(msg);
+			Future<Boolean> online = queryRegistry(dataObject);
 			online.setHandler(asyncResult -> {
 				if (asyncResult.succeeded()) {
 					if (online.result()) {
 						processPendingSubscription(msg);
 					} else {
-						storeMessageInDB(msg, pendingSubscriptionsCollection);
+						
+						JsonObject saveInDB = new JsonObject();
+						saveInDB.put("message", msg);
+						saveInDB.put("user", dataObject.getString("user"));
+						JsonObject document = new JsonObject(saveInDB.toString());
+						
+						mongoClient.save(pendingSubscriptionsCollection, document, id -> {
+							logger.debug(logMessage + "storeMessage(): " + document);
+						});
 					}
 				} else {
 					// oh ! we have a problem...
@@ -204,6 +212,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	 */
 	private void storeMessageInDB(JsonObject msg, String collection) {
 		JsonObject saveInDB = new JsonObject();
+		System.out.println("storeMessage msg" + msg.toString());
 		saveInDB.put("message", msg);
 		saveInDB.put("user",
 				msg.getJsonObject("body").getJsonObject("body").getJsonObject("identity").getString("guid"));
@@ -229,6 +238,8 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 			send(forwardAddress, subscribeMsg, reply -> {
 				JsonObject body = reply.result().body().getJsonObject("body");
 				logger.debug(logMessage + "processPendingSubscription() reply " + body.toString());
+				logger.debug(logMessage + "processPendingSubscription() reply all msg " + reply.result().body().toString());
+				
 				if (body.getInteger("code") == 200) {
 					removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
 				}
@@ -271,14 +282,16 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		JsonObject registryMsg = new JsonObject();
 		registryMsg.put("type", "read");
 		JsonObject body = new JsonObject();
-		body.put("resource", msg.getJsonObject("identity").getJsonObject("userProfile").getString("guid"));
-		registryMsg.put("type", "read");
+		body.put("resource", msg.getString("user"));
+		registryMsg.put("from", this.url);
+		registryMsg.put("identity", msg.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("identity"));
 		registryMsg.put("body", body);
 
 		send(registryURL, registryMsg, reply -> {
-			JsonObject replyBody = reply.result().body().getJsonObject("body");
-			logger.debug(logMessage + "queryRegistry() reply " + replyBody.toString());
-			registryFuture.complete(replyBody.getJsonObject("entry").getString("status", "offline").equals("online"));
+			logger.debug(logMessage + "read reply ->" + reply.result().body().toString());
+			JsonObject replyValue = reply.result().body().getJsonObject("value");
+			logger.debug(logMessage + "queryRegistry() reply " + replyValue.toString());
+			registryFuture.complete(replyValue.getString("status").equals("online"));
 		});
 
 		return registryFuture;
