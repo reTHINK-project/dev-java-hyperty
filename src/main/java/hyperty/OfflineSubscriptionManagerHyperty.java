@@ -141,15 +141,15 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 */
 	private void statusUpdate(JsonObject msg) {
-		logger.debug(logMessage + "statusUpdate()  new msg, msg too long");
+		logger.debug(logMessage + "statusUpdate()  new msg, msg too long" + msg.toString());
 		if (msg.getString("status").equals("online")) {
 
 			JsonObject query = new JsonObject().put("user", msg.getString("resource"));
-			mongoClient.find(collection, query, res -> {
+			mongoClient.find(pendingSubscriptionsCollection, query, res -> {
 				logger.debug(logMessage + "statusUpdate(): cguid associated with msgs: " + res.result().toString());
 				for (Object obj : res.result()) {
 					JsonObject pendingSubscriptionMessage = ((JsonObject) obj).getJsonObject("message");
-					processPendingSubscription(pendingSubscriptionMessage);
+					processPendingSubscription(pendingSubscriptionMessage, msg.getString("resource"));
 				}
 			});
 		}
@@ -183,7 +183,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 			online.setHandler(asyncResult -> {
 				if (asyncResult.succeeded()) {
 					if (online.result()) {
-						processPendingSubscription(msg);
+						processPendingSubscription(msg, dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("identity").getString("guid"));
 					} else {
 						
 						JsonObject saveInDB = new JsonObject();
@@ -227,22 +227,23 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	 *
 	 * @param subscribeMsg
 	 */
-	private void processPendingSubscription(JsonObject subscribeMsg) {
+	private void processPendingSubscription(JsonObject subscribeMsg, String addressGuid) {
 		
 		// Subscribe message is forwarded to subscribeMsg.to and in case a 200 Ok
 		// response is received it executes the subscribeMsg is removed from
 		// pendingSubscription collection.
 		if (subscribeMsg != null && subscribeMsg.containsKey("to")) {
 			logger.debug(logMessage + "processPendingSubscription(): " + subscribeMsg.toString());
-			String forwardAddress = subscribeMsg.getString("to");
-			send(forwardAddress, subscribeMsg, reply -> {
+
+			logger.debug(logMessage + "forwarding to: " + addressGuid);
+			send(addressGuid, subscribeMsg.getJsonObject("body"), reply -> {
 				JsonObject body = reply.result().body().getJsonObject("body");
 				logger.debug(logMessage + "processPendingSubscription() reply " + body.toString());
 				logger.debug(logMessage + "processPendingSubscription() reply all msg " + reply.result().body().toString());
 				
-				if (body.getInteger("code") == 200) {
-					removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
-				}
+				//if (body.getInteger("code") == 200) {
+				//	removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
+				//}
 			});
 		} 
 	}
