@@ -80,5 +80,5 @@ For all `online` events received it checks if the CGUID is associated to any pen
 
 ### `processPendingSubscription(subscribeMsg)` 
 
-Subscribe message is forwarded to `subscribeMsg.to` and in case a 200 Ok response is received it executes the `subscribeMsg` is removed from pendingSubscription collection.
+Subscribe message is forwarded to `CGUID` and in case a 200 Ok response is received it executes the `subscribeMsg` is removed from pendingSubscription collection.
 
