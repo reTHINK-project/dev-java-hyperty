@@ -1,5 +1,5 @@
 #FROM java:8
-FROM openjdk:8-jre-alpine
+FROM ubuntu:latest
 
 RUN cat /etc/apt/sources.list
 
