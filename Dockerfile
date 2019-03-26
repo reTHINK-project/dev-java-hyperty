@@ -1,4 +1,5 @@
-FROM java:8
+#FROM java:8
+FROM openjdk:8-jre-alpine
 
 RUN cat /etc/apt/sources.list
 
