@@ -1,5 +1,7 @@
 FROM java:8
 
+RUN cat /etc/apt/sources.list
+
 #Install maven
 RUN apt-get update
  
