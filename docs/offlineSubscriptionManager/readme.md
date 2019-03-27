@@ -61,9 +61,23 @@ Forward of [Subscribe](https://rethink-project.github.io/specs/messages/data-syn
 
 1- It queries the Data Objects Registry collection for the data object URL to be subscribed (`message.body.body.resource`), and replies with 200 OK where `reply.body.value = message.body.body.value`.
 
-2- [Queries the runtime registry](https://github.com/reTHINK-project/dev-java-hyperty/blob/master/docs/registry.md#readstatus-from-user) about cguid status.
+2- [Queries the runtime registry](https://github.com/reTHINK-project/dev-java-hyperty/blob/master/docs/registry.md#readstatus-from-user) about cguid status and `offlineHandler` address.
+ *at this point the offlineHandler can be hardcoded as the [CRM update handler](https://github.com/reTHINK-project/dev-java-hyperty/tree/master/docs/CRM#update-tickets) but it should be provided in the metadata of the Data Objetc registered in runtime registry*
 
-3- If online it executes the `processPendingSubscription(subscribeMsg)` otherwise it stores it in the pendingSubscriptions collection.
+3- if `offlineHandler` exists the following msg is sent to `offlineHandler` address:
+
+```
+{
+type: "update",
+from: "object url",
+body: {
+  status: "new-participant",
+  participant: <agent-hyperty-url>
+  }
+}
+```
+
+4- If online it executes the `processPendingSubscription(subscribeMsg)` otherwise it stores it in the pendingSubscriptions collection.
 
 ### status handler
 
