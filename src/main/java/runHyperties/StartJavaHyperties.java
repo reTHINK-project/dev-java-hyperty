@@ -216,7 +216,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("mongoHost", mongoHosts);
 		configRegistry.put("mongoCluster", mongoCluster);
 		configRegistry.put("mongoPorts", mongoPorts);
-		configRegistry.put("checkStatusTimer", 180000);
+		configRegistry.put("checkStatusTimer", 10000);
 		configRegistry.put("CRMHypertyStatus", crmStatus);
 		configRegistry.put("offlineSMStatus", offlineSMStatus);
 
