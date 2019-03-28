@@ -372,7 +372,7 @@ public class CRMHyperty extends AbstractHyperty {
 				String previousStatus = agent.getString("status");
 
 				// if (previousStatus.equals("offline") && nextStatus.equals("online")) {
-				if (nextStatus.equals("online")) {
+				if (previousStatus.equals("offline") && nextStatus.equals("online")) {
 					changeStatus(nextStatus, agent, query);
 				} else if (previousStatus.equals("online") && nextStatus.equals("offline")) {
 					changeStatus(nextStatus, agent, query);

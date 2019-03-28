@@ -1,8 +1,11 @@
 package hyperty;
 
+import java.util.Arrays;
+
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -17,12 +20,16 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	private static final String logMessage = "[OfflineSubMgr] ";
 	private static String pendingSubscriptionsCollection = "pendingSubscriptions";
 	private static String dataObjectsRegistry = "dataObjectsRegistry";
+	private static final String ticketsCollection = "tickets";
+
+	public static final String ticketOngoing = "ongoing";
 
 	// handler URLs
 	private static String statusHandler;
 	private static String registerHandler;
 	private static String subscriptionHandler;
 	private static String registryURL;
+	private static String offlineHandler;
 
 	@Override
 	public void start() {
@@ -35,10 +42,12 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		statusHandler = config().getString("url") + "/status";
 		subscriptionHandler = config().getString("url") + "/subscription";
 		registerHandler = config().getString("url") + "/register";
+		offlineHandler = config().getString("url") + "offline";
 
 		handleStatusRequests();
 		handleSubscriptionRequests();
 		handleDORequests();
+		handleOfflineHandler();
 	}
 
 	private void handleSubscriptionRequests() {
@@ -175,22 +184,42 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 			JsonObject dataObject = res.result().get(0);
 			logger.debug(logMessage + "handleSubscription() reply  " + dataObject.toString());
 			JsonObject response = new JsonObject();
-			response.put("body", new JsonObject().put("value",
-					dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("value")).put("code", 200));
+			response.put("body", new JsonObject().put("value", dataObject.getJsonObject("message").getJsonObject("body")
+					.getJsonObject("body").getJsonObject("value")).put("code", 200));
 			message.reply(response);
 			// 2- Queries the registry about cguid status.
 			Future<Boolean> online = queryRegistry(dataObject);
 			online.setHandler(asyncResult -> {
 				if (asyncResult.succeeded()) {
 					if (online.result()) {
-						processPendingSubscription(msg, dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("identity").getString("guid"));
+						processPendingSubscription(msg, dataObject.getJsonObject("message").getJsonObject("body")
+								.getJsonObject("body").getJsonObject("identity").getString("guid"));
 					} else {
+
+						/*{
+							type: "update",
+							from: "object url",
+							body: {
+							  status: "new-participant",
+							  participant: <agent-hyperty-url>
+							  }
+							}
+						*/
+						
+						JsonObject msgUpdate = new JsonObject();
+						msgUpdate.put("type", "update");
+						msgUpdate.put("from", body.getString("to").split("/subscription")[0]);
+						JsonObject bodyMsgUpdate = new JsonObject().put("status", "new-participant").put("participant", body.getJsonObject("body").getString("subscriber"));
+						msgUpdate.put("body", bodyMsgUpdate);
+
+						
+						publish(offlineHandler, msgUpdate);
 						
 						JsonObject saveInDB = new JsonObject();
 						saveInDB.put("message", msg);
 						saveInDB.put("user", dataObject.getString("user"));
 						JsonObject document = new JsonObject(saveInDB.toString());
-						
+
 						mongoClient.save(pendingSubscriptionsCollection, document, id -> {
 							logger.debug(logMessage + "storeMessage(): " + document);
 						});
@@ -228,7 +257,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	 * @param subscribeMsg
 	 */
 	private void processPendingSubscription(JsonObject subscribeMsg, String addressGuid) {
-		
+
 		// Subscribe message is forwarded to subscribeMsg.to and in case a 200 Ok
 		// response is received it executes the subscribeMsg is removed from
 		// pendingSubscription collection.
@@ -239,13 +268,14 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 			send(addressGuid, subscribeMsg.getJsonObject("body"), reply -> {
 				JsonObject body = reply.result().body().getJsonObject("body");
 				logger.debug(logMessage + "processPendingSubscription() reply " + body.toString());
-				logger.debug(logMessage + "processPendingSubscription() reply all msg " + reply.result().body().toString());
-				
-				//if (body.getInteger("code") == 200) {
-				//	removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
-				//}
+				logger.debug(
+						logMessage + "processPendingSubscription() reply all msg " + reply.result().body().toString());
+
+				// if (body.getInteger("code") == 200) {
+				// removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
+				// }
 			});
-		} 
+		}
 	}
 
 	/**
@@ -285,7 +315,8 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		JsonObject body = new JsonObject();
 		body.put("resource", msg.getString("user"));
 		registryMsg.put("from", this.url);
-		registryMsg.put("identity", msg.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("identity"));
+		registryMsg.put("identity",
+				msg.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("identity"));
 		registryMsg.put("body", body);
 
 		send(registryURL, registryMsg, reply -> {
@@ -296,6 +327,53 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		});
 
 		return registryFuture;
+	}
+
+	private void handleOfflineHandler() {
+
+		vertx.eventBus().<JsonObject>consumer(offlineHandler, message -> {
+
+			logger.debug(logMessage + "handleOffline(): " + message.body().toString());
+
+			/*
+			 * { type: "update", from: "object url", body: { status: "new-participant",
+			 * participant: <agent-hyperty-url> } }
+			 */
+			JsonObject msg = new JsonObject(message.body().toString());
+			String ticketUrl = msg.getString("from");
+			switch (msg.getString("type")) {
+			case "update":
+				if (msg.getJsonObject("body") != null) {
+
+					JsonObject body = msg.getJsonObject("body");
+					String status = body.getString("status");
+
+					if (status.equals("new-participant")) {
+
+						JsonObject query = new JsonObject().put("url", ticketUrl);
+						mongoClient.find(ticketsCollection, query, res -> {
+							JsonArray results = new JsonArray(res.result());
+							JsonObject ticket = results.getJsonObject(0);
+							String statusTicket = ticket.getString("status");
+
+							ticket.put("status", ticketOngoing);
+
+							if (statusTicket.equals("pending")) {
+								JsonObject document = new JsonObject(ticket.toString());
+								mongoClient.findOneAndReplace(ticketsCollection, query, document, id -> {
+								});
+							}
+
+						});
+
+					}
+				}
+				break;
+			default:
+				logger.debug("Incorrect message type: " + msg.getString("type"));
+				break;
+			}
+		});
 	}
 
 }
