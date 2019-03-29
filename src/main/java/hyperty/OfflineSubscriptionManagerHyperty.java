@@ -179,13 +179,13 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		// 1- It queries the Data Objects Registry collection for the data object URL to
 		// be subscribed (message.body.resource), and replies with 200 OK where
 		// reply.body.value = message.body.value.
-		JsonObject query = new JsonObject().put("message.body.resource", msg.getJsonObject("body").getString("source"));
+		JsonObject query = new JsonObject().put("message.body.body.resource", body.getString("to").split("/subscription")[0]);
 		mongoClient.find(dataObjectsRegistry, query, res -> {
 			JsonObject dataObject = res.result().get(0);
 			logger.debug(logMessage + "handleSubscription() reply  " + dataObject.toString());
 			JsonObject response = new JsonObject();
-			response.put("body", new JsonObject().put("value", dataObject.getJsonObject("message").getJsonObject("body")
-					.getJsonObject("body").getJsonObject("value")).put("code", 200));
+			response.put("body", new JsonObject().put("value", dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("value"))
+												 .put("code", 200));
 			message.reply(response);
 			// 2- Queries the registry about cguid status.
 			Future<Boolean> online = queryRegistry(dataObject);
@@ -249,7 +249,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		mongoClient.save(collection, document, id -> {
 			logger.debug(logMessage + "storeMessage(): " + document);
 		});
-	}
+	} 
 
 	/**
 	 * *
