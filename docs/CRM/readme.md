@@ -121,7 +121,7 @@ body: {
 
 `status: "new-participant"`: checks the ticket is still in the `new` or `pending` status and belongs to the user then it executes the `ticketAccepted` function. Otherwise, the message is ignored.
 
-**`ticketAccepted` function:** the ticket is associated to the agent, its status changed to `ongoing` and a delete message is sent to all remaining invited Agents. The delete message is similar to this [one](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#delete-data-object-requested-by-reporter):
+**`ticketAccepted` function:** the ticket is associated to the agent, its status changed to `ongoing` . A delete message is sent to all remaining invited Agents. The delete message is similar to this [one](https://github.com/reTHINK-project/specs/blob/master/messages/data-sync-messages.md#delete-data-object-requested-by-reporter):
 
 ```javascript
 "type" : "delete",
@@ -129,6 +129,8 @@ body: {
 "to"   : "Agente Hyperty URL",
 "body" : { "resource" : "<ObjectURL>" }
 ```
+
+ In case a timeout is received for sent delete messages, it means the agent is offline and the delete message is stored in the `pendingCancels` Collection.
 
 `status: "closed"`: Checks if ticket belongs to user, change its status to closed and update collection.
 
