@@ -691,6 +691,7 @@ public class CRMHyperty extends AbstractHyperty {
 	 * @param code   - code of agent who accepted ticket
 	 */
 	private void removeTicketInvitation(JsonObject ticket, String acceptingAgentCode) {
+		System.out.println("to remove ticket :" + ticket.toString());
 		JsonObject query = new JsonObject().put("code", new JsonObject().put("$ne", acceptingAgentCode));
 		String ticketObjectURL = ticket.getString("url");
 		mongoClient.find(agentsCollection, query, res -> {
