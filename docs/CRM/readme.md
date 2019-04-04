@@ -52,6 +52,14 @@ The Hyperty handles the `agents` data collection and associated tickets. The fir
 }
 ```
 
+**pendingCancels data collection**
+
+```
+{
+  agent:<cguid>,
+  message: <subscribeMsg>
+}
+```
 
 ### resolve-role handler
 
@@ -134,8 +142,11 @@ Status event message sent by the Vertx Runtime Registry.
 
 **logic**
 
-For all `online` events received it checks if the CGUID is associated to any agent and forwards to it pending tickets. Execute funtion `ticketAccepted` for 200 ok accepting messages.
+For all `online` events received it checks if the CGUID is associated to any agent and if yes:
 
+1- forwards to it pending tickets and executes funtion `ticketAccepted` for 200 ok accepting messages.
+
+2- check if there is any pending cancel in the `pendingCancels` collection and if yes forwards to it pending cancels. In case a 200 Ok response is received it is removed from the collection.
 
 ### unregistration of Agents
 
