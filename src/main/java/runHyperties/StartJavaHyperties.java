@@ -259,11 +259,19 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String agent1Address = "agent1Address";
 		String agent2Code = "agent2Code";
 		String agent2Address = "agent2Address";
+		String agent3Code = "agent3Code";
+		String agent3Address = "agent3Address";
+		String agent4Code = "agent4Code";
+		String agent4Address = "agent4Address";
 		JsonArray agents = new JsonArray();
 		JsonObject agent1 = new JsonObject().put("address", agent1Address).put("code", agent1Code);
 		JsonObject agent2 = new JsonObject().put("address", agent2Address).put("code", agent2Code);
+		JsonObject agent3 = new JsonObject().put("address", agent3Address).put("code", agent3Code);
+		JsonObject agent4 = new JsonObject().put("address", agent4Address).put("code", agent4Code);
 		agents.add(agent1);
 		agents.add(agent2);
+		agents.add(agent3);
+		agents.add(agent4);
 		configCRM.put("agents", agents);
 		configCRM.put("checkTicketsTimer", 2000);
 

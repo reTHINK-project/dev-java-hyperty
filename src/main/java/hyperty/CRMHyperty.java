@@ -28,6 +28,7 @@ public class CRMHyperty extends AbstractHyperty {
 	private static final String logMessage = "[CRM] ";
 	private static final String agentsCollection = "agents";
 	private static final String ticketsCollection = "tickets";
+	private static final String cancelsCollection = "pendingCancels";
 
 	// handler URLs
 	private static String ticketsHandler;
@@ -349,6 +350,7 @@ public class CRMHyperty extends AbstractHyperty {
 		mongoClient.findOneAndReplace(agentsCollection, query, document, id -> {
 			if (status.equals("online"))
 				forwardPendingTickets(agent);
+				forwardCanceledTickets(agent);
 		});
 	}
 
@@ -407,6 +409,59 @@ public class CRMHyperty extends AbstractHyperty {
 				send(guid, message, reply -> {
 				});
 			}
+		});
+	}
+	
+	/**
+	 * Forward pending tickets to agent that went live.
+	 *
+	 * @param agent
+	 */
+	private void forwardCanceledTickets(JsonObject agent) {
+		logger.debug(logMessage + "forwardCanceledTickets() for agent " + agent);
+		String guid = agent.getString("user");
+		
+		JsonObject queryCancels = new JsonObject().put("agent", agent.getString("user"));
+		mongoClient.find(cancelsCollection, queryCancels, res -> {
+			logger.debug(logMessage + "cancels statusUpdate(): cguid associated with msgs: " + res.result().toString());
+			for (Object obj : res.result()) {
+				JsonObject cancelMessage = ((JsonObject) obj).getJsonObject("message");
+				processCancels(cancelMessage, agent.getString("user"));
+			}
+		});
+
+	}
+	
+	/**
+	 * *
+	 *
+	 * @param subscribeMsg
+	 */
+	private void processCancels(JsonObject cancelMsg, String addressGuid) {
+
+
+			logger.debug(logMessage + "cancelMSG(): " + cancelMsg.toString());
+			
+			if (cancelMsg != null ) {
+	
+				logger.debug(logMessage + "forwarding to: " + addressGuid);
+				send(addressGuid, cancelMsg, reply -> {
+					JsonObject body = reply.result().body().getJsonObject("body");
+					logger.debug(logMessage + "cancelMSG() reply " + body.toString());
+					if (body.getInteger("code") == 200) {
+						removeMessageFromDB(cancelMsg, cancelsCollection);
+					}
+				});
+			}
+
+
+	}
+	
+	private void removeMessageFromDB(JsonObject msg, String collection) {
+		logger.debug(logMessage + "removeMessageFromDB(): " + msg + " from	 collection " + collection);
+		JsonObject query = new JsonObject().put("message",msg);
+
+		mongoClient.findOneAndDelete(collection, query, id -> {
 		});
 	}
 
@@ -503,11 +558,12 @@ public class CRMHyperty extends AbstractHyperty {
 			if (asyncResult.succeeded()) {
 				if (asyncResult.result().equals("")) {
 					// agent code not registered
-					logger.debug(logMessage + "ticketUpdateClosed(): no agent for user (" + participantHypertyURL + ")"  + participantHypertyURL);
+					logger.debug(logMessage + "ticketUpdateClosed(): no agent for user (" + participantHypertyURL + ")"
+							+ participantHypertyURL);
 					if (participantHypertyURL != null) {
 						return;
 					}
-					
+
 				}
 				JsonObject query = new JsonObject().put("url", msgobjectURL);
 				mongoClient.find(ticketsCollection, query, res -> {
@@ -521,8 +577,8 @@ public class CRMHyperty extends AbstractHyperty {
 						logger.debug(logMessage + "ticketUpdateClosed() updated: " + document);
 					});
 				});
-				
-				if (! asyncResult.result().equals("")) {
+
+				if (!asyncResult.result().equals("")) {
 					JsonObject agentQuery = new JsonObject().put("code", asyncResult.result());
 					// update agent
 					mongoClient.find(agentsCollection, agentQuery, res -> {
@@ -703,9 +759,22 @@ public class CRMHyperty extends AbstractHyperty {
 				JsonObject msg = new JsonObject();
 				msg.put("body", new JsonObject().put("resource", ticketObjectURL));
 				msg.put("type", "delete");
-				msg.put("from", url);
-				msg.put("to", guid);
+				msg.put("from", ticketObjectURL + "/subscription");
+				msg.put("to", agent.getString("address"));
 				send(guid, msg, reply -> {
+					if (reply.result() != null) {
+						JsonObject body = reply.result().body().getJsonObject("body");
+						if (body.getInteger("code") == 200) {
+						}
+					} else {
+						System.out.println("save msg to guid:" + guid +"\nmsg:" + msg);
+						
+						JsonObject document = new JsonObject().put("agent", guid)
+														      .put("message", msg);
+						mongoClient.save(cancelsCollection, document, id -> {
+							logger.debug(logMessage + "new cancel() added for guid:" + guid);
+						});
+					}
 				});
 			}
 		});
