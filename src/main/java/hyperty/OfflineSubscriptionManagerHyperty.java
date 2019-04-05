@@ -21,6 +21,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	private static String pendingSubscriptionsCollection = "pendingSubscriptions";
 	private static String dataObjectsRegistry = "dataObjectsRegistry";
 	private static final String ticketsCollection = "tickets";
+	private static final String cancelsCollection = "pendingCancels";
 
 	public static final String ticketOngoing = "ongoing";
 
@@ -155,12 +156,13 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 
 			JsonObject query = new JsonObject().put("user", msg.getString("resource"));
 			mongoClient.find(pendingSubscriptionsCollection, query, res -> {
-				logger.debug(logMessage + "statusUpdate(): cguid associated with msgs: " + res.result().toString());
+				logger.debug(logMessage + " pending statusUpdate(): cguid associated with msgs: " + res.result().toString());
 				for (Object obj : res.result()) {
 					JsonObject pendingSubscriptionMessage = ((JsonObject) obj).getJsonObject("message");
 					processPendingSubscription(pendingSubscriptionMessage, msg.getString("resource"));
 				}
 			});
+			
 		}
 	}
 
@@ -277,6 +279,8 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 			});
 		}
 	}
+	
+
 
 	/**
 	 * Reply message is forwarded to subscribeReply.to and the subscribeReply is
