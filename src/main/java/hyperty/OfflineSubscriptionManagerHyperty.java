@@ -216,6 +216,15 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 					processPendingSubscription(pendingSubscriptionMessage, msg.getString("resource"));
 				}
 			});
+			
+			mongoClient.find(pendingDeletesCollection, query, res -> {
+				logger.debug(
+						logMessage + " pending statusUpdate(): cguid associated with msgs: " + res.result().toString());
+				for (Object obj : res.result()) {
+					JsonObject pendingDeleteMessage = ((JsonObject) obj).getJsonObject("message");
+					processPendingDelete(pendingDeleteMessage, msg.getString("resource"));
+				}
+			});
 
 		}
 	}
