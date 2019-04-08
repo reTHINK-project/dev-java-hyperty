@@ -16,12 +16,22 @@ The Hyperty handles two collections:
 }
 ```
 
+**pendingDeletes data collection**
+
+```
+{
+  user:<cguid>,
+  message: <deleteMsg>
+}
+```
+
 **dataObjectsRegistry data collection**
 
 ```
 {
   user:<cguid>,
-  message: <inviteMsg>
+  message: <inviteMsg>,
+  subscriptions: [<cguid>]
 }
 ```
 
@@ -47,7 +57,10 @@ Forward of [Data Object Delete Message](https://github.com/reTHINK-project/specs
 
 **logic:**
 
-Removes data object message from dataObjectsRegistry data collection and it replies with 200 OK.
+1- It retrieves the deleted Data Object (`msg.body.resource = <data object url>`) from the dataObjectsRegistry data collection and for each CGUID in the `subscriptions` it stores the received delete message in the `pendingDeleted` collection and executes `processPendingDelete(deleteMsg)`. 
+
+2- Then it removes data object message from dataObjectsRegistry data collection and it replies with 200 OK.
+
 
 ### Subscription handler
 
@@ -89,10 +102,18 @@ Status event message sent by the Vertx Runtime Registry.
 
 **logic**
 
-For all `online` events received it checks if the CGUID is associated to any pending subscription at pendingSubscriptions collection and if yes the `processPendingSubscription(subscribeMsg)` function is executed
+For all `online` events received:
+
+1- it checks if the CGUID is associated to any pending subscription at pendingSubscriptions collection and if yes the `processPendingSubscription(subscribeMsg)` function is executed
+
+2- it checks if the CGUID is associated to any pending delete at pendingDeletes collection and if yes the `processPendingDelete(deleteMsg)` function is executed
 
 
 ### `processPendingSubscription(subscribeMsg)` 
 
-Subscribe message is forwarded to `CGUID` and in case a 200 Ok response is received it executes the `subscribeMsg` is removed from pendingSubscription collection.
+`subscribeMsg` message is forwarded to `CGUID` and in case a 200 Ok response is received, the `subscribeMsg` is removed from pendingSubscription collection and it retrieves the subscribed Data Object from the dataObjectsRegistry data collection and the `CGUID` in added to the `subscriptions` array.
 
+
+### `processPendingDelete(deleteMsg)` 
+
+`deleteMsg` message is forwarded to `CGUID` and in case a 200 Ok response is received, it is removed  from pendingDeletes collection.
