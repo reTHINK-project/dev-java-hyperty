@@ -19,9 +19,11 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 
 	private static final String logMessage = "[OfflineSubMgr] ";
 	private static String pendingSubscriptionsCollection = "pendingSubscriptions";
+	private static String pendingDeletesCollection = "pendingDeletes";
 	private static String dataObjectsRegistry = "dataObjectsRegistry";
 	private static final String ticketsCollection = "tickets";
 	private static final String cancelsCollection = "pendingCancels";
+	private static final String aggentsCollection = "agents";
 
 	public static final String ticketOngoing = "ongoing";
 
@@ -117,9 +119,60 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 	 * @param msg
 	 */
 	private void dataObjectUnregister(Message<JsonObject> message, JsonObject msg) {
-		removeMessageFromDB(msg, dataObjectsRegistry);
-		JsonObject response = new JsonObject().put("code", 200);
-		message.reply(response);
+
+		System.out.println("dataObjectUnregister: message" + message.body().toString());
+		System.out.println("dataObjectUnregister: msg" + msg.toString());
+		/*
+		 * removeMessageFromDB(msg, dataObjectsRegistry); JsonObject response = new
+		 * JsonObject().put("code", 200); message.reply(response);
+		 */
+		
+		JsonObject body = msg.getJsonObject("body");
+		String dataObjectUrl = body.getJsonObject("body").getString("resource");
+		System.out.println("dataObject url:" + dataObjectUrl);
+		
+		JsonObject deleteMsg = body;
+		deleteMsg.put("from", dataObjectUrl + "/subscription");
+		deleteMsg.put("to", dataObjectUrl + "/changes");
+		
+		JsonObject query = new JsonObject().put("tickets", new JsonObject().put("$in", new JsonArray().add(dataObjectUrl)));
+		System.out.println("query:" + query.toString());
+		mongoClient.find(aggentsCollection, query, resultHandler -> {
+			
+			logger.debug(
+					logMessage + " query result " + resultHandler.result().toString());
+			
+			if(resultHandler.result().size()>0) {
+				JsonObject agent = resultHandler.result().get(0);
+				String agentGuid = agent.getString("user");
+				Future<Boolean> online = queryRegistryAgent(agentGuid);
+				online.setHandler(asyncResult -> {
+					if (asyncResult.succeeded()) {
+						if (online.result()) {
+							logger.debug(logMessage + " status result online");
+							processPendingDelete(deleteMsg, agentGuid);
+						} else {
+							logger.debug(logMessage + " status result offline");
+							
+							JsonObject saveInDB = new JsonObject();
+							saveInDB.put("message", deleteMsg);
+							saveInDB.put("user", agentGuid);
+							JsonObject document = new JsonObject(saveInDB.toString());
+
+							mongoClient.save(pendingDeletesCollection, document, id -> {
+								logger.debug(logMessage + "storeMessage(): " + document);
+							});
+						}
+					} else {
+						// oh ! we have a problem...
+					}
+				});
+			}
+
+		});
+		
+
+
 	}
 
 	private void handleStatusRequests() {
@@ -156,13 +209,14 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 
 			JsonObject query = new JsonObject().put("user", msg.getString("resource"));
 			mongoClient.find(pendingSubscriptionsCollection, query, res -> {
-				logger.debug(logMessage + " pending statusUpdate(): cguid associated with msgs: " + res.result().toString());
+				logger.debug(
+						logMessage + " pending statusUpdate(): cguid associated with msgs: " + res.result().toString());
 				for (Object obj : res.result()) {
 					JsonObject pendingSubscriptionMessage = ((JsonObject) obj).getJsonObject("message");
 					processPendingSubscription(pendingSubscriptionMessage, msg.getString("resource"));
 				}
 			});
-			
+
 		}
 	}
 
@@ -181,13 +235,14 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		// 1- It queries the Data Objects Registry collection for the data object URL to
 		// be subscribed (message.body.resource), and replies with 200 OK where
 		// reply.body.value = message.body.value.
-		JsonObject query = new JsonObject().put("message.body.body.resource", body.getString("to").split("/subscription")[0]);
+		JsonObject query = new JsonObject().put("message.body.body.resource",
+				body.getString("to").split("/subscription")[0]);
 		mongoClient.find(dataObjectsRegistry, query, res -> {
 			JsonObject dataObject = res.result().get(0);
 			logger.debug(logMessage + "handleSubscription() reply  " + dataObject.toString());
 			JsonObject response = new JsonObject();
-			response.put("body", new JsonObject().put("value", dataObject.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("value"))
-												 .put("code", 200));
+			response.put("body", new JsonObject().put("value", dataObject.getJsonObject("message").getJsonObject("body")
+					.getJsonObject("body").getJsonObject("value")).put("code", 200));
 			message.reply(response);
 			// 2- Queries the registry about cguid status.
 			Future<Boolean> online = queryRegistry(dataObject);
@@ -198,25 +253,20 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 								.getJsonObject("body").getJsonObject("identity").getString("guid"));
 					} else {
 
-						/*{
-							type: "update",
-							from: "object url",
-							body: {
-							  status: "new-participant",
-							  participant: <agent-hyperty-url>
-							  }
-							}
-						*/
-						
+						/*
+						 * { type: "update", from: "object url", body: { status: "new-participant",
+						 * participant: <agent-hyperty-url> } }
+						 */
+
 						JsonObject msgUpdate = new JsonObject();
 						msgUpdate.put("type", "update");
 						msgUpdate.put("from", body.getString("to").split("/subscription")[0]);
-						JsonObject bodyMsgUpdate = new JsonObject().put("status", "new-participant").put("participant", body.getJsonObject("body").getString("subscriber"));
+						JsonObject bodyMsgUpdate = new JsonObject().put("status", "new-participant").put("participant",
+								body.getJsonObject("body").getString("subscriber"));
 						msgUpdate.put("body", bodyMsgUpdate);
 
-						
 						publish(offlineHandler, msgUpdate);
-						
+
 						JsonObject saveInDB = new JsonObject();
 						saveInDB.put("message", msg);
 						saveInDB.put("user", dataObject.getString("user"));
@@ -251,7 +301,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		mongoClient.save(collection, document, id -> {
 			logger.debug(logMessage + "storeMessage(): " + document);
 		});
-	} 
+	}
 
 	/**
 	 * *
@@ -273,14 +323,39 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 				logger.debug(
 						logMessage + "processPendingSubscription() reply all msg " + reply.result().body().toString());
 
-				// if (body.getInteger("code") == 200) {
-				// removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
-				// }
+				if (body.getInteger("code") == 200) {
+					removeMessageFromDB(subscribeMsg, pendingSubscriptionsCollection);
+				}
 			});
 		}
 	}
-	
 
+	/**
+	 * *
+	 *
+	 * @param subscribeMsg
+	 */
+	private void processPendingDelete(JsonObject deleteMsg, String addressGuid) {
+
+		logger.debug(logMessage + "processPendingDelete msg(): " + deleteMsg.toString());
+		logger.debug(logMessage + "processPendingDelete guid(): " + addressGuid);
+
+		if (deleteMsg != null && deleteMsg.containsKey("to")) {
+			logger.debug(logMessage + "processPendingDelete(): " + deleteMsg.toString());
+
+			logger.debug(logMessage + "forwarding to: " + addressGuid);
+			send(addressGuid, deleteMsg.getJsonObject("body"), reply -> {
+				JsonObject body = reply.result().body().getJsonObject("body");
+				logger.debug(logMessage + "pendingDeletesCollection() reply " + body.toString());
+				logger.debug(
+						logMessage + "pendingDeletesCollection() reply all msg " + reply.result().body().toString());
+
+				if (body.getInteger("code") == 200) {
+					removeMessageFromDB(deleteMsg, pendingDeletesCollection);
+				}
+			});
+		}
+	}
 
 	/**
 	 * Reply message is forwarded to subscribeReply.to and the subscribeReply is
@@ -321,6 +396,27 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		registryMsg.put("from", this.url);
 		registryMsg.put("identity",
 				msg.getJsonObject("message").getJsonObject("body").getJsonObject("body").getJsonObject("identity"));
+		registryMsg.put("body", body);
+
+		send(registryURL, registryMsg, reply -> {
+			logger.debug(logMessage + "read reply ->" + reply.result().body().toString());
+			JsonObject replyValue = reply.result().body().getJsonObject("value");
+			logger.debug(logMessage + "queryRegistry() reply " + replyValue.toString());
+			registryFuture.complete(replyValue.getString("status").equals("online"));
+		});
+
+		return registryFuture;
+	}
+	
+	private Future<Boolean> queryRegistryAgent(String guid) {
+		logger.debug(logMessage + "queryRegistry() " + guid);
+		Future<Boolean> registryFuture = Future.future();
+		JsonObject registryMsg = new JsonObject();
+		registryMsg.put("type", "read");
+		JsonObject body = new JsonObject();
+		body.put("resource", guid);
+		registryMsg.put("from", this.url);
+		registryMsg.put("identity",new JsonObject());
 		registryMsg.put("body", body);
 
 		send(registryURL, registryMsg, reply -> {
