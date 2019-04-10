@@ -353,7 +353,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 			logger.debug(logMessage + "processPendingDelete(): " + deleteMsg.toString());
 
 			logger.debug(logMessage + "forwarding to: " + addressGuid);
-			send(addressGuid, deleteMsg.getJsonObject("body"), reply -> {
+			send(addressGuid, deleteMsg, reply -> {
 				JsonObject body = reply.result().body().getJsonObject("body");
 				logger.debug(logMessage + "pendingDeletesCollection() reply " + body.toString());
 				logger.debug(
