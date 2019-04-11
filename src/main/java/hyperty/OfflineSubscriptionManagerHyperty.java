@@ -126,23 +126,23 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		 * removeMessageFromDB(msg, dataObjectsRegistry); JsonObject response = new
 		 * JsonObject().put("code", 200); message.reply(response);
 		 */
-		
+
 		JsonObject body = msg.getJsonObject("body");
 		String dataObjectUrl = body.getJsonObject("body").getString("resource");
 		System.out.println("dataObject url:" + dataObjectUrl);
-		
+
 		JsonObject deleteMsg = body;
 		deleteMsg.put("from", dataObjectUrl + "/subscription");
 		deleteMsg.put("to", dataObjectUrl + "/changes");
-		
-		JsonObject query = new JsonObject().put("tickets", new JsonObject().put("$in", new JsonArray().add(dataObjectUrl)));
+
+		JsonObject query = new JsonObject().put("tickets",
+				new JsonObject().put("$in", new JsonArray().add(dataObjectUrl)));
 		System.out.println("query:" + query.toString());
 		mongoClient.find(aggentsCollection, query, resultHandler -> {
-			
-			logger.debug(
-					logMessage + " query result " + resultHandler.result().toString());
-			
-			if(resultHandler.result().size()>0) {
+
+			logger.debug(logMessage + " query result " + resultHandler.result().toString());
+
+			if (resultHandler.result().size() > 0) {
 				JsonObject agent = resultHandler.result().get(0);
 				String agentGuid = agent.getString("user");
 				Future<Boolean> online = queryRegistryAgent(agentGuid);
@@ -153,7 +153,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 							processPendingDelete(deleteMsg, agentGuid);
 						} else {
 							logger.debug(logMessage + " status result offline");
-							
+
 							JsonObject saveInDB = new JsonObject();
 							saveInDB.put("message", deleteMsg);
 							saveInDB.put("user", agentGuid);
@@ -170,8 +170,6 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 			}
 
 		});
-		
-
 
 	}
 
@@ -216,7 +214,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 					processPendingSubscription(pendingSubscriptionMessage, msg.getString("resource"));
 				}
 			});
-			
+
 			mongoClient.find(pendingDeletesCollection, query, res -> {
 				logger.debug(
 						logMessage + " pending statusUpdate(): cguid associated with msgs: " + res.result().toString());
@@ -354,33 +352,33 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 
 			logger.debug(logMessage + "forwarding to: " + addressGuid);
 			send(addressGuid, deleteMsg, reply -> {
-				
+
 				if (reply.succeeded()) {
 					JsonObject body = reply.result().body().getJsonObject("body");
 					logger.debug(logMessage + "pendingDeletesCollection() reply " + body.toString());
-					logger.debug(
-							logMessage + "pendingDeletesCollection() reply all msg " + reply.result().body().toString());
+					logger.debug(logMessage + "pendingDeletesCollection() reply all msg "
+							+ reply.result().body().toString());
 
 					if (body.getInteger("code") == 200) {
 						removeMessageFromDB(deleteMsg, pendingDeletesCollection);
 					}
 				} else {
 					logger.debug(logMessage + " status result offline");
-					
+
 					JsonObject saveInDB = new JsonObject();
 					saveInDB.put("message", deleteMsg);
 					saveInDB.put("user", addressGuid);
 					JsonObject document = new JsonObject(saveInDB.toString());
 
-					mongoClient.find(pendingDeletesCollection, new JsonObject().put("message", deleteMsg), handlerFind -> {
-						if(handlerFind.result().size()== 0) {
-							mongoClient.save(pendingDeletesCollection, document, id -> {
-								logger.debug(logMessage + "storeMessage(): " + document);
+					mongoClient.find(pendingDeletesCollection, new JsonObject().put("message", deleteMsg),
+							handlerFind -> {
+								if (handlerFind.result().size() == 0) {
+									mongoClient.save(pendingDeletesCollection, document, id -> {
+										logger.debug(logMessage + "storeMessage(): " + document);
+									});
+								}
 							});
-						}
-					});
-					
-					
+
 				}
 
 			});
@@ -437,7 +435,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 
 		return registryFuture;
 	}
-	
+
 	private Future<Boolean> queryRegistryAgent(String guid) {
 		logger.debug(logMessage + "queryRegistry() " + guid);
 		Future<Boolean> registryFuture = Future.future();
@@ -446,7 +444,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		JsonObject body = new JsonObject();
 		body.put("resource", guid);
 		registryMsg.put("from", this.url);
-		registryMsg.put("identity",new JsonObject());
+		registryMsg.put("identity", new JsonObject());
 		registryMsg.put("body", body);
 
 		send(registryURL, registryMsg, reply -> {
