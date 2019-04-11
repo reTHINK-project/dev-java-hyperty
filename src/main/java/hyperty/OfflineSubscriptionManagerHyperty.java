@@ -354,14 +354,35 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 
 			logger.debug(logMessage + "forwarding to: " + addressGuid);
 			send(addressGuid, deleteMsg, reply -> {
-				JsonObject body = reply.result().body().getJsonObject("body");
-				logger.debug(logMessage + "pendingDeletesCollection() reply " + body.toString());
-				logger.debug(
-						logMessage + "pendingDeletesCollection() reply all msg " + reply.result().body().toString());
+				
+				if (reply.succeeded()) {
+					JsonObject body = reply.result().body().getJsonObject("body");
+					logger.debug(logMessage + "pendingDeletesCollection() reply " + body.toString());
+					logger.debug(
+							logMessage + "pendingDeletesCollection() reply all msg " + reply.result().body().toString());
 
-				if (body.getInteger("code") == 200) {
-					removeMessageFromDB(deleteMsg, pendingDeletesCollection);
+					if (body.getInteger("code") == 200) {
+						removeMessageFromDB(deleteMsg, pendingDeletesCollection);
+					}
+				} else {
+					logger.debug(logMessage + " status result offline");
+					
+					JsonObject saveInDB = new JsonObject();
+					saveInDB.put("message", deleteMsg);
+					saveInDB.put("user", addressGuid);
+					JsonObject document = new JsonObject(saveInDB.toString());
+
+					mongoClient.find(pendingDeletesCollection, new JsonObject().put("message", deleteMsg), handlerFind -> {
+						if(handlerFind.result().size()== 0) {
+							mongoClient.save(pendingDeletesCollection, document, id -> {
+								logger.debug(logMessage + "storeMessage(): " + document);
+							});
+						}
+					});
+					
+					
 				}
+
 			});
 		}
 	}
