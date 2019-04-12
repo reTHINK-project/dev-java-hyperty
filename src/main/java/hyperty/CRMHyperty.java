@@ -569,6 +569,8 @@ public class CRMHyperty extends AbstractHyperty {
 					}
 
 				}
+				
+				
 				JsonObject query = new JsonObject().put("url", msgobjectURL);
 				mongoClient.find(ticketsCollection, query, res -> {
 					JsonArray results = new JsonArray(res.result());

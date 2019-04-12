@@ -148,21 +148,22 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 				Future<Boolean> online = queryRegistryAgent(agentGuid);
 				online.setHandler(asyncResult -> {
 					if (asyncResult.succeeded()) {
-						if (online.result()) {
-							logger.debug(logMessage + " status result online");
-							processPendingDelete(deleteMsg, agentGuid);
-						} else {
-							logger.debug(logMessage + " status result offline");
+						
+						logger.debug(logMessage + " status result offline");
 
-							JsonObject saveInDB = new JsonObject();
-							saveInDB.put("message", deleteMsg);
-							saveInDB.put("user", agentGuid);
-							JsonObject document = new JsonObject(saveInDB.toString());
+						JsonObject saveInDB = new JsonObject();
+						saveInDB.put("message", deleteMsg);
+						saveInDB.put("user", agentGuid);
+						JsonObject document = new JsonObject(saveInDB.toString());
 
-							mongoClient.save(pendingDeletesCollection, document, id -> {
-								logger.debug(logMessage + "storeMessage(): " + document);
-							});
-						}
+						mongoClient.save(pendingDeletesCollection, document, id -> {
+							logger.debug(logMessage + "storeMessage(): " + document);
+							if (online.result()) {
+								logger.debug(logMessage + " status result online");
+								processPendingDelete(deleteMsg, agentGuid);
+							}
+						});
+						
 					} else {
 						// oh ! we have a problem...
 					}
