@@ -134,6 +134,7 @@ public class OfflineSubscriptionManagerHyperty extends AbstractHyperty {
 		JsonObject deleteMsg = body;
 		deleteMsg.put("from", dataObjectUrl + "/subscription");
 		deleteMsg.put("to", dataObjectUrl + "/changes");
+		deleteMsg.put("type", "delete");
 
 		JsonObject query = new JsonObject().put("tickets",
 				new JsonObject().put("$in", new JsonArray().add(dataObjectUrl)));
