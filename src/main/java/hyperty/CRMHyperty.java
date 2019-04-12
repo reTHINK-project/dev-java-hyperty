@@ -591,8 +591,13 @@ public class CRMHyperty extends AbstractHyperty {
 						JsonArray results = new JsonArray(res.result());
 						JsonObject agent = results.getJsonObject(0);
 						JsonArray tickets = agent.getJsonArray("tickets");
-						tickets.remove(tickets.size() - 1);
-						agent.put(openedTickets, agent.getInteger(openedTickets) - 1);
+						if (tickets.size()>0) {
+							tickets.remove(tickets.size() - 1);
+						}
+						if (agent.getInteger(openedTickets)>0) {
+							agent.put(openedTickets, agent.getInteger(openedTickets) - 1);
+						}
+						
 						JsonObject document = new JsonObject(agent.toString());
 						mongoClient.findOneAndReplace(agentsCollection, agentQuery, document, id -> {
 						});
@@ -682,6 +687,7 @@ public class CRMHyperty extends AbstractHyperty {
 		JsonObject query = new JsonObject().put("code", agentCode);
 		// update agent
 		mongoClient.find(agentsCollection, query, res -> {
+			System.out.println(logMessage + "insert new ticket on agent");
 			JsonArray results = new JsonArray(res.result());
 			JsonObject agent = results.getJsonObject(0);
 			JsonArray tickets = agent.getJsonArray("tickets");
@@ -690,17 +696,19 @@ public class CRMHyperty extends AbstractHyperty {
 			agent.put(openedTickets, agent.getInteger(openedTickets) + 1);
 			JsonObject document = new JsonObject(agent.toString());
 			mongoClient.findOneAndReplace(agentsCollection, query, document, id -> {
+				System.out.println(logMessage + "inserted new ticket on agent");
 			});
 		});
 		// update ticket
 		JsonObject ticketQuery = new JsonObject().put("url", ticket.getString("url").split("/subscription")[0]);
 		mongoClient.find(ticketsCollection, ticketQuery, res -> {
+			System.out.println(logMessage + "change ticket status");
 			JsonArray results = new JsonArray(res.result());
 			JsonObject ticketDB = results.getJsonObject(0);
 			ticketDB.put("status", ticketOngoing);
 			JsonObject document = new JsonObject(ticketDB.toString());
 			mongoClient.findOneAndReplace(ticketsCollection, ticketQuery, document, id -> {
-
+				System.out.println(logMessage + "changed ticket status");
 			});
 		});
 	}
