@@ -485,7 +485,7 @@ public class CRMHyperty extends AbstractHyperty {
 				}
 				break;
 			case "update":
-				handleTicketUpdate(msg, message);
+				handleTicketUpdate(msg);
 				break;
 			default:
 				logger.debug("Incorrect message type: " + msg.getString("type"));
@@ -530,12 +530,12 @@ public class CRMHyperty extends AbstractHyperty {
 	 * @param msg - ticket message
 	 * @param message 
 	 */
-	private void handleTicketUpdate(JsonObject msg, Message<JsonObject> message) {
+	private void handleTicketUpdate(JsonObject msg) {
 		logger.debug(logMessage + "handleTicketUpdate(): " + msg.toString());
 		String status = msg.getJsonObject("body").getString("status");
 		switch (status) {
 		case newParticipant:
-			ticketUpdateNewParticipant(msg, message);
+			ticketUpdateNewParticipant(msg);
 			break;
 		case closed:
 			ticketUpdateClosed(msg);
@@ -617,7 +617,7 @@ public class CRMHyperty extends AbstractHyperty {
 	 *
 	 * @param msg
 	 */
-	private void ticketUpdateNewParticipant(JsonObject msg, Message<JsonObject> message) {
+	private void ticketUpdateNewParticipant(JsonObject msg) {
 		logger.debug(logMessage + "ticketUpdateNewParticipant(): " + msg);
 		String msgobjectURL = msg.getString("from");
 		String participantHypertyURL = msg.getJsonObject("body").getString("participant");
@@ -631,24 +631,21 @@ public class CRMHyperty extends AbstractHyperty {
 					return;
 				}
 
-				JsonObject query = new JsonObject().put("url", msgobjectURL).put("status", "pending");
+				JsonObject query = new JsonObject().put("url", msgobjectURL);
 				mongoClient.find(ticketsCollection, query, res -> {
 					JsonArray results = new JsonArray(res.result());
-					if(results.size()>0) {
-						JsonObject ticket = results.getJsonObject(0);
-						String status = ticket.getString("status");
-						String[] values = { ticketNew, ticketPending };
-						if (Arrays.stream(values).anyMatch(status::equals)) {
-							String objectURL = ticket.getJsonObject("message").getString("from").split("/subscription")[0];
-							if (objectURL.equals(msgobjectURL)) {
-								ticketAccepted(ticket, asyncResult.result());
-								removeTicketInvitation(ticket, asyncResult.result());
-							}
-						}
-					} else {
-						System.out.println("Already accepted");
-					}
 					
+					JsonObject ticket = results.getJsonObject(0);
+					String status = ticket.getString("status");
+					String[] values = { ticketNew, ticketPending };
+					if (Arrays.stream(values).anyMatch(status::equals)) {
+						String objectURL = ticket.getJsonObject("message").getString("from").split("/subscription")[0];
+						if (objectURL.equals(msgobjectURL)) {
+							ticketAccepted(ticket, asyncResult.result());
+							removeTicketInvitation(ticket, asyncResult.result());
+						}
+					}
+										
 				});
 			} else {
 				// oh ! we have a problem...
