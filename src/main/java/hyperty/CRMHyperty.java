@@ -62,12 +62,19 @@ public class CRMHyperty extends AbstractHyperty {
 
 		handleTicketRequests();
 		handleStatusRequests();
-		handleAgentValidationRequests();
 
-		agentsConfig = config().getJsonArray("agents");
-		if (agentsConfig != null) {
-			createAgents(agentsConfig);
-		}
+		mongoClient.find("agentsList", new JsonObject(), agentsHandler -> {
+			if(agentsHandler.result().size() > 0) {
+				JsonArray agents = new JsonArray();
+				for(int i = 0 ; i< agentsHandler.result().size(); i++) {
+					agents.add(agentsHandler.result().get(i));
+				}
+				System.out.println("new Data agents:" + agents.toString());
+				createAgents(agents);
+			}
+		});
+		
+
 
 		Timer timer = new Timer();
 		checkTicketsTimer = config().getInteger("checkTicketsTimer");
