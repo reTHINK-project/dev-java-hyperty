@@ -72,6 +72,7 @@ public class CRMHyperty extends AbstractHyperty {
 				}
 				System.out.println("new Data agents:" + agents.toString());
 				createAgents(agents);
+				agentsConfig = agents;
 			}
 		});
 		
