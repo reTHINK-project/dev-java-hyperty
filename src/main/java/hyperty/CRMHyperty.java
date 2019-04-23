@@ -62,6 +62,7 @@ public class CRMHyperty extends AbstractHyperty {
 
 		handleTicketRequests();
 		handleStatusRequests();
+		handleAgentValidationRequests();
 
 		mongoClient.find("agentsList", new JsonObject(), agentsHandler -> {
 			if(agentsHandler.result().size() > 0) {
