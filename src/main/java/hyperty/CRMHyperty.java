@@ -291,25 +291,33 @@ public class CRMHyperty extends AbstractHyperty {
 			JsonObject query = new JsonObject().put("code", code);
 			mongoClient.find(agentsCollection, query, res -> {
 				JsonArray results = new JsonArray(res.result());
-				JsonObject agent = results.getJsonObject(0);
-//					if (agent.getString("user").equals("")) {
-				// update agent's associated user guid and address
-				agent.put("user", guid);
-				agent.put("status", "online");
-				agent.put("address", msg.getString("from"));
-				JsonObject document = new JsonObject(agent.toString());
-				mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document, id -> {
-					logger.debug(logMessage + "handleAgentRegistration(): agent updated " + document);
-					message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
-					resultFuture.complete();
-				});
-//					} else {
-//						JsonObject response = new JsonObject().put("code", 400).put("reason",
-//								"agent is already allocated with user");
-//						message.reply(response);
-//						latch.countDown();
-//
-//					}
+				
+				if(results.size()>0) {
+					JsonObject agent = results.getJsonObject(0);
+					agent.put("user", guid);
+					agent.put("status", "online");
+					agent.put("address", msg.getString("from"));
+					JsonObject document = new JsonObject(agent.toString());
+					mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document, id -> {
+						logger.debug(logMessage + "handleAgentRegistration(): agent updated " + document);
+						message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
+						resultFuture.complete();
+					});
+				} else {
+					JsonObject agent = new JsonObject();
+					agent.put("code", code);
+					agent.put("user", guid);
+					agent.put("status", "online");
+					agent.put("address", msg.getString("from"));
+					agent.put("openedTickets", 0);
+					agent.put("tickets", new JsonArray());
+					mongoClient.insert(agentsCollection, agent, id -> {
+						logger.debug(logMessage + "handleAgentRegistration(): agent updated " + agent);
+						message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
+						resultFuture.complete();
+					});
+				}
+
 
 			});
 		} else {
