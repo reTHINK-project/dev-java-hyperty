@@ -113,7 +113,6 @@ For all `online` events received:
 
 `subscribeMsg` message is forwarded to `CGUID` and in case a 200 Ok response is received, the `subscribeMsg` is removed from pendingSubscription collection and it retrieves the subscribed Data Object from the dataObjectsRegistry data collection and the `CGUID` in added to the `subscriptions` array.
 
-
 ### `processPendingDelete(deleteMsg)` 
 
 `deleteMsg` message is forwarded to `CGUID` and in case a 200 Ok response is received, it is removed  from pendingDeletes collection.
