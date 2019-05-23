@@ -1215,6 +1215,8 @@ public class SmartIotProtostub extends AbstractVerticle {
 			URL url = new URL(urlString);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("GET");
+			//conn.setConnectTimeout(50000);
+			//conn.setReadTimeout(50000);
 
 			conn.setRequestProperty("authorization", "Bearer " + currentToken);
 

@@ -555,12 +555,16 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		}
 		logger.debug(logMessage + "removing wallet for address " + walletAddress);
 
+		/*
 		JsonObject query = new JsonObject();
-		// query.put("address", walletAddress);
+		JsonObject userProfile = new JsonObject().put("guid", "user-guid://" + walletAddress);
+		JsonObject identity = new JsonObject().put("userProfile", userProfile);
+		query.put("identity", identity);
+
 
 		mongoClient.removeDocument(walletsCollection, query, res -> {
 			logger.debug("Wallets removed from DB");
-		});
+		});*/
 
 	}
 

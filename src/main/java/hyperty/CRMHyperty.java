@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import com.hazelcast.nio.Address;
+
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -28,6 +30,7 @@ public class CRMHyperty extends AbstractHyperty {
 	private static final String logMessage = "[CRM] ";
 	private static final String agentsCollection = "agents";
 	private static final String ticketsCollection = "tickets";
+	private static final String cancelsCollection = "pendingCancels";
 
 	// handler URLs
 	private static String ticketsHandler;
@@ -61,10 +64,19 @@ public class CRMHyperty extends AbstractHyperty {
 		handleStatusRequests();
 		handleAgentValidationRequests();
 
-		agentsConfig = config().getJsonArray("agents");
-		if (agentsConfig != null) {
-			createAgents(agentsConfig);
-		}
+		mongoClient.find("agentsList", new JsonObject(), agentsHandler -> {
+			if(agentsHandler.result().size() > 0) {
+				JsonArray agents = new JsonArray();
+				for(int i = 0 ; i< agentsHandler.result().size(); i++) {
+					agents.add(agentsHandler.result().get(i));
+				}
+				System.out.println("new Data agents:" + agents.toString());
+				createAgents(agents);
+				agentsConfig = agents;
+			}
+		});
+		
+
 
 		Timer timer = new Timer();
 		checkTicketsTimer = config().getInteger("checkTicketsTimer");
@@ -279,25 +291,33 @@ public class CRMHyperty extends AbstractHyperty {
 			JsonObject query = new JsonObject().put("code", code);
 			mongoClient.find(agentsCollection, query, res -> {
 				JsonArray results = new JsonArray(res.result());
-				JsonObject agent = results.getJsonObject(0);
-//					if (agent.getString("user").equals("")) {
-				// update agent's associated user guid and address
-				agent.put("user", guid);
-				agent.put("status", "online");
-				agent.put("address", msg.getString("from"));
-				JsonObject document = new JsonObject(agent.toString());
-				mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document, id -> {
-					logger.debug(logMessage + "handleAgentRegistration(): agent updated " + document);
-					message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
-					resultFuture.complete();
-				});
-//					} else {
-//						JsonObject response = new JsonObject().put("code", 400).put("reason",
-//								"agent is already allocated with user");
-//						message.reply(response);
-//						latch.countDown();
-//
-//					}
+				
+				if(results.size()>0) {
+					JsonObject agent = results.getJsonObject(0);
+					agent.put("user", guid);
+					agent.put("status", "online");
+					agent.put("address", msg.getString("from"));
+					JsonObject document = new JsonObject(agent.toString());
+					mongoClient.findOneAndReplace(agentsCollection, new JsonObject().put("code", code), document, id -> {
+						logger.debug(logMessage + "handleAgentRegistration(): agent updated " + document);
+						message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
+						resultFuture.complete();
+					});
+				} else {
+					JsonObject agent = new JsonObject();
+					agent.put("code", code);
+					agent.put("user", guid);
+					agent.put("status", "online");
+					agent.put("address", msg.getString("from"));
+					agent.put("openedTickets", 0);
+					agent.put("tickets", new JsonArray());
+					mongoClient.insert(agentsCollection, agent, id -> {
+						logger.debug(logMessage + "handleAgentRegistration(): agent updated " + agent);
+						message.reply(new JsonObject().put("body", new JsonObject().put("agent", agent).put("code", 200)));
+						resultFuture.complete();
+					});
+				}
+
 
 			});
 		} else {
@@ -349,6 +369,7 @@ public class CRMHyperty extends AbstractHyperty {
 		mongoClient.findOneAndReplace(agentsCollection, query, document, id -> {
 			if (status.equals("online"))
 				forwardPendingTickets(agent);
+				forwardCanceledTickets(agent);
 		});
 	}
 
@@ -372,7 +393,7 @@ public class CRMHyperty extends AbstractHyperty {
 				String previousStatus = agent.getString("status");
 
 				// if (previousStatus.equals("offline") && nextStatus.equals("online")) {
-				if (nextStatus.equals("online")) {
+				if (previousStatus.equals("offline") && nextStatus.equals("online")) {
 					changeStatus(nextStatus, agent, query);
 				} else if (previousStatus.equals("online") && nextStatus.equals("offline")) {
 					changeStatus(nextStatus, agent, query);
@@ -403,10 +424,64 @@ public class CRMHyperty extends AbstractHyperty {
 			for (int i = 0; i < res.result().size(); i++) {
 				JsonObject ticket = res.result().get(i);
 				JsonObject message = ticket.getJsonObject("message");
+				message.put("to", agent.getString("address"));
 				logger.debug(logMessage + "forward tickets " + i);
 				send(guid, message, reply -> {
 				});
 			}
+		});
+	}
+	
+	/**
+	 * Forward pending tickets to agent that went live.
+	 *
+	 * @param agent
+	 */
+	private void forwardCanceledTickets(JsonObject agent) {
+		logger.debug(logMessage + "forwardCanceledTickets() for agent " + agent);
+		String guid = agent.getString("user");
+		
+		JsonObject queryCancels = new JsonObject().put("agent", agent.getString("user"));
+		mongoClient.find(cancelsCollection, queryCancels, res -> {
+			logger.debug(logMessage + "cancels statusUpdate(): cguid associated with msgs: " + res.result().toString());
+			for (Object obj : res.result()) {
+				JsonObject cancelMessage = ((JsonObject) obj).getJsonObject("message");
+				processCancels(cancelMessage, agent.getString("user"));
+			}
+		});
+
+	}
+	
+	/**
+	 * *
+	 *
+	 * @param subscribeMsg
+	 */
+	private void processCancels(JsonObject cancelMsg, String addressGuid) {
+
+
+			logger.debug(logMessage + "cancelMSG(): " + cancelMsg.toString());
+			
+			if (cancelMsg != null ) {
+	
+				logger.debug(logMessage + "forwarding to: " + addressGuid);
+				send(addressGuid, cancelMsg, reply -> {
+					JsonObject body = reply.result().body().getJsonObject("body");
+					logger.debug(logMessage + "cancelMSG() reply " + body.toString());
+					if (body.getInteger("code") == 200) {
+						removeMessageFromDB(cancelMsg, cancelsCollection);
+					}
+				});
+			}
+
+
+	}
+	
+	private void removeMessageFromDB(JsonObject msg, String collection) {
+		logger.debug(logMessage + "removeMessageFromDB(): " + msg + " from	 collection " + collection);
+		JsonObject query = new JsonObject().put("message",msg);
+
+		mongoClient.findOneAndDelete(collection, query, id -> {
 		});
 	}
 
@@ -470,6 +545,7 @@ public class CRMHyperty extends AbstractHyperty {
 	 * Handle ticket update.
 	 *
 	 * @param msg - ticket message
+	 * @param message 
 	 */
 	private void handleTicketUpdate(JsonObject msg) {
 		logger.debug(logMessage + "handleTicketUpdate(): " + msg.toString());
@@ -503,12 +579,15 @@ public class CRMHyperty extends AbstractHyperty {
 			if (asyncResult.succeeded()) {
 				if (asyncResult.result().equals("")) {
 					// agent code not registered
-					logger.debug(logMessage + "ticketUpdateClosed(): no agent for user (" + participantHypertyURL + ")"  + participantHypertyURL);
+					logger.debug(logMessage + "ticketUpdateClosed(): no agent for user (" + participantHypertyURL + ")"
+							+ participantHypertyURL);
 					if (participantHypertyURL != null) {
 						return;
 					}
-					
+
 				}
+				
+				
 				JsonObject query = new JsonObject().put("url", msgobjectURL);
 				mongoClient.find(ticketsCollection, query, res -> {
 					JsonArray results = new JsonArray(res.result());
@@ -521,16 +600,21 @@ public class CRMHyperty extends AbstractHyperty {
 						logger.debug(logMessage + "ticketUpdateClosed() updated: " + document);
 					});
 				});
-				
-				if (! asyncResult.result().equals("")) {
+
+				if (!asyncResult.result().equals("")) {
 					JsonObject agentQuery = new JsonObject().put("code", asyncResult.result());
 					// update agent
 					mongoClient.find(agentsCollection, agentQuery, res -> {
 						JsonArray results = new JsonArray(res.result());
 						JsonObject agent = results.getJsonObject(0);
 						JsonArray tickets = agent.getJsonArray("tickets");
-						tickets.remove(tickets.size() - 1);
-						agent.put(openedTickets, agent.getInteger(openedTickets) - 1);
+						if (tickets.size()>0) {
+							tickets.remove(tickets.size() - 1);
+						}
+						if (agent.getInteger(openedTickets)>0) {
+							agent.put(openedTickets, agent.getInteger(openedTickets) - 1);
+						}
+						
 						JsonObject document = new JsonObject(agent.toString());
 						mongoClient.findOneAndReplace(agentsCollection, agentQuery, document, id -> {
 						});
@@ -567,6 +651,7 @@ public class CRMHyperty extends AbstractHyperty {
 				JsonObject query = new JsonObject().put("url", msgobjectURL);
 				mongoClient.find(ticketsCollection, query, res -> {
 					JsonArray results = new JsonArray(res.result());
+					
 					JsonObject ticket = results.getJsonObject(0);
 					String status = ticket.getString("status");
 					String[] values = { ticketNew, ticketPending };
@@ -577,6 +662,7 @@ public class CRMHyperty extends AbstractHyperty {
 							removeTicketInvitation(ticket, asyncResult.result());
 						}
 					}
+										
 				});
 			} else {
 				// oh ! we have a problem...
@@ -615,6 +701,7 @@ public class CRMHyperty extends AbstractHyperty {
 		JsonObject query = new JsonObject().put("code", agentCode);
 		// update agent
 		mongoClient.find(agentsCollection, query, res -> {
+			System.out.println(logMessage + "insert new ticket on agent");
 			JsonArray results = new JsonArray(res.result());
 			JsonObject agent = results.getJsonObject(0);
 			JsonArray tickets = agent.getJsonArray("tickets");
@@ -623,17 +710,19 @@ public class CRMHyperty extends AbstractHyperty {
 			agent.put(openedTickets, agent.getInteger(openedTickets) + 1);
 			JsonObject document = new JsonObject(agent.toString());
 			mongoClient.findOneAndReplace(agentsCollection, query, document, id -> {
+				System.out.println(logMessage + "inserted new ticket on agent");
 			});
 		});
 		// update ticket
 		JsonObject ticketQuery = new JsonObject().put("url", ticket.getString("url").split("/subscription")[0]);
 		mongoClient.find(ticketsCollection, ticketQuery, res -> {
+			System.out.println(logMessage + "change ticket status");
 			JsonArray results = new JsonArray(res.result());
 			JsonObject ticketDB = results.getJsonObject(0);
 			ticketDB.put("status", ticketOngoing);
 			JsonObject document = new JsonObject(ticketDB.toString());
 			mongoClient.findOneAndReplace(ticketsCollection, ticketQuery, document, id -> {
-
+				System.out.println(logMessage + "changed ticket status");
 			});
 		});
 	}
@@ -691,6 +780,7 @@ public class CRMHyperty extends AbstractHyperty {
 	 * @param code   - code of agent who accepted ticket
 	 */
 	private void removeTicketInvitation(JsonObject ticket, String acceptingAgentCode) {
+		System.out.println("to remove ticket :" + ticket.toString());
 		JsonObject query = new JsonObject().put("code", new JsonObject().put("$ne", acceptingAgentCode));
 		String ticketObjectURL = ticket.getString("url");
 		mongoClient.find(agentsCollection, query, res -> {
@@ -702,9 +792,22 @@ public class CRMHyperty extends AbstractHyperty {
 				JsonObject msg = new JsonObject();
 				msg.put("body", new JsonObject().put("resource", ticketObjectURL));
 				msg.put("type", "delete");
-				msg.put("from", url);
-				msg.put("to", guid);
+				msg.put("from", ticketObjectURL + "/subscription");
+				msg.put("to", agent.getString("address"));
 				send(guid, msg, reply -> {
+					if (reply.result() != null) {
+						JsonObject body = reply.result().body().getJsonObject("body");
+						if (body.getInteger("code") == 200) {
+						}
+					} else {
+						System.out.println("save msg to guid:" + guid +"\nmsg:" + msg);
+						
+						JsonObject document = new JsonObject().put("agent", guid)
+														      .put("message", msg);
+						mongoClient.save(cancelsCollection, document, id -> {
+							logger.debug(logMessage + "new cancel() added for guid:" + guid);
+						});
+					}
 				});
 			}
 		});

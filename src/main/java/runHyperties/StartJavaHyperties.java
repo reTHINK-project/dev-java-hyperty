@@ -216,7 +216,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configRegistry.put("mongoHost", mongoHosts);
 		configRegistry.put("mongoCluster", mongoCluster);
 		configRegistry.put("mongoPorts", mongoPorts);
-		configRegistry.put("checkStatusTimer", 180000);
+		configRegistry.put("checkStatusTimer", 10000);
 		configRegistry.put("CRMHypertyStatus", crmStatus);
 		configRegistry.put("offlineSMStatus", offlineSMStatus);
 
@@ -259,12 +259,10 @@ public class StartJavaHyperties extends AbstractVerticle {
 		String agent1Address = "agent1Address";
 		String agent2Code = "agent2Code";
 		String agent2Address = "agent2Address";
-		JsonArray agents = new JsonArray();
-		JsonObject agent1 = new JsonObject().put("address", agent1Address).put("code", agent1Code);
-		JsonObject agent2 = new JsonObject().put("address", agent2Address).put("code", agent2Code);
-		agents.add(agent1);
-		agents.add(agent2);
-		configCRM.put("agents", agents);
+		String agent3Code = "agent3Code";
+		String agent3Address = "agent3Address";
+		String agent4Code = "agent4Code";
+		String agent4Address = "agent4Address";
 		configCRM.put("checkTicketsTimer", 2000);
 
 		DeploymentOptions optionsCRM = new DeploymentOptions().setConfig(configCRM).setWorker(false);
@@ -336,7 +334,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configElearning.put("mongoCluster", mongoCluster);
 		configElearning.put("tokens_per_completed_quiz", 50);
 		configElearning.put("tokens_per_correct_answer", 5);
-		configElearning.put("tokens_per_feedback", 10);
+		configElearning.put("tokens_per_feedback", 600);
 		configElearning.put("wallet", "hyperty://sharing-cities-dsm/wallet-manager");
 		configElearning.put("streams", new JsonObject().put("elearning", "data://sharing-cities-dsm/elearning"));
 		configElearning.put("hyperty", "123");
