@@ -62,6 +62,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 	private static final int initialBalance = 50;
 
 	private static int engageRating;
+	private static long challengeExpire;
 
 	@Override
 	public void start() {
@@ -75,6 +76,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		int rankingTimer = config().getInteger("rankingTimer");
 		onReadMaxTransactions = config().getInteger("onReadMaxTransactions");
 		engageRating = config().getInteger("engageRating");
+		challengeExpire = config().getLong("challengeExpire");
+		
 
 		if (publicWallets != null) {
 			createPublicWallets(publicWallets);
@@ -1305,12 +1308,20 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				Future<Void> updatedTransaction = transferToPrivateWallet(walletAddress, transaction);
 
 				updatedTransaction.setHandler(asyncResult -> {
-					String publicWalletAddress = wallet.getString(causeWalletAddress);
-					if (publicWalletAddress != null) {
-						// update wallet2bGranted balance
-						transferToPublicWallet(publicWalletAddress, transaction);
+					
+					
+					Long currentTime = new Date().getTime();
+					logger.debug(" current:" + currentTime +"\n challengeExpire:"+challengeExpire);
+					if(currentTime < challengeExpire) {
+						String publicWalletAddress = wallet.getString(causeWalletAddress);
+						if (publicWalletAddress != null) {
+							// update wallet2bGranted balance
+							transferToPublicWallet(publicWalletAddress, transaction);
+						}
+					} else {
+						logger.debug("challengeExpire");
 					}
-
+					
 				});
 
 				// check if nonce is repeated
