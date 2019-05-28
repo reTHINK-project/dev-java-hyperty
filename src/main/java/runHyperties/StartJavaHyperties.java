@@ -117,6 +117,19 @@ public class StartJavaHyperties extends AbstractVerticle {
 			e.printStackTrace();
 		}
 		System.out.println("SIOT_POC:" + pointOfContact);
+		
+		String challengeExpireStr = "1577750400000"; //31-12-2019
+		long challengeExpire = Long.valueOf(challengeExpireStr);
+		try {
+			String envChallengeExpire = System.getenv("CHALLENGE_EXPIRE");
+			if (envChallengeExpire != null) {
+				challengeExpire = Long.valueOf(envChallengeExpire);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		
 
 		String checkINHypertyURL = "hyperty://sharing-cities-dsm/checkin-rating";
 		String userActivityHypertyURL = "hyperty://sharing-cities-dsm/user-activity";
@@ -380,6 +393,7 @@ public class StartJavaHyperties extends AbstractVerticle {
 		configWalletManager.put("rankingTimer", 30000);
 		configWalletManager.put("onReadMaxTransactions", 100);
 		configWalletManager.put("engageRating", 50);
+		configWalletManager.put("challengeExpire", challengeExpire);
 
 
 		// public wallets
