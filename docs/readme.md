@@ -3,7 +3,7 @@
 
 | Master                                   |
 | ---------------------------------------- |
-| [![Build Status](https://travis-ci.org/reTHINK-project/dev-java-hyperty.svg?branch=master)](https://travis-ci.org/reTHINK-project/dev-java-hyperty) | 
+| [![Build Status](https://travis-ci.org/reTHINK-project/dev-java-hyperty.svg?branch=master)](https://travis-ci.org/reTHINK-project/dev-java-hyperty) |
 
 
 ## Overview
@@ -34,3 +34,110 @@ Remote addresses that are interfaced with protostubs are set as a Verticle confi
 ## Runtime registry
 
 Use [Vertx service discovery API](http://vertx.io/docs/vertx-service-discovery) to register and discover Hyperties and Data Objects  using a JSON object compliant with [reTHINK Hyperty Instance Data Model](https://rethink-project.github.io/specs/datamodel/core/hyperty-registry/readme/).
+
+
+
+## Start Java Runtime Hyperties
+
+We can use the docker-hub image, that is available [here](https://hub.docker.com/r/rethinkaltice/dev-java-hyperty/), to start JavaRuntime. 
+
+With docker-compose you can use the following example:
+`  'dev-java-hyperty':
+
+    image: 'rethinkaltice/dev-java-hyperty:develop'
+    container_name: "dev-java-hyperty"
+    environment:
+      - MONGOHOSTS=MongoIP
+      - MONGOPORTS=27017
+      - MONGO_CLUSTER=NO
+      - LOG_LEVEL=INFO
+      - SCHEDULE_MINUTE=0
+      - SCHEDULE_HOUR=2
+      - SIOT_POC=https://vertx-runtime.rethink.alticelabs.com/requestpub
+      - CHALLENGE_EXPIRE=1559257200000
+    networks:
+      rethink:
+        ipv4_address: 172.20.0.128
+    expose:
+      - '443'
+      - '9091'` 
+It is available some environment variables to be used on startUp of container
+
+- MONGOHOSTS: could be more than one MONGOHOSTS separated by comma:IP1,IP2
+- MONGOPORTS: could be more than one MONGOPORTS separated by comma:PORT1,PORT2
+- MONGO_CLUSTER: should be YES, if you are using more than one MONGOHOST
+- LOG_LEVEL: you can alternate between INFO and DEBUG
+- SCHEDULE_MINUTE, SCHEDULE_HOUR: SCHEDULE is used to clear expired accounts transactions
+- SIOT_POC: This URL is to be used for smartIOT protostub
+- CHALLENGE_EXPIRES: Long timestamp used to control transactions added to public wallets
+
+
+
+### Mongo Database
+There is some collections, that we must create and fill to the application use like shops, elearnings, bonus and agentsList
+
+#### Shops Collection
+Here we can add documents, where which one will be a shop, the skeleton of shop document will be like this:
+
+
+```json
+{
+	"id": "shopID",
+	"name": "Shop Name",
+	"description": "description name of shop",
+	"picture": "picture URL",
+	"opening-hours": {
+		"monday-saturday": "[10:00-13:00, 15:00-19:30]"
+	},
+	"location": {
+		"degrees-latitude": 1.0,
+		"degrees-longitude": -1.0
+	}
+}
+```
+
+#### Elearnigs Collection
+
+Here we can add documents, where which one will be a elearnig(quizz), the skeleton of elearnig document will be like this:
+
+
+```json
+{
+	"type": "default | mini-quiz | power-quiz",
+	"name": "Quizz name",
+	"description": "",
+	"picture": "",
+	"classification": "Nível 1 | Nível 2 | Nível 3",
+	"date": "2018-09-01",
+	"category": "energia | mobilidade",
+	"value": 65,
+	"questions": [{
+		"id": 1,
+		"question": "Question 1?",
+		"answers": ["answer 1", "answer 2", "answer 3"],
+		"correctAnswer": 0,
+		"hint": "hint description"
+	}, {
+		"id": 2,
+		"question": "Question 2?",
+		"answers": ["answer 1", "answer 2", "answer 3"],
+		"correctAnswer": 1,
+		"hint": "hint description"
+	}, {
+		"id": 3,
+		"question": "Question 3?",
+		"answers": ["answer 1", "answer 2", "answer 3"],
+		"correctAnswer": 2,
+		"hint": "hint description"
+	}]
+}
+```
+
+
+
+Type property could be: default or mini-quiz or power-quiz
+
+Classification property could be: Nível 1 or Nível 2 or Nível 3
+
+Category property could be: energia or mobilidade
+
