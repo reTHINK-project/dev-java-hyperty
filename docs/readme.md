@@ -42,25 +42,26 @@ Use [Vertx service discovery API](http://vertx.io/docs/vertx-service-discovery) 
 We can use the docker-hub image, that is available [here](https://hub.docker.com/r/rethinkaltice/dev-java-hyperty/), to start JavaRuntime. 
 
 With docker-compose you can use the following example:
-`  'dev-java-hyperty':
 
-    image: 'rethinkaltice/dev-java-hyperty:develop'
-    container_name: "dev-java-hyperty"
-    environment:
-      - MONGOHOSTS=MongoIP
-      - MONGOPORTS=27017
-      - MONGO_CLUSTER=NO
-      - LOG_LEVEL=INFO
-      - SCHEDULE_MINUTE=0
-      - SCHEDULE_HOUR=2
-      - SIOT_POC=https://vertx-runtime.rethink.alticelabs.com/requestpub
-      - CHALLENGE_EXPIRE=1559257200000
-    networks:
-      rethink:
-        ipv4_address: 172.20.0.128
-    expose:
-      - '443'
-      - '9091'` 
+
+    'dev-java-hyperty':
+    	image: 'rethinkaltice/dev-java-hyperty:develop'
+    	container_name: "dev-java-hyperty"
+        environment:
+          - MONGOHOSTS=MongoIP
+          - MONGOPORTS=27017
+          - MONGO_CLUSTER=NO
+          - LOG_LEVEL=INFO
+          - SCHEDULE_MINUTE=0
+          - SCHEDULE_HOUR=2
+          - SIOT_POC=https://vertx-runtime.rethink.alticelabs.com/requestpub
+          - CHALLENGE_EXPIRE=1559257200000
+        networks:
+          rethink:
+            ipv4_address: 172.20.0.128
+        expose:
+          - '443'
+          - '9091'
 It is available some environment variables to be used on startUp of container
 
 - MONGOHOSTS: could be more than one MONGOHOSTS separated by comma:IP1,IP2
@@ -141,3 +142,13 @@ Classification property could be: Nível 1 or Nível 2 or Nível 3
 
 Category property could be: energia or mobilidade
 
+#### AgentsList Collection
+
+Here we can add documents, where which one will be an agent to receive tickets and handle them.
+
+```json
+	{
+	  "address": "agentAddress",
+	  "code": "agentCode"
+	}
+```
