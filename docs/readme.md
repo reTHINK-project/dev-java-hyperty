@@ -96,6 +96,29 @@ Here we can add documents, where which one will be a shop, the skeleton of shop 
 	}
 }
 ```
+#### Bonus Collection
+Here we can add documents, where which one will be a bonus associated with a shop, the skeleton of the bonus document will be like this:
+
+
+```json
+{
+	"id": "bonusID",
+	"name": "name of bonus",
+	"description": " description of bonus",
+	"cost": 300,
+	"spotID": "shopID",
+	"constraints": {
+		"period": "day",
+		"times": 1
+	},
+	"icon": "https://urlforicon.jpg",
+	"start": "2018/08/10",
+	"expires": "2019/05/31",
+	"successfulTransactionIcon": "https://success.jpg",
+	"failedTransactionIcon": "https://error.jpg"
+}
+```
+
 
 #### Elearnigs Collection
 
