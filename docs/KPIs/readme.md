@@ -2,7 +2,12 @@
 
 For it, you need to have a version of database on you local computer.
 
-Install [MongoDB](https://docs.mongodb.com/manual/installation/) and get a version of database from remote machine using [mongodump](https://docs.mongodb.com/manual/reference/program/mongodump/) command, and save this version on you local machine using [mongorestore](https://docs.mongodb.com/manual/reference/program/mongorestore/) command. 
+Install [MongoDB](https://docs.mongodb.com/manual/installation/) and get a version of database from remote machine using:
+
+- [mongodump](https://docs.mongodb.com/manual/reference/program/mongodump/) command,
+- or running a script to execute this command and push to a certain [git repo](https://github.com/pchainho/sharing-lx-kpis): 
+
+ and save this version on you local machine using [mongorestore](https://docs.mongodb.com/manual/reference/program/mongorestore/) command. 
 
 
 
