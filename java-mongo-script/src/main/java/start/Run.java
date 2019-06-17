@@ -87,9 +87,10 @@ public class Run extends AbstractVerticle {
 		JsonArray hosts = new JsonArray();
 		hosts.add(new JsonObject().put("host", "localhost").put("port", 27017));
 
-		// final String uri = "mongodb://" + "localhost" + ":27017";
-		final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test")
-				.put("hosts", hosts);
+		final String uri = "mongodb://" + "localhost" + ":27017";
+		//final JsonObject mongoconfig = new JsonObject().put("replicaSet", "testeMongo").put("db_name", "test").put("hosts", hosts);
+		
+		JsonObject mongoconfig = new JsonObject().put("connection_string", uri).put("db_name", "test");
 
 		mongoClient = MongoClient.createShared(vertx, mongoconfig);
 		JsonArray wallets = findWallets().getJsonObject(0).getJsonArray("wallets");
