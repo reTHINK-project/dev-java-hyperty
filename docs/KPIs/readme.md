@@ -2,14 +2,14 @@
 
 For it, you need to have a version of database on you local computer.
 
-Install [MongoDB](https://docs.mongodb.com/manual/installation/) and get a version of database from remote machine using:
+- Install [MongoDB](https://docs.mongodb.com/manual/installation/);
+- Go to MongoDB Container `sudo docker exec -t -i mongodb /bin/bash`
+- get a version of database from remote machine using:
 
-- [mongodump](https://docs.mongodb.com/manual/reference/program/mongodump/) command,
-- or running a script to execute this command and push to a certain [git repo](https://github.com/pchainho/sharing-lx-kpis): 
+ - [mongodump](https://docs.mongodb.com/manual/reference/program/mongodump/) command,
+ - or running `sh backup.sh` script to execute this command at home (`cd ~`) and push to a certain [git repo](https://github.com/pchainho/sharing-lx-kpis): 
 
- and save this version on you local machine using [mongorestore](https://docs.mongodb.com/manual/reference/program/mongorestore/) command. 
-
-
+- pull the repo to your local machine and save this version on you local machine using [mongorestore](https://docs.mongodb.com/manual/reference/program/mongorestore/) command. Make sure mongo is running and remove previous restored DBs (named `Test` eg using mongo compass) 
 
 When you have a version of remote machine database on you local machine you can get some KPI's from database. For it you can use a environment variable `DATA` for get some data such as:
 
