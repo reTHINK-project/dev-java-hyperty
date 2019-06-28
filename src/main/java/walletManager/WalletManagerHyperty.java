@@ -77,7 +77,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		onReadMaxTransactions = config().getInteger("onReadMaxTransactions");
 		engageRating = config().getInteger("engageRating");
 		challengeExpire = config().getLong("challengeExpire");
-		
 
 		if (publicWallets != null) {
 			createPublicWallets(publicWallets);
@@ -106,11 +105,18 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		eb.consumer("wallet-cause-transfer", message -> {
 			JsonObject received = (JsonObject) message.body();
 			JsonObject transaction = received.getJsonObject("transaction");
-			
+
 			logger.debug(logMessage + "wallet-cause-transfer():" + received);
 			Future<Void> persistFuture = persistTransaction(transaction);
-			persistFuture.setHandler(asyncResult -> {
-				transferToPublicWallet(received.getString("address"), transaction);
+			persistFuture.setHandler(asyncResult -> {		
+				Long currentTime = new Date().getTime();
+				logger.debug(" current:" + currentTime + "\n challengeExpire:"
+						+ challengeExpire);
+				if (currentTime < challengeExpire) {
+					transferToPublicWallet(received.getString("address"), transaction);
+				} else {
+					logger.debug("challengeExpire - wallet cause transfer");
+				}		
 			});
 
 		});
@@ -559,15 +565,15 @@ public class WalletManagerHyperty extends AbstractHyperty {
 		logger.debug(logMessage + "removing wallet for address " + walletAddress);
 
 		/*
-		JsonObject query = new JsonObject();
-		JsonObject userProfile = new JsonObject().put("guid", "user-guid://" + walletAddress);
-		JsonObject identity = new JsonObject().put("userProfile", userProfile);
-		query.put("identity", identity);
-
-
-		mongoClient.removeDocument(walletsCollection, query, res -> {
-			logger.debug("Wallets removed from DB");
-		});*/
+		 * JsonObject query = new JsonObject(); JsonObject userProfile = new
+		 * JsonObject().put("guid", "user-guid://" + walletAddress); JsonObject identity
+		 * = new JsonObject().put("userProfile", userProfile); query.put("identity",
+		 * identity);
+		 * 
+		 * 
+		 * mongoClient.removeDocument(walletsCollection, query, res -> {
+		 * logger.debug("Wallets removed from DB"); });
+		 */
 
 	}
 
@@ -1127,7 +1133,6 @@ public class WalletManagerHyperty extends AbstractHyperty {
 							}
 						}
 
-
 						updatedWallet = wallet;
 					}
 				}
@@ -1308,20 +1313,19 @@ public class WalletManagerHyperty extends AbstractHyperty {
 				Future<Void> updatedTransaction = transferToPrivateWallet(walletAddress, transaction);
 
 				updatedTransaction.setHandler(asyncResult -> {
-					
-					
+
 					Long currentTime = new Date().getTime();
-					logger.debug(" current:" + currentTime +"\n challengeExpire:"+challengeExpire);
-					if(currentTime < challengeExpire) {
+					logger.debug(" current:" + currentTime + "\n challengeExpire:" + challengeExpire);
+					if (currentTime < challengeExpire) {
 						String publicWalletAddress = wallet.getString(causeWalletAddress);
-						if (publicWalletAddress != null) {
+						if (publicWalletAddress != null && !publicWalletAddress.equals("")) {
 							// update wallet2bGranted balance
 							transferToPublicWallet(publicWalletAddress, transaction);
 						}
 					} else {
 						logger.debug("challengeExpire");
 					}
-					
+
 				});
 
 				// check if nonce is repeated
@@ -1514,20 +1518,27 @@ public class WalletManagerHyperty extends AbstractHyperty {
 												if (walletInfo.getJsonObject("error") == null) {
 													String walletAddress = walletInfo.getString("address");
 													JsonObject engagedUserTransaction = new JsonObject();
-													engagedUserTransaction.put("recipient", 
+													engagedUserTransaction.put("recipient",
 															walletInfo.getString("_id"));
 													engagedUserTransaction.put("source", "engagedUsers");
 													engagedUserTransaction.put("date",
-													DateUtilsHelper.getCurrentDateAsISO8601());
+															DateUtilsHelper.getCurrentDateAsISO8601());
 													engagedUserTransaction.put("value", engageRating);
 													engagedUserTransaction.put("description", "valid");
 													engagedUserTransaction.put("nonce", 1);
 													engagedUserTransaction.put(causeWalletAddress, wallet2bGranted);
 													// transfer to other wallet
 													transferToPrivateWallet(walletAddress, engagedUserTransaction);
-													transferToPublicWallet(
-															newWallet.getString(causeWalletAddress), 
-															engagedUserTransaction);
+
+													Long currentTime = new Date().getTime();
+													logger.debug(" current:" + currentTime + "\n challengeExpire:"
+															+ challengeExpire);
+													if (currentTime < challengeExpire) {
+														transferToPublicWallet(newWallet.getString(causeWalletAddress),
+																engagedUserTransaction);
+													} else {
+														logger.debug("challengeExpire handle creation request - 1!");
+													}
 												}
 											}
 										});
@@ -1552,8 +1563,8 @@ public class WalletManagerHyperty extends AbstractHyperty {
 
 										validateCause.setHandler(asyncResult2 -> {
 											if (asyncResult2.succeeded()) {
-											//	reply2.result().reply(response);
-											//	result.complete();
+												// reply2.result().reply(response);
+												// result.complete();
 											} else {
 												// oh ! we have a problem...
 											}
@@ -1574,35 +1585,44 @@ public class WalletManagerHyperty extends AbstractHyperty {
 									newTransaction.put("recipient", id.result());
 									transactions.add(newTransaction);
 									newWallet.put("transactions", transactions);
-									
+
 									mongoClient.findOneAndReplace(walletsCollection,
-									new JsonObject().put("_id", id.result()),
-									new JsonObject(newWallet.toString()), resultHandler -> {
-										if (resultHandler.succeeded()) {
-											
+											new JsonObject().put("_id", id.result()),
+											new JsonObject(newWallet.toString()), resultHandler -> {
+												if (resultHandler.succeeded()) {
+
 													// transfer to public after persisting
 													Future<Void> persistFuture = persistTransaction(newTransaction);
 													persistFuture.setHandler(r -> {
 														response.put("code", 200).put("wallet", newWallet);
 														logger.debug("wallet created, reply" + response.toString());
 
-														Future<Void> transferPublic;
-														if (bal > 0) {
-															transferPublic = transferToPublicWallet(
-																	newWallet.getString(causeWalletAddress),
-																	newTransaction);
-														} else {
-															transferPublic = Future.future();
-															transferPublic.complete();
-														}
+														Long currentTime = new Date().getTime();
+														logger.debug(" current:" + currentTime + "\n challengeExpire:"
+																+ challengeExpire);
+														if (currentTime < challengeExpire) {
+															Future<Void> transferPublic;
+															if (bal > 0) {
+																transferPublic = transferToPublicWallet(
+																		newWallet.getString(causeWalletAddress),
+																		newTransaction);
+															} else {
+																transferPublic = Future.future();
+																transferPublic.complete();
+															}
 
-														transferPublic.setHandler(asyncResult -> {
+															transferPublic.setHandler(asyncResult -> {
+																reply2.result().reply(response);
+																result.complete();
+
+															});
+														} else {
+															logger.debug("challengeExpire handle creation request - 2!");
 															reply2.result().reply(response);
 															result.complete();
-
-														});
+														}
 													});
-													
+
 												}
 											});
 
@@ -1610,7 +1630,7 @@ public class WalletManagerHyperty extends AbstractHyperty {
 								inviteObservers(msg.getJsonObject("identity"), address, requestsHandler(),
 										readHandler());
 							});
-							
+
 						});
 
 					} else {
