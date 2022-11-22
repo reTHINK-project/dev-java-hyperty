@@ -23,6 +23,6 @@
   },
   "homepage": "https://github.com/reTHINK-project/dev-java-hyperty#readme",
   "devDependencies": {
-    "karma": "^3.1.1"
+    "karma": "^6.4.1"
   }
 }
